@@ -2,6 +2,7 @@
 
 // Compact booking-state card used only on the customer My bookings dashboard.
 
+import SessionCountdown from "@/components/SessionCountdown";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -233,7 +234,8 @@ export default function CurrentVisit({
         </div>
 
         <div className="progress-wrap">
-          <BookingProgress
+          <SessionCountdown bookingId={visit.id} status={visit.status} startedAt={visit.arrivedAt} durationMinutes={visit.durationMinutes} />
+      <BookingProgress
             status={visit.status}
             stage={stageIndex(visit.status)}
             labels={STAGES}

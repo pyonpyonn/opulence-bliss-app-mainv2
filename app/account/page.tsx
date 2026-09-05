@@ -13,6 +13,8 @@ import {
 import VisitHistoryCard from "@/components/VisitHistoryCard";
 
 type Row = {
+  duration_minutes: number | null;
+  property_size_sqm: number | null;
   id: string;
   scheduled_at: string;
   status: string;
@@ -126,7 +128,7 @@ export default async function AccountPage({
   const { data: rowsData } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, package_id, household_notes, provider_delay_minutes, provider_delay_reported_at, packages(name, duration_minutes, price), providers(display_name, photo_url, years_experience, vetting_status, rating_avg, rating_count), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, package_id, household_notes, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, photo_url, years_experience, vetting_status, rating_avg, rating_count), check_ins(arrived_at, left_at)",
     )
     .order("scheduled_at", { ascending: false });
 
@@ -254,7 +256,7 @@ export default async function AccountPage({
       scheduled_at: r.scheduled_at,
       address: r.address,
       service: pkg?.name ?? "Service",
-      durationMinutes: pkg?.duration_minutes ?? null,
+      durationMinutes: r.duration_minutes ?? pkg?.duration_minutes ?? null,
       providerName: prv?.display_name ?? null,
       providerPhoto: prv?.photo_url ?? null,
       providerYearsExperience: prv?.years_experience ?? null,
@@ -417,8 +419,8 @@ export default async function AccountPage({
                       label: "Duration",
                       value:
                         actualDuration ??
-                        (pkg?.duration_minutes
-                          ? `${pkg.duration_minutes} minutes planned`
+                        ((b.duration_minutes ?? pkg?.duration_minutes)
+                          ? `${b.duration_minutes ?? pkg?.duration_minutes} minutes planned`
                           : "—"),
                     },
                     {

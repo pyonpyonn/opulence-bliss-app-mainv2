@@ -25,6 +25,7 @@ export default function RatingGate() {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [customTip, setCustomTip] = useState("");
   const [phase, setPhase] = useState<"rate" | "tip">("rate");
 
   const look = useCallback(async () => {
@@ -208,6 +209,12 @@ export default function RatingGate() {
               Entirely optional — and it all goes to {job.other}. We take
               nothing.
             </p>
+            <form onSubmit={(event) => { event.preventDefault(); void tip(Number(customTip)); }} style={{ margin: "14px 0", display: "grid", gap: 8 }}>
+              <label htmlFor="rating-tip">Your tip (£)</label>
+              <input id="rating-tip" type="number" inputMode="decimal" min="0.30" step="0.01" required value={customTip} onChange={(event) => setCustomTip(event.target.value)} placeholder="Enter any amount" disabled={busy} />
+              <button type="submit" disabled={busy || !Number.isFinite(Number(customTip)) || Number(customTip) < 0.30}>Continue with your tip</button>
+              <small>Card payments start at £0.30.</small>
+            </form>
             <div className="tips">
               {[3, 5, 10].map((n) => (
                 <button key={n} onClick={() => tip(n)} disabled={busy}>

@@ -3,6 +3,7 @@
 // Create a customer account AND their profile in one go, from inside the
 // booking flow. No confirmation email — they're mid-purchase.
 
+import { LEGAL_VERSION, legalLinksReady } from "@/lib/legal";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -13,8 +14,15 @@ const admin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email, password, phone, address, postcode } =
+    const { fullName, email, password, phone, address, postcode, consentAccepted, requireEmailConfirmation } =
       await req.json();
+
+    if (!legalLinksReady) {
+      return NextResponse.json({ error: "Registration is unavailable until the Terms & Conditions and Privacy Policy are published." }, { status: 503 });
+    }
+    if (consentAccepted !== true) {
+      return NextResponse.json({ error: "Accept the Terms & Conditions and Privacy Policy before signing up." }, { status: 400 });
+    }
 
     if (!fullName || !email || !password) {
       return NextResponse.json(
@@ -29,11 +37,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: String(email).trim(),
-      password: String(password),
-      email_confirm: true,
-    });
+    const consent = { legal_accepted: true, legal_version: LEGAL_VERSION, legal_accepted_at: new Date().toISOString() };
+    const credentials = { email: String(email).trim(), password: String(password) };
+    const { data: created, error } = requireEmailConfirmation === true
+      ? await admin.auth.signUp({ ...credentials, options: { data: consent } })
+      : await admin.auth.admin.createUser({ ...credentials, email_confirm: true, user_metadata: consent });
 
     if (error || !created.user) {
       const msg = error?.message ?? "Could not create your account.";
@@ -50,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Profile, filled in properly from the start.
-    await admin.from("profiles").upsert(
+    const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: created.user.id,
         email: String(email).trim(),
@@ -63,6 +71,7 @@ export async function POST(req: NextRequest) {
       { onConflict: "id" }
     );
 
+    if (profileError) throw profileError;
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sign-up failed";

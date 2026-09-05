@@ -1,5 +1,6 @@
 "use client";
 
+import SessionCountdown from "@/components/SessionCountdown";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -288,6 +289,7 @@ export default function WorkerJobWorkspace({
           )}
         </div>
 
+      <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.checkIn.arrivedAt} durationMinutes={job.durationMinutes} />
         <BookingProgress
           status={job.status}
           stage={stage}
@@ -295,6 +297,7 @@ export default function WorkerJobWorkspace({
           details={timelineDetails}
         />
 
+        {job.propertySizeSqm && <p>Property size: {Number(job.propertySizeSqm).toFixed(1)} m²</p>}
         <div className="summary-grid">
           <SummaryCard tone="sky" icon={<MapPin size={22} />} label="Location">
             <strong>{job.address ?? "Address unavailable"}</strong>

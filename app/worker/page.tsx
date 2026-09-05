@@ -9,6 +9,8 @@ import ActiveJob, { type ActiveJobData } from "./ActiveJob";
 import JobActions from "./JobActions";
 
 type Row = {
+  duration_minutes: number | null;
+  property_size_sqm: number | null;
   id: string;
   customer_id: string | null;
   scheduled_at: string;
@@ -97,7 +99,7 @@ export default async function WorkerPage() {
   const { data: rowsData } = await supabase
     .from("bookings")
     .select(
-      "id, customer_id, scheduled_at, status, address, household_notes, customer_email, provider_payout, provider_delay_minutes, provider_delay_reported_at, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass)",
+      "id, customer_id, scheduled_at, status, address, household_notes, customer_email, provider_payout, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass)",
     )
     .order("scheduled_at", { ascending: true });
 
@@ -109,7 +111,7 @@ export default async function WorkerPage() {
     const { data: offerRows } = await supabase
       .from("booking_offers")
       .select(
-        "booking_id, bookings(id, customer_id, scheduled_at, status, address, household_notes, customer_email, offer_expires_at, provider_payout, provider_delay_minutes, provider_delay_reported_at, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass))",
+        "booking_id, bookings(id, customer_id, scheduled_at, status, address, household_notes, customer_email, offer_expires_at, provider_payout, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass))",
       )
       .eq("provider_id", prov.id)
       .eq("status", "open");
@@ -221,7 +223,7 @@ export default async function WorkerPage() {
       clientRatingCount: customer?.client_rating_count ?? 0,
       clientCompletedBookings: customer?.completedWithProvider ?? 0,
       service: pkg?.name ?? "Service",
-      durationMinutes: pkg?.duration_minutes ?? null,
+      durationMinutes: booking.duration_minutes ?? pkg?.duration_minutes ?? null,
       earns: earnMap.get(booking.id) ?? null,
       paymentLabel: providerPaymentLabel({
         bookingStatus: booking.status,
@@ -365,8 +367,8 @@ export default async function WorkerPage() {
                       label: "Duration",
                       value:
                         actualDuration ??
-                        (pkg?.duration_minutes
-                          ? `${pkg.duration_minutes} minutes planned`
+                        ((r.duration_minutes ?? pkg?.duration_minutes)
+                          ? `${r.duration_minutes ?? pkg?.duration_minutes} minutes planned`
                           : "—"),
                     },
                     {

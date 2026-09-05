@@ -2,6 +2,7 @@
 // Save at: app/api/slots/route.ts
 // Try: localhost:3000/api/slots?postcode=SW3%201AA
 
+import { isCleaning, validCleaningDuration } from "@/lib/cleaningBooking";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -18,7 +19,7 @@ const admin = createClient(
 );
 
 const DAYS_AHEAD = 14;
-const SLOT_INTERVAL_MINUTES = 60;
+const SLOT_INTERVAL_MINUTES = 30;
 
 function outwardCode(pc: string) {
   const s = (pc || "").toUpperCase().replace(/\s+/g, "");
@@ -37,6 +38,9 @@ export async function GET(req: NextRequest) {
       Number.isFinite(requestedDuration) && requestedDuration > 0
         ? Math.min(Math.round(requestedDuration), 12 * 60)
         : DEFAULT_APPOINTMENT_DURATION_MINUTES;
+    if (isCleaning(req.nextUrl.searchParams.get("service")) && !validCleaningDuration(requestedDuration)) {
+      return NextResponse.json({ error: "Cleaning sessions must be 2–8 hours in 30-minute steps." }, { status: 400 });
+    }
     const out = outwardCode(postcode);
     if (!out) {
       return NextResponse.json({ error: "Missing postcode" }, { status: 400 });
@@ -74,7 +78,7 @@ export async function GET(req: NextRequest) {
 
       for (
         let minute = APPOINTMENT_START_HOUR * 60;
-        minute + durationMinutes <= APPOINTMENT_END_HOUR * 60;
+        minute <= APPOINTMENT_END_HOUR * 60;
         minute += SLOT_INTERVAL_MINUTES
       ) {
         const slot = londonDate(
@@ -112,7 +116,7 @@ export async function GET(req: NextRequest) {
       suggested,
       appointmentWindow: {
         start: "07:00",
-        end: "19:00",
+        end: "20:00",
         durationMinutes,
       },
       workerAvailabilityRequired: false,

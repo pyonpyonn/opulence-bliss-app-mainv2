@@ -15,6 +15,8 @@ export default function ClientProfilePage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -33,10 +35,12 @@ export default function ClientProfilePage() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, phone, address, postcode")
+        .select("full_name, phone, address, postcode, client_rating_avg, client_rating_count")
         .eq("id", user.id)
         .maybeSingle();
 
+      setRating(data?.client_rating_avg == null ? null : Number(data.client_rating_avg));
+      setRatingCount(data?.client_rating_count ?? 0);
       setName(data?.full_name ?? "");
       setPhone(data?.phone ?? "");
       setAddress(data?.address ?? "");
@@ -88,6 +92,7 @@ export default function ClientProfilePage() {
           </div>
         ) : (
           <>
+            <div className="card" aria-label="Customer rating"><strong>{rating === null || ratingCount === 0 ? "Not yet rated" : `★ ${rating.toFixed(1)} / 5`}</strong><p>{ratingCount} cleaner review{ratingCount === 1 ? "" : "s"}</p></div>
             <div className="card">
               <label>Email</label>
               <input value={email} disabled />

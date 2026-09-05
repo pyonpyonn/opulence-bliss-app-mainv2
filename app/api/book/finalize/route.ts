@@ -1,8 +1,9 @@
+import { isCleaning, validCleaningDuration, validPropertySize } from "@/lib/cleaningBooking";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import { seedAndStartOfferRotation } from "@/lib/offerRotation";
+import { rotateBookingOffer } from "@/lib/offerRotation";
 import {
   APPOINTMENT_WINDOW_MESSAGE,
   appointmentFitsWindow,
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
       expand: ["payment_intent"],
     });
     const pi = session.payment_intent as Stripe.PaymentIntent;
+    if (!pi || typeof pi === "string") throw new Error("Payment is missing.");
     const ok = pi.status === "requires_capture" || pi.status === "succeeded";
     if (!ok) {
       target.searchParams.set("session_id", sessionId);
@@ -42,17 +44,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(target);
     }
 
-    const checkoutEmail = session.customer_details?.email?.toLowerCase();
-    if (checkoutEmail && checkoutEmail !== user.email?.toLowerCase()) {
-      return NextResponse.json({ error: "Checkout does not belong to this account" }, { status: 403 });
+    if (session.client_reference_id !== user.id || pi.metadata.customer_id !== user.id || pi.metadata.kind !== "booking") {
+      return NextResponse.json({ error: "Checkout does not belong to this account." }, { status: 403 });
     }
-
-    const { data: existing } = await admin
-      .from("payments")
-      .select("id")
-      .eq("stripe_payment_ref", pi.id)
-      .maybeSingle();
-    if (!existing) {
+    {
       const m = pi.metadata ?? {};
       const packageId = m.package_id || null;
       const postcode = m.postcode || null;
@@ -65,7 +60,12 @@ export async function GET(req: NextRequest) {
         .eq("id", packageId ?? "")
         .maybeSingle();
       const serviceType = pkgRow?.service_type ?? null;
-      if (!slot || !appointmentFitsWindow(slot, pkgRow?.duration_minutes ?? 120)) {
+      const minutes = Number(m.duration_minutes);
+      const size = m.property_size_sqm ? Number(m.property_size_sqm) : null;
+      if (isCleaning(serviceType) && (!validCleaningDuration(minutes) || size === null || !validPropertySize(size))) {
+        throw new Error("Invalid cleaning duration or property size.");
+      }
+      if (!slot || !appointmentFitsWindow(slot, minutes)) {
         throw new Error(APPOINTMENT_WINDOW_MESSAGE);
       }
       const compact = (postcode ?? "").toUpperCase().replace(/\s+/g, "");
@@ -101,53 +101,33 @@ export async function GET(req: NextRequest) {
         matched = data ?? [];
       }
 
-      const slotTime = slot ? new Date(slot) : new Date();
-      const expires = new Date(slotTime.getTime() - 2 * 60 * 60 * 1000);
-      const { data: booking, error: bookingError } = await admin
-        .from("bookings")
-        .insert({
-          customer_id: user.id,
-          provider_id: null,
-          package_id: packageId,
-          scheduled_at: slot ?? new Date().toISOString(),
-          status: "offered",
-          address: postcode,
-          customer_email: user.email ?? checkoutEmail ?? null,
-          household_notes: request,
-          offer_expires_at: expires.toISOString(),
-        })
-        .select("id")
-        .single();
-      if (bookingError || !booking) throw bookingError ?? new Error("Booking insert failed");
-
-      await seedAndStartOfferRotation(
-        admin,
-        booking.id,
-        matched.map((provider) => provider.id),
-      );
-
-      const total = pi.amount;
-      const platform = pi.application_fee_amount ?? 0;
-      const { error: paymentError } = await admin.from("payments").insert({
-        booking_id: booking.id,
-        gross_amount: total / 100,
-        split_breakdown: {
-          provider: (total - platform) / 100,
-          platform_margin: platform / 100,
-        },
-        stripe_payment_ref: pi.id,
-        status: pi.status === "succeeded" ? "succeeded" : "authorised",
+      // The database locks the checkout reference and creates booking + payment
+      // together, so refreshes and retries cannot create duplicate visits.
+      const { data: bookingId, error: bookingError } = await admin.rpc("finalize_customer_checkout", {
+        p_customer_id: user.id,
+        p_session_id: session.id,
+        p_payment_ref: pi.id,
+        p_package_id: packageId,
+        p_postcode: postcode,
+        p_request: request,
+        p_slot: slot,
+        p_duration_minutes: minutes,
+        p_property_size_sqm: size,
+        p_preferred_provider_id: m.preferred_provider_id || null,
+        p_amount: pi.amount / 100,
+        p_platform: (pi.application_fee_amount ?? 0) / 100,
+        p_email: user.email ?? null,
+        p_payment_status: pi.status === "succeeded" ? "succeeded" : "authorised",
       });
-      if (paymentError) throw paymentError;
+      if (bookingError || !bookingId) throw bookingError ?? new Error("Booking insert failed");
 
-      await admin.from("notifications").insert({
-        user_id: user.id,
-        title: matched.length ? "Booking received" : "Looking for a provider",
-        body: matched.length
-          ? `${m.package || "Service"} — we're asking matching providers one at a time and will confirm as soon as one accepts.`
-          : `${m.package || "Service"} — we'll keep looking and cancel free of charge if we can't fill it.`,
-        href: "/account",
+      const preferred = m.preferred_provider_id;
+      matched.sort((a, b) => Number(b.id === preferred) - Number(a.id === preferred));
+      const { data: initialized, error: queueError } = await admin.rpc("system_initialize_booking_offer_queue", {
+        p_booking_id: bookingId, p_provider_ids: matched.map((provider) => provider.id),
       });
+      if (queueError) throw queueError;
+      if (initialized) await rotateBookingOffer(admin, bookingId);
     }
 
     target.searchParams.set("session_id", sessionId);

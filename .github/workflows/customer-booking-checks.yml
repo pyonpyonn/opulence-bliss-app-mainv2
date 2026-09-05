@@ -1,0 +1,34 @@
+name: Customer booking checks
+on:
+  push:
+    branches: [codex/customer-booking]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+      - name: Lint changed TypeScript
+        run: |
+          git fetch origin main --depth=1
+          git diff --name-only --diff-filter=ACM origin/main...HEAD -- '*.ts' '*.tsx' | xargs -r npx eslint
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+          STRIPE_SECRET_KEY: sk_test_ci_placeholder

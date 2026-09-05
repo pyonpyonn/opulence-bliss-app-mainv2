@@ -1,6 +1,7 @@
 // Validate a promo code and preview the discount.
 // Save at: app/api/promo/route.ts
 
+import { bookingPricePence } from "@/lib/cleaningBooking";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -26,7 +27,7 @@ export function discountFor(
 
 export async function POST(req: NextRequest) {
   try {
-    const { code, packageId } = await req.json();
+    const { code, packageId, durationMinutes } = await req.json();
     const clean = String(code ?? "").trim().toUpperCase();
     if (!clean) {
       return NextResponse.json({ valid: false, error: "Enter a code." });
@@ -53,7 +54,9 @@ export async function POST(req: NextRequest) {
 
     const { data: pkg } = await admin
       .from("packages")
-      .select("price")
+      .select("price, service_type, duration_minutes")
+      .eq("active", true)
+      .eq("billing_type", "per_visit")
       .eq("id", packageId ?? "")
       .maybeSingle();
 
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, error: "Pick a service first." });
     }
 
-    const gross = Math.round(Number(pkg.price) * 100);
+    const gross = bookingPricePence(pkg, Number(durationMinutes ?? pkg.duration_minutes ?? 120));
     const discount = discountFor(gross, promo);
 
     if (discount <= 0) {

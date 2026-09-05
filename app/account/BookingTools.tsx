@@ -254,7 +254,7 @@ export function BookingTools({
   const selectedService =
     serviceOptions.find((item) => item.id === selectedPackageId) ??
     currentService;
-  const selectedDuration = selectedService?.durationMinutes ?? durationMinutes;
+  const selectedDuration = selectedPackageId === packageId ? durationMinutes : selectedService?.durationMinutes ?? durationMinutes;
   const changed =
     (scheduledAt
       ? new Date(selectedSlot).getTime() !== new Date(scheduledAt).getTime()
@@ -385,7 +385,7 @@ export function BookingTools({
                       setSelectedPackageId(nextId);
                       setMessage(null);
                       void fetchSlots(
-                        next?.durationMinutes ?? durationMinutes,
+                        nextId === packageId ? durationMinutes : next?.durationMinutes ?? durationMinutes,
                         nextId === packageId ? scheduledAt : "",
                       );
                     }}
@@ -1060,6 +1060,8 @@ export function TipBooking({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [customAmount, setCustomAmount] = useState("");
+
   async function tip(amount: number) {
     setBusy(true);
     setErr(null);
@@ -1097,6 +1099,13 @@ export function TipBooking({ id }: { id: string }) {
       <p style={{ margin: "0 0 8px", fontSize: 13.5, color: "#7A828C" }}>
         Tips go entirely to your provider — we take nothing.
       </p>
+      <form onSubmit={(event) => { event.preventDefault(); void tip(Number(customAmount)); }} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        <label htmlFor={`tip-${id}`}>Your tip (£)</label>
+        <input id={`tip-${id}`} type="number" inputMode="decimal" min="0.30" step="0.01" required value={customAmount} onChange={(event) => setCustomAmount(event.target.value)} disabled={busy}
+          placeholder="Enter an amount" style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8, maxWidth: 180 }} />
+        <button type="submit" disabled={busy || !Number.isFinite(Number(customAmount)) || Number(customAmount) < 0.30} style={{ padding: "8px 14px", background: "#6d28d9", color: "white", borderRadius: 8 }}>Continue</button>
+        <small style={{ width: "100%" }}>Choose any amount from £0.30 (the card processor minimum).</small>
+      </form>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {[3, 5, 10].map((n) => (
           <button

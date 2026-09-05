@@ -3,6 +3,7 @@
 // Needs in .env.local: STRIPE_SECRET_KEY, PROVIDER_TEST_ACCOUNT,
 //   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+import { bookingPricePence, isCleaning, validCleaningDuration, validPropertySize } from "@/lib/cleaningBooking";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -22,7 +23,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { packageId, postcode, request, slot, promoCode } = await req.json();
+    const { packageId, postcode, request, slot, promoCode, durationMinutes, propertySizeSqm, preferredProviderId } = await req.json();
     if (!packageId) {
       return NextResponse.json({ error: "Missing packageId" }, { status: 400 });
     }
@@ -35,28 +36,52 @@ export async function POST(req: NextRequest) {
     );
     const { data: pkg, error } = await supabase
       .from("packages")
-      .select("name, price, duration_minutes")
+      .select("name, price, duration_minutes, service_type")
       .eq("id", packageId)
       .eq("active", true)
+      .eq("billing_type", "per_visit")
       .single();
 
     if (error || !pkg) {
       return NextResponse.json({ error: "Package not found" }, { status: 404 });
     }
-    if (!slot || !appointmentFitsWindow(slot, pkg.duration_minutes ?? 120)) {
+    const cleaning = isCleaning(pkg.service_type);
+    const minutes = cleaning ? Number(durationMinutes) : pkg.duration_minutes ?? 120;
+    if (cleaning && (!validCleaningDuration(minutes) || !validPropertySize(Number(propertySizeSqm)))) {
+      return NextResponse.json({ error: "Enter your property size and choose 2–8 hours in 30-minute steps." }, { status: 400 });
+    }
+    if (!slot || !appointmentFitsWindow(slot, minutes) || new Date(slot).getTime() < Date.now() + 2 * 60 * 60 * 1000) {
       return NextResponse.json(
         { error: APPOINTMENT_WINDOW_MESSAGE },
         { status: 400 },
       );
     }
 
-    const gross = Math.round(Number(pkg.price) * 100); // amount in pence
+    const gross = bookingPricePence(pkg, minutes); // amount in pence
 
     // Who's booking? Used to prefill their email on Stripe's checkout.
     const ssr = await createServerClient();
     const {
       data: { user },
     } = await ssr.auth.getUser();
+
+    if (!user) return NextResponse.json({ error: "Please sign in before checkout." }, { status: 401 });
+    const { data: profile } = await ssr.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    if (profile?.role !== "customer") return NextResponse.json({ error: "A customer account is required." }, { status: 403 });
+    if (preferredProviderId) {
+      if (!cleaning || typeof preferredProviderId !== "string" || !/^[0-9a-f-]{36}$/i.test(preferredProviderId)) {
+        return NextResponse.json({ error: "Choose a previous cleaner from your booking history." }, { status: 400 });
+      }
+      const { data: past } = await supabaseAdmin.from("bookings").select("id").eq("customer_id", user.id)
+        .eq("provider_id", preferredProviderId).eq("status", "completed").limit(1);
+      if (!past?.length) return NextResponse.json({ error: "You can only request a cleaner from a completed visit." }, { status: 400 });
+    }
+    const compact = String(postcode ?? "").toUpperCase().replace(/\s+/g, "");
+    const district = compact.length > 4 ? compact.slice(0, -3) : compact;
+    const { data: areas } = await supabaseAdmin.from("service_areas").select("postcode_prefixes").eq("active", true);
+    if (!district || !(areas ?? []).some((area) => (area.postcode_prefixes ?? []).includes(district))) {
+      return NextResponse.json({ error: "This postcode is outside our service area." }, { status: 400 });
+    }
 
     // ---- PLACEHOLDER split — REPLACE with the client's SIGNED numbers ----
     // Per-visit model: the platform takes a margin, the provider keeps the rest.
@@ -107,6 +132,7 @@ export async function POST(req: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      client_reference_id: user.id,
       customer_email: user?.email ?? undefined,
       line_items: [
         {
@@ -115,7 +141,7 @@ export async function POST(req: NextRequest) {
             currency: "gbp",
             unit_amount: chargeAmount,
             product_data: {
-              name: `${pkg.name} — one visit${
+              name: `${pkg.name} — ${minutes / 60} hours${
                 appliedCode ? ` (${appliedCode} applied)` : ""
               }`,
             },
@@ -130,6 +156,11 @@ export async function POST(req: NextRequest) {
         application_fee_amount: platformFee,
         transfer_data: { destination: process.env.PROVIDER_TEST_ACCOUNT! },
         metadata: {
+          kind: "booking",
+          customer_id: user.id,
+          duration_minutes: String(minutes),
+          property_size_sqm: cleaning ? String(Number(propertySizeSqm)) : "",
+          preferred_provider_id: preferredProviderId || "",
           package: pkg.name,
           package_id: packageId,
           postcode: postcode ?? "",

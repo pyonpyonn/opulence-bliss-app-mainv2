@@ -12,6 +12,7 @@ const GRAD = "linear-gradient(100deg,#F5C542,#C86FC9 55%,#7B2FF7)";
 const PURPLE = "#6D28D9";
 
 type Msg = {
+  booking_message_attachments?: { path: string; name: string; mime_type: string; signedUrl?: string }[];
   id: number;
   sender_id: string;
   sender_role: "customer" | "provider" | "admin";
@@ -69,6 +70,8 @@ export default function MessageThread({
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [me, setMe] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export default function MessageThread({
 
     const { data, error: loadError } = await supabase
       .from("booking_messages")
-      .select("id, sender_id, sender_role, body, created_at, read_at")
+      .select("id, sender_id, sender_role, body, created_at, read_at, booking_message_attachments(path, name, mime_type)")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: true });
 
@@ -94,7 +97,14 @@ export default function MessageThread({
       return;
     }
 
-    setMessages((data ?? []) as Msg[]);
+    const hydrated = await Promise.all(((data ?? []) as Msg[]).map(async (message) => ({
+      ...message,
+      booking_message_attachments: await Promise.all((message.booking_message_attachments ?? []).map(async (file) => {
+        const { data: signed } = await supabase.storage.from("booking-attachments").createSignedUrl(file.path, 3600);
+        return { ...file, signedUrl: signed?.signedUrl };
+      })),
+    })));
+    setMessages(hydrated);
     setLoaded(true);
 
     if (
@@ -140,23 +150,32 @@ export default function MessageThread({
 
   async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || busy || closed) return;
-
+    if ((!trimmed && !attachment) || busy || closed || !me) return;
     setBusy(true);
     setError(null);
-
-    const { error: sendError } = await supabase.rpc("send_booking_message", {
-      p_booking_id: bookingId,
-      p_body: trimmed,
-    });
-
-    setBusy(false);
-    if (sendError) {
-      setError(sendError.message);
-      return;
+    let uploadedPath: string | null = null;
+    try {
+      if (attachment) {
+        const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
+        const extension = extensions[attachment.type];
+        if (!extension || attachment.size <= 0 || attachment.size > 10 * 1024 * 1024) throw new Error("Choose a JPG, PNG, WebP or PDF up to 10 MB.");
+        uploadedPath = `${bookingId}/${me}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from("booking-attachments").upload(uploadedPath, attachment, { contentType: attachment.type, upsert: false });
+        if (uploadError) throw uploadError;
+      }
+      const { error: sendError } = uploadedPath
+        ? await supabase.rpc("send_booking_attachment", { p_booking_id: bookingId, p_body: trimmed || "Shared an attachment", p_path: uploadedPath, p_name: attachment!.name.slice(0, 160) })
+        : await supabase.rpc("send_booking_message", { p_booking_id: bookingId, p_body: trimmed });
+      if (sendError) throw sendError;
+      setBody("");
+      setAttachment(null);
+      if (fileRef.current) fileRef.current.value = "";
+    } catch (failure) {
+      if (uploadedPath) await supabase.storage.from("booking-attachments").remove([uploadedPath]);
+      setError(failure instanceof Error ? failure.message : "The message could not be sent. Please try again.");
+    } finally {
+      setBusy(false);
     }
-
-    setBody("");
     await load();
   }
 
@@ -241,6 +260,16 @@ export default function MessageThread({
                     >
                       {fromAdmin && <span style={badge}>Opulence Bliss</span>}
                       <span style={{ display: "block" }}>{message.body}</span>
+                      {(message.booking_message_attachments ?? []).map((file) => file.signedUrl ? (
+                        <a key={file.path} href={file.signedUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block", marginTop: 8, color: "inherit", textDecoration: "underline" }}>
+                          {file.mime_type.startsWith("image/") && (
+                            // Private, short-lived Storage URLs cannot use the public image optimizer.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={file.signedUrl} alt={file.name} loading="lazy" style={{ maxWidth: "100%", maxHeight: 220, borderRadius: 8 }} />
+                          )}
+                          {file.name}
+                        </a>
+                      ) : <span key={file.path}>Attachment unavailable. Reopen the conversation to retry.</span> )}
                       <span
                         style={{
                           ...stamp,
@@ -294,6 +323,18 @@ export default function MessageThread({
                 ))}
               </div>
 
+              <label style={{ display: "block", margin: "10px 0", fontSize: 13 }}>
+                Add a photo or file (JPG, PNG, WebP or PDF, up to 10 MB)
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    if (file && (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type) || file.size <= 0 || file.size > 10 * 1024 * 1024)) {
+                      setError("Choose a JPG, PNG, WebP or PDF up to 10 MB."); event.target.value = ""; setAttachment(null); return;
+                    }
+                    setError(null); setAttachment(file);
+                  }} />
+              </label>
+              {attachment && <button type="button" disabled={busy} onClick={() => { setAttachment(null); if (fileRef.current) fileRef.current.value = ""; }}>Remove {attachment.name}</button>}
               <div style={composer}>
                 <input
                   value={body}
@@ -310,13 +351,13 @@ export default function MessageThread({
                 <button
                   type="button"
                   onClick={() => void send(body)}
-                  disabled={busy || !body.trim()}
+                  disabled={busy || (!body.trim() && !attachment)}
                   style={{
                     ...sendBtn,
                     ...(bare
                       ? { width: 46, height: 46, padding: 0, borderRadius: 999 }
                       : {}),
-                    opacity: busy || !body.trim() ? 0.45 : 1,
+                    opacity: busy || (!body.trim() && !attachment) ? 0.45 : 1,
                   }}
                   aria-label="Send message"
                 >

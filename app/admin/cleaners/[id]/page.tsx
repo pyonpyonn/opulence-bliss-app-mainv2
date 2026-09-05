@@ -26,7 +26,7 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
       .maybeSingle(),
     supabase
       .from("bookings")
-      .select("id, status, scheduled_at, created_at, customer_email, address, provider_payout, packages(name, duration_minutes)")
+      .select("id, status, scheduled_at, created_at, customer_email, address, provider_payout, duration_minutes, packages(name, duration_minutes)")
       .eq("provider_id", id)
       .order("scheduled_at", { ascending: false }),
     supabase
@@ -95,7 +95,7 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
                 <article key={booking.id} style={recordCard}>
                   <div style={recordTop}>
                     <div>
-                      <strong>{pkg?.name ?? "Service"}{pkg?.duration_minutes ? ` · ${pkg.duration_minutes} min` : ""}</strong>
+                      <strong>{pkg?.name ?? "Service"}{(booking.duration_minutes ?? pkg?.duration_minutes) ? ` · ${booking.duration_minutes ?? pkg?.duration_minutes} min` : ""}</strong>
                       <p style={muted}>{when(booking.scheduled_at)} · {booking.customer_email ?? "Unknown customer"}</p>
                       <p style={muted}>{booking.address ?? "No address"}</p>
                     </div>

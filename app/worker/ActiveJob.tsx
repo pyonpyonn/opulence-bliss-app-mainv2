@@ -2,6 +2,7 @@
 
 // Compact job-state card used only on the provider Jobs dashboard.
 
+import SessionCountdown from "@/components/SessionCountdown";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -217,7 +218,8 @@ export default function ActiveJob({
         </div>
 
         <div className="progress-wrap">
-          <BookingProgress
+          <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.arrivedAt} durationMinutes={job.durationMinutes} />
+      <BookingProgress
             status={job.status}
             stage={stageIndex(job.status)}
             labels={STAGES}

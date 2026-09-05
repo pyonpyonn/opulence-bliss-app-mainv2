@@ -1,5 +1,6 @@
 "use client";
 
+import SessionCountdown from "@/components/SessionCountdown";
 import { useEffect, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import {
@@ -27,6 +28,7 @@ export type ClientBookingWorkspaceData = {
   status: string;
   service: string;
   durationMinutes: number | null;
+  propertySizeSqm?: number | null;
   scheduledAt: string;
   address: string | null;
   bookedAt: string | null;
@@ -322,6 +324,7 @@ export default function BookingWorkspace({
           )}
         </div>
 
+      <SessionCountdown bookingId={booking.id} status={booking.status} startedAt={booking.arrivedAt} durationMinutes={booking.durationMinutes} />
         <BookingProgress
           status={booking.status}
           stage={stage}
@@ -329,6 +332,7 @@ export default function BookingWorkspace({
           details={timelineDetails}
         />
 
+        {booking.propertySizeSqm && <p>Property size: {Number(booking.propertySizeSqm).toFixed(1)} m²</p>}
         <div className="summary-grid">
           <SummaryCard tone="sky" icon={<MapPin size={22} />} label="Location">
             <strong>{booking.address ?? "Address saved"}</strong>

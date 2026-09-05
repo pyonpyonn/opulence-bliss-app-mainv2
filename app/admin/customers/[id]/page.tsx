@@ -38,7 +38,7 @@ export default async function CustomerRecordPage({
       .maybeSingle(),
     supabase
       .from("bookings")
-      .select("id, status, scheduled_at, created_at, address, packages(name, duration_minutes), providers(display_name)")
+      .select("id, status, scheduled_at, created_at, address, duration_minutes, packages(name, duration_minutes), providers(display_name)")
       .eq("customer_id", id)
       .order("scheduled_at", { ascending: false }),
   ]);
@@ -108,7 +108,7 @@ export default async function CustomerRecordPage({
                 <article key={booking.id} style={recordCard}>
                   <div style={recordTop}>
                     <div>
-                      <strong>{pkg?.name ?? "Service"}{pkg?.duration_minutes ? ` · ${pkg.duration_minutes} min` : ""}</strong>
+                      <strong>{pkg?.name ?? "Service"}{(booking.duration_minutes ?? pkg?.duration_minutes) ? ` · ${booking.duration_minutes ?? pkg?.duration_minutes} min` : ""}</strong>
                       <p style={muted}>{when(booking.scheduled_at)} · {provider?.display_name ?? "No professional assigned"}</p>
                       <p style={muted}>{booking.address ?? "No address"}</p>
                     </div>
