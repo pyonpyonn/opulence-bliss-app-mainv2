@@ -6,13 +6,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  attachmentMimeType,
+  normalizeMessageAttachments,
+  type MessageAttachment,
+} from "@/lib/messageAttachments";
 
 const supabase = createClient();
 const GRAD = "linear-gradient(100deg,#F5C542,#C86FC9 55%,#7B2FF7)";
 const PURPLE = "#6D28D9";
 
 type Msg = {
-  booking_message_attachments?: { path: string; name: string; mime_type: string; signedUrl?: string }[];
+  booking_message_attachments: MessageAttachment[];
   id: number;
   sender_id: string;
   sender_role: "customer" | "provider" | "admin";
@@ -20,6 +25,26 @@ type Msg = {
   created_at: string;
   read_at: string | null;
 };
+
+type RawMsg = Omit<Msg, "booking_message_attachments"> & {
+  booking_message_attachments?: MessageAttachment | MessageAttachment[] | null;
+};
+
+function withTimeout<T>(request: T, message: string, timeoutMs = 15_000) {
+  return new Promise<Awaited<T>>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    Promise.resolve(request).then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (failure) => {
+        window.clearTimeout(timer);
+        reject(failure);
+      },
+    );
+  });
+}
 
 const QUICK: Record<"customer" | "provider", string[]> = {
   customer: [
@@ -75,46 +100,84 @@ export default function MessageThread({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const loadVersion = useRef(0);
+  const sending = useRef(false);
 
   const load = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    setMe(user?.id ?? null);
+    const version = ++loadVersion.current;
+    try {
+      const auth = await withTimeout(
+        supabase.auth.getSession(),
+        "The conversation took too long to connect. Please try again.",
+      );
+      if (auth.error) throw auth.error;
+      const user = auth.data.session?.user;
+      if (!user) {
+        setMe(null);
+        throw new Error("Please sign in again to use booking messages.");
+      }
 
-    const { data, error: loadError } = await supabase
-      .from("booking_messages")
-      .select("id, sender_id, sender_role, body, created_at, read_at, booking_message_attachments(path, name, mime_type)")
-      .eq("booking_id", bookingId)
-      .order("created_at", { ascending: true });
+      const result = await withTimeout(
+        supabase
+          .from("booking_messages")
+          .select("id, sender_id, sender_role, body, created_at, read_at, booking_message_attachments(path, name, mime_type)")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: true }),
+        "The conversation took too long to load. Please try again.",
+      );
+      if (result.error) throw result.error;
 
-    if (loadError) {
-      setError(loadError.message);
+      const rawMessages = (result.data ?? []) as unknown as RawMsg[];
+      const hydrated = await Promise.all(rawMessages.map(async (message) => ({
+        ...message,
+        booking_message_attachments: await Promise.all(
+          normalizeMessageAttachments(message.booking_message_attachments).map(async (file) => {
+            try {
+              const signed = await withTimeout(
+                supabase.storage.from("booking-attachments").createSignedUrl(file.path, 3600),
+                "Attachment preview timed out.",
+                8_000,
+              );
+              return { ...file, signedUrl: signed.data?.signedUrl };
+            } catch {
+              return file;
+            }
+          }),
+        ),
+      })));
+
+      if (version !== loadVersion.current) return false;
+      setMe(user.id);
+      setMessages(hydrated);
       setLoaded(true);
-      return;
-    }
+      setLoadError(null);
 
-    const hydrated = await Promise.all(((data ?? []) as Msg[]).map(async (message) => ({
-      ...message,
-      booking_message_attachments: await Promise.all((message.booking_message_attachments ?? []).map(async (file) => {
-        const { data: signed } = await supabase.storage.from("booking-attachments").createSignedUrl(file.path, 3600);
-        return { ...file, signedUrl: signed?.signedUrl };
-      })),
-    })));
-    setMessages(hydrated);
-    setLoaded(true);
-
-    if (
-      user &&
-      (bare || !minimized) &&
-      (data ?? []).some(
-        (message) => message.sender_id !== user.id && !message.read_at,
-      )
-    ) {
-      await supabase.rpc("mark_messages_read", { p_booking_id: bookingId });
+      if (
+        (bare || !minimized) &&
+        rawMessages.some(
+          (message) => message.sender_id !== user.id && !message.read_at,
+        )
+      ) {
+        void withTimeout(
+          supabase.rpc("mark_messages_read", { p_booking_id: bookingId }),
+          "Read receipt timed out.",
+          8_000,
+        ).catch(() => undefined);
+      }
+      return true;
+    } catch (failure) {
+      if (version !== loadVersion.current) return false;
+      setLoaded(true);
+      setLoadError(
+        failure instanceof Error
+          ? failure.message
+          : "The conversation could not be loaded. Please try again.",
+      );
+      return false;
     }
   }, [bare, bookingId, minimized]);
 
@@ -132,12 +195,23 @@ export default function MessageThread({
         },
         () => void load(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void load();
+      });
 
     // Recovery path for a sleeping tab or a temporarily dropped socket.
     const timer = setInterval(() => void load(), 30_000);
+    const refresh = () => void load();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
+      loadVersion.current += 1;
       clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
       void supabase.removeChannel(channel);
     };
   }, [bookingId, load]);
@@ -150,33 +224,52 @@ export default function MessageThread({
 
   async function send(text: string) {
     const trimmed = text.trim();
-    if ((!trimmed && !attachment) || busy || closed || !me) return;
+    if ((!trimmed && !attachment) || busy || sending.current || closed) return;
+    if (!me) {
+      setError("The conversation is still connecting. Please try again.");
+      return;
+    }
+    sending.current = true;
     setBusy(true);
     setError(null);
     let uploadedPath: string | null = null;
     try {
       if (attachment) {
         const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
-        const extension = extensions[attachment.type];
-        if (!extension || attachment.size <= 0 || attachment.size > 10 * 1024 * 1024) throw new Error("Choose a JPG, PNG, WebP or PDF up to 10 MB.");
+        const mimeType = attachmentMimeType(attachment);
+        const extension = mimeType ? extensions[mimeType] : null;
+        if (!mimeType || !extension || attachment.size <= 0 || attachment.size > 10 * 1024 * 1024) throw new Error("Choose a JPG, PNG, WebP or PDF up to 10 MB.");
         uploadedPath = `${bookingId}/${me}/${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase.storage.from("booking-attachments").upload(uploadedPath, attachment, { contentType: attachment.type, upsert: false });
+        const { error: uploadError } = await withTimeout(
+          supabase.storage.from("booking-attachments").upload(uploadedPath, attachment, { contentType: mimeType, upsert: false }),
+          "The file upload took too long. Please try again.",
+          30_000,
+        );
         if (uploadError) throw uploadError;
       }
-      const { error: sendError } = uploadedPath
-        ? await supabase.rpc("send_booking_attachment", { p_booking_id: bookingId, p_body: trimmed || "Shared an attachment", p_path: uploadedPath, p_name: attachment!.name.slice(0, 160) })
-        : await supabase.rpc("send_booking_message", { p_booking_id: bookingId, p_body: trimmed });
+      const { error: sendError } = await withTimeout(
+        uploadedPath
+          ? supabase.rpc("send_booking_attachment", { p_booking_id: bookingId, p_body: trimmed || "Shared an attachment", p_path: uploadedPath, p_name: attachment!.name.slice(0, 160) })
+          : supabase.rpc("send_booking_message", { p_booking_id: bookingId, p_body: trimmed }),
+        "Sending took too long. Please try again.",
+      );
       if (sendError) throw sendError;
       setBody("");
       setAttachment(null);
       if (fileRef.current) fileRef.current.value = "";
+      const refreshed = await load();
+      if (!refreshed) {
+        setError("Message sent, but the conversation could not refresh. Reopen it to see the message.");
+      }
     } catch (failure) {
-      if (uploadedPath) await supabase.storage.from("booking-attachments").remove([uploadedPath]);
+      if (uploadedPath) {
+        void supabase.storage.from("booking-attachments").remove([uploadedPath]);
+      }
       setError(failure instanceof Error ? failure.message : "The message could not be sent. Please try again.");
     } finally {
+      sending.current = false;
       setBusy(false);
     }
-    await load();
   }
 
   const other = viewerRole === "customer" ? "your provider" : "your customer";
@@ -217,6 +310,13 @@ export default function MessageThread({
           >
             {!loaded ? (
               <p style={muted}>Loading…</p>
+            ) : loadError && messages.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "14px 0" }}>
+                <p style={{ ...muted, padding: 0 }}>{loadError}</p>
+                <button type="button" onClick={() => void load()} style={retryButton}>
+                  Try loading again
+                </button>
+              </div>
             ) : messages.length === 0 ? (
               <p style={muted}>
                 Nothing yet. Anything {other} should know before the visit?
@@ -305,7 +405,7 @@ export default function MessageThread({
                     key={reply}
                     type="button"
                     style={reply === "Running late?" ? lateChip : chip}
-                    disabled={busy}
+                    disabled={busy || !loaded || !me}
                     onClick={() => {
                       if (viewerRole === "provider" && reply === "Running late?") {
                         window.dispatchEvent(
@@ -325,10 +425,10 @@ export default function MessageThread({
 
               <label style={{ display: "block", margin: "10px 0", fontSize: 13 }}>
                 Add a photo or file (JPG, PNG, WebP or PDF, up to 10 MB)
-                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy}
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy || !loaded || !me}
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
-                    if (file && (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type) || file.size <= 0 || file.size > 10 * 1024 * 1024)) {
+                    if (file && (!attachmentMimeType(file) || file.size <= 0 || file.size > 10 * 1024 * 1024)) {
                       setError("Choose a JPG, PNG, WebP or PDF up to 10 MB."); event.target.value = ""; setAttachment(null); return;
                     }
                     setError(null); setAttachment(file);
@@ -340,24 +440,27 @@ export default function MessageThread({
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") void send(body);
+                    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                      event.preventDefault();
+                      void send(body);
+                    }
                   }}
-                  placeholder={`Message ${other}…`}
+                  placeholder={!loaded || !me ? "Connecting to messages…" : `Message ${other}…`}
                   aria-label="Your message"
-                  disabled={busy}
+                  disabled={busy || !loaded || !me}
                   maxLength={2000}
                   style={input}
                 />
                 <button
                   type="button"
                   onClick={() => void send(body)}
-                  disabled={busy || (!body.trim() && !attachment)}
+                  disabled={busy || !loaded || !me || (!body.trim() && !attachment)}
                   style={{
                     ...sendBtn,
                     ...(bare
                       ? { width: 46, height: 46, padding: 0, borderRadius: 999 }
                       : {}),
-                    opacity: busy || (!body.trim() && !attachment) ? 0.45 : 1,
+                    opacity: busy || !loaded || !me || (!body.trim() && !attachment) ? 0.45 : 1,
                   }}
                   aria-label="Send message"
                 >
@@ -368,6 +471,14 @@ export default function MessageThread({
           )}
 
           {error && <p style={errStyle}>{error}</p>}
+          {loadError && messages.length > 0 && (
+            <p style={errStyle}>
+              {loadError}{" "}
+              <button type="button" onClick={() => void load()} style={inlineRetryButton}>
+                Refresh
+              </button>
+            </p>
+          )}
         </>
       )}
     </section>
@@ -514,4 +625,25 @@ const errStyle: React.CSSProperties = {
   fontSize: 13.5,
   fontWeight: 700,
   margin: "10px 0 0",
+};
+const retryButton: React.CSSProperties = {
+  marginTop: 10,
+  border: "1px solid #E2D2FA",
+  borderRadius: 999,
+  background: "#F8F5FF",
+  color: PURPLE,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontWeight: 800,
+  padding: "7px 13px",
+};
+const inlineRetryButton: React.CSSProperties = {
+  border: 0,
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontWeight: 900,
+  padding: 0,
+  textDecoration: "underline",
 };
