@@ -68,6 +68,18 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Please sign in before checkout." }, { status: 401 });
     const { data: profile } = await ssr.from("profiles").select("role").eq("id", user.id).maybeSingle();
     if (profile?.role !== "customer") return NextResponse.json({ error: "A customer account is required." }, { status: 403 });
+
+    // Never authorise a card unless this deployment can persist the booking.
+    // The readiness function is installed by the booking database migration.
+    const { data: bookingReady, error: bookingReadyError } = await supabaseAdmin.rpc("booking_checkout_ready");
+    if (bookingReadyError || bookingReady !== true) {
+      console.error("Booking checkout is not ready:", bookingReadyError);
+      return NextResponse.json(
+        { error: "Booking is temporarily unavailable while an update finishes. No payment has been taken." },
+        { status: 503 },
+      );
+    }
+
     if (preferredProviderId) {
       if (!cleaning || typeof preferredProviderId !== "string" || !/^[0-9a-f-]{36}$/i.test(preferredProviderId)) {
         return NextResponse.json({ error: "Choose a previous cleaner from your booking history." }, { status: 400 });
