@@ -617,7 +617,7 @@ export async function getVisitStatus(
     .select(
       `id, status, scheduled_at, offer_expires_at, address, package_id,
        subscription_id,
-       packages(name, duration_minutes),
+       duration_minutes, property_size_sqm, packages(name, duration_minutes),
        providers(display_name),
        check_ins(arrived_at)`
     )
@@ -680,7 +680,7 @@ export async function getVisitStatus(
     bookingStatus: String(b.status),
     scheduledAt: b.scheduled_at,
     offerExpiresAt: b.offer_expires_at ?? null,
-    durationMinutes: pkg?.duration_minutes ?? null,
+    durationMinutes: b.duration_minutes ?? pkg?.duration_minutes ?? null,
     serviceName: pkg?.name ?? null,
     providerName: prv?.display_name ?? null,
     arrivedAt: ci?.arrived_at ?? null,

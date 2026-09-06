@@ -4,6 +4,7 @@
 //
 // Inline styles on purpose — nothing in globals.css can override them.
 
+import CleaningMenu from "@/components/CleaningMenu";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -151,6 +152,7 @@ export default function SiteHeader() {
       <nav style={navRow} aria-label="Main">
         <div style={navInner}>
           {NAV.map((l) => {
+            if (l.href === "/services/cleaning") return <CleaningMenu key={l.href} />;
             const on = active === l.href;
             const hot = hover === l.href;
             return (

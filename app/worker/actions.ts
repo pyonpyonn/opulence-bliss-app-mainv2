@@ -153,31 +153,7 @@ export async function acceptJob(id: string) {
     return { taken: true };
   }
 
-  const { customerId, service, email, scheduledAt } = await bookingContext(id);
-  await notify(
-    customerId,
-    "Your provider is confirmed",
-    `${service} — a vetted provider has accepted your booking.`,
-    "/account",
-  );
-  await sendEmail({
-    to: email,
-    subject: "Your booking is confirmed",
-    title: "Your provider is confirmed",
-    body: `<p>Good news — a vetted provider has accepted your <strong>${service}</strong> booking${
-      scheduledAt
-        ? ` for ${new Date(scheduledAt).toLocaleString("en-GB", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })}`
-        : ""
-    }.</p><p>You'll only be charged once the visit is complete.</p>`,
-    cta: { text: "View your booking", url: "/account" },
-  });
+  // Booking acceptance queues confirmation and reminders in the database.
 
   revalidatePath("/worker");
   revalidatePath("/account");

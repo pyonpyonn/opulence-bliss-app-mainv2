@@ -1,7 +1,7 @@
 "use client";
 
+import ConsentCheckbox from "@/components/ConsentCheckbox";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +20,8 @@ export function SignUpForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const [fullName, setFullName] = useState("");
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -29,7 +31,7 @@ export function SignUpForm({
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = createClient();
+
     setIsLoading(true);
     setError(null);
 
@@ -40,14 +42,13 @@ export function SignUpForm({
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
-        },
+      if (!consentAccepted) throw new Error("Accept the Terms & Conditions and Privacy Policy.");
+      const response = await fetch("/api/client-signup", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email, password, consentAccepted, requireEmailConfirmation: true }),
       });
-      if (error) throw error;
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not create your account.");
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
@@ -66,6 +67,7 @@ export function SignUpForm({
         <CardContent>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
+              <div className="grid gap-2"><Label htmlFor="full-name">Full name</Label><Input id="full-name" required value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" /></div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -101,8 +103,9 @@ export function SignUpForm({
                   onChange={(e) => setRepeatPassword(e.target.value)}
                 />
               </div>
+              <ConsentCheckbox checked={consentAccepted} onChange={setConsentAccepted} />
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || !consentAccepted}>
                 {isLoading ? "Creating an account..." : "Sign up"}
               </Button>
             </div>

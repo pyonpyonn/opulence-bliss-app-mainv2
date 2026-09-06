@@ -6,6 +6,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { CLEANING_DURATIONS, isCleaning, validPropertySize, recommendedCleaningMinutes, bookingPricePence } from "@/lib/cleaningBooking";
+import ConsentCheckbox from "@/components/ConsentCheckbox";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
 const supabase = createClient();
@@ -75,6 +77,18 @@ export default function BookPage() {
   const [gate, setGate] = useState<null | { ok: boolean; area?: string }>(null);
   const [selected, setSelected] = useState<Pkg | null>(null);
 
+  const [cleaningMinutes, setCleaningMinutes] = useState(120);
+  const [propertySize, setPropertySize] = useState("");
+  const [sizeUnit, setSizeUnit] = useState("sqm");
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [previousCleaners, setPreviousCleaners] = useState<{ provider_id: string; display_name: string }[]>([]);
+  const [preferredCleaner, setPreferredCleaner] = useState("");
+  const cleaning = isCleaning(selected?.service_type);
+  const squareMetres = Number(propertySize) * (sizeUnit === "sqft" ? 0.09290304 : 1);
+  const minutes = cleaning ? cleaningMinutes : selected?.duration_minutes ?? 120;
+  const recommendation = recommendedCleaningMinutes(squareMetres);
+  const propertyValid = !cleaning || validPropertySize(squareMetres);
+
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
 
@@ -131,6 +145,8 @@ export default function BookPage() {
           .eq("id", user.id)
           .maybeSingle();
         setRole(p?.role ?? null);
+        const { data: cleaners } = await supabase.rpc("my_previous_cleaners");
+        setPreviousCleaners(cleaners ?? []);
         if (p?.postcode) {
           savedPc = p.postcode;
           setPostcode(p.postcode);
@@ -163,7 +179,11 @@ export default function BookPage() {
       // Assistant handoffs are checked against the current permitted booking
       // window before opening the payment summary. If anything changed, keep the known service and
       // postcode and show fresh times instead of silently returning to step one.
-      if (reviewHandoff && match && wantSlot && pcToCheck) {
+      if (match && isCleaning(match.service_type)) {
+        setSelected(match);
+        setServiceType("clean");
+        setStep(covered ? 1 : 0);
+      } else if (reviewHandoff && match && wantSlot && pcToCheck) {
         try {
           const response = await fetch(
             `/api/slots?postcode=${encodeURIComponent(
@@ -254,7 +274,7 @@ export default function BookPage() {
   async function loadSlots(
     pc: string,
     serviceType: string,
-    durationMinutes: number | null = selected?.duration_minutes ?? null,
+    durationMinutes: number | null = minutes,
   ) {
     setSlots(null);
     setSlot(null);
@@ -275,15 +295,18 @@ export default function BookPage() {
   function pick(p: Pkg) {
     setSelected(p);
     setPromoInfo(null);
+    setPreferredCleaner("");
+    setCleaningMinutes(recommendedCleaningMinutes(squareMetres));
+    setSlot(null);
   }
 
   function goToTimes() {
-    if (!selected) return;
+    if (!selected || !propertyValid) return;
     setStep(2);
     loadSlots(
       postcode,
       selected.service_type ?? "",
-      selected.duration_minutes,
+      minutes,
     );
   }
 
@@ -294,7 +317,7 @@ export default function BookPage() {
       const res = await fetch("/api/promo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: promo, packageId: selected.id }),
+        body: JSON.stringify({ code: promo, packageId: selected.id, durationMinutes: minutes }),
       });
       const d = await res.json();
       setPromoInfo(
@@ -312,10 +335,11 @@ export default function BookPage() {
     setPayError(null);
     try {
       if (mode === "new") {
+        if (!consentAccepted) throw new Error("Accept the Terms & Conditions and Privacy Policy to sign up.");
         const res = await fetch("/api/client-signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullName, email, password, phone, address, postcode }),
+          body: JSON.stringify({ fullName, email, password, phone, address, postcode, consentAccepted }),
         });
         const data = await res.json();
         if (!data.ok) {
@@ -329,6 +353,16 @@ export default function BookPage() {
       });
       if (error) throw new Error(error.message);
       setSignedIn(true);
+      if (mode === "existing" && cleaning) {
+        const { data: cleaners } = await supabase.rpc("my_previous_cleaners");
+        setPreviousCleaners(cleaners ?? []);
+        if (cleaners?.length) {
+          setPaying(false);
+          setStep(1);
+          setHandoffError("You’re signed in. You can now request a cleaner from a previous visit.");
+          return;
+        }
+      }
       await startCheckout();
     } catch (e) {
       setPayError(e instanceof Error ? e.message : "Something went wrong");
@@ -342,7 +376,7 @@ export default function BookPage() {
   }
 
   async function startCheckout() {
-    if (!selected) return;
+    if (!selected || !propertyValid || !slot) return;
     setPaying(true);
     setPayError(null);
     try {
@@ -351,6 +385,9 @@ export default function BookPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           packageId: selected.id,
+          durationMinutes: minutes,
+          propertySizeSqm: cleaning ? squareMetres : null,
+          preferredProviderId: cleaning ? preferredCleaner || null : null,
           postcode,
           request,
           slot,
@@ -426,7 +463,7 @@ export default function BookPage() {
   const total = selected
     ? promoInfo?.ok && promoInfo.total !== undefined
       ? promoInfo.total
-      : Number(selected.price)
+      : bookingPricePence(selected, minutes) / 100
     : 0;
 
   return (
@@ -578,10 +615,40 @@ export default function BookPage() {
                 </div>
               )}
 
+              {selected && cleaning && <div style={{ marginTop: 20, padding: 20, background: "#faf7ff", borderRadius: 16 }}>
+                <label className="label" htmlFor="property-size">Property size (required)</label>
+                <div className="inline">
+                  <input id="property-size" className="field" type="number" min="0.01" step="0.01" value={propertySize}
+                    onChange={(e) => { setPropertySize(e.target.value); setPromoInfo(null); setSlot(null); }} placeholder="e.g. 90" />
+                  <select className="field" aria-label="Property size unit" value={sizeUnit} onChange={(e) => { setSizeUnit(e.target.value); setSlot(null); }}>
+                    <option value="sqm">m²</option><option value="sqft">ft²</option>
+                  </select>
+                </div>
+                {validPropertySize(squareMetres) && <p role="status">
+                  Suggested: <strong>{duration(recommendation)}</strong> for your property.
+                  <button type="button" className="ghost" onClick={() => { setCleaningMinutes(recommendation); setPromoInfo(null); setSlot(null); }}>Use suggested hours</button>
+                  <small style={{ display: "block" }}>Estimate based on 35 m² per cleaner-hour. Condition and tasks can change the time needed.{squareMetres > 280 ? " This property may need multiple visits; a single session is capped at 8 hours." : ""}</small>
+                </p>}
+                <label className="label" htmlFor="cleaning-duration">How long would you like?</label>
+                <select id="cleaning-duration" className="field" value={cleaningMinutes}
+                  onChange={(e) => { setCleaningMinutes(Number(e.target.value)); setPromoInfo(null); setSlot(null); }}>
+                  {CLEANING_DURATIONS.map((n) => <option value={n} key={n}>{duration(n)} · {money(bookingPricePence(selected, n) / 100)}</option>)}
+                </select>
+                <p className="muted">2-hour minimum, 8-hour maximum. Price scales with your chosen hours.</p>
+                {previousCleaners.length > 0 && <>
+                  <label className="label" htmlFor="preferred-cleaner">Request a previous cleaner (optional)</label>
+                  <select id="preferred-cleaner" className="field" value={preferredCleaner} onChange={(e) => setPreferredCleaner(e.target.value)}>
+                    <option value="">Match me with any available cleaner</option>
+                    {previousCleaners.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.display_name}</option>)}
+                  </select>
+                  <p className="muted">We’ll ask your requested cleaner first if they still cover this service and area. Assignment depends on acceptance.</p>
+                </>}
+              </div>}
+
               <button
                 className="next"
                 onClick={goToTimes}
-                disabled={!selected}
+                disabled={!selected || !propertyValid}
               >
                 {selected ? `Continue with ${selected.name}` : "Choose a session"}
               </button>
@@ -615,7 +682,7 @@ export default function BookPage() {
                   slots={slots}
                   value={slot}
                   onChange={setSlot}
-                  durationMinutes={selected.duration_minutes}
+                  durationMinutes={minutes}
                 />
               )}
 
@@ -647,7 +714,7 @@ export default function BookPage() {
                 <div>
                   <span>Service</span>
                   <strong>{selected.name}</strong>
-                  <small>{duration(selected.duration_minutes) ?? "Visit"}</small>
+                  <small>{duration(minutes) ?? "Visit"}</small>
                 </div>
                 <div>
                   <span>Date and time</span>
@@ -661,6 +728,7 @@ export default function BookPage() {
                 </div>
               </div>
 
+              {cleaning && <p>Property size: {propertySize} {sizeUnit === "sqm" ? "m²" : "ft²"} · {duration(minutes)}{preferredCleaner ? ` · Requested cleaner: ${previousCleaners.find((p) => p.provider_id === preferredCleaner)?.display_name ?? "Previous cleaner"}` : ""}</p>}
               <p className="label">Requests (optional)</p>
               <textarea
                 className="field"
@@ -741,6 +809,7 @@ export default function BookPage() {
                   />
                   {mode === "new" && (
                     <>
+                      <ConsentCheckbox checked={consentAccepted} onChange={setConsentAccepted} />
                       <input
                         className="field"
                         value={phone}
@@ -815,7 +884,7 @@ export default function BookPage() {
                       loadSlots(
                         postcode,
                         selected.service_type ?? "",
-                        selected.duration_minutes,
+                        minutes,
                       );
                     }
                   }}
@@ -833,7 +902,7 @@ export default function BookPage() {
                 </div>
                 <div className="brow">
                   <span className="k">Length</span>
-                  <span className="v">{duration(selected.duration_minutes) ?? "—"}</span>
+                  <span className="v">{duration(minutes) ?? "—"}</span>
                 </div>
                 <div className="brow">
                   <span className="k">When</span>
@@ -868,7 +937,7 @@ export default function BookPage() {
               </p>
             )}
             {step === 3 && (
-              <button className="pay" onClick={checkout} disabled={paying}>
+              <button className="pay" onClick={checkout} disabled={paying || !slot || !propertyValid || (signedIn === false && mode === "new" && !consentAccepted)}>
                 {paying
                   ? "Taking you to checkout…"
                   : signedIn === false

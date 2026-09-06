@@ -34,7 +34,7 @@ export default async function AdminBookingsPage() {
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, created_at, customer_email, address, provider_delay_minutes, packages(name, duration_minutes), providers(display_name)",
+      "id, status, scheduled_at, created_at, customer_email, address, provider_delay_minutes, duration_minutes, packages(name, duration_minutes), providers(display_name)",
     )
     .order("scheduled_at", { ascending: false })
     .limit(150);
@@ -92,8 +92,8 @@ export default async function AdminBookingsPage() {
                     <div style={cardTop}>
                       <strong style={service}>
                         {pkg?.name ?? "Service"}
-                        {pkg?.duration_minutes
-                          ? ` · ${pkg.duration_minutes} min`
+                        {(booking.duration_minutes ?? pkg?.duration_minutes)
+                          ? ` · ${booking.duration_minutes ?? pkg?.duration_minutes} min`
                           : ""}
                       </strong>
                       <span
@@ -127,7 +127,7 @@ export default async function AdminBookingsPage() {
                       bookingId={booking.id}
                       scheduledAt={booking.scheduled_at}
                       postcode={booking.address}
-                      durationMinutes={pkg?.duration_minutes ?? null}
+                      durationMinutes={(booking.duration_minutes ?? pkg?.duration_minutes) ?? null}
                     />
                   ) : booking.status === "needs_review" ? (
                     <a href="/admin/review" style={actionLink}>

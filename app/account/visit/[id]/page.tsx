@@ -44,7 +44,7 @@ export default async function VisitPage({
   const { data: row } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, household_notes, package_id, provider_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, packages(name, duration_minutes, price), providers(display_name, rating_avg, rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, household_notes, package_id, provider_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, rating_avg, rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -152,7 +152,8 @@ export default async function VisitPage({
     id: row.id,
     status: row.status,
     service,
-    durationMinutes: pkg?.duration_minutes ?? null,
+    propertySizeSqm: row.property_size_sqm ?? null,
+    durationMinutes: row.duration_minutes ?? pkg?.duration_minutes ?? null,
     scheduledAt: row.scheduled_at,
     address: row.address,
     bookedAt: jobPay?.created_at ?? events[0]?.created_at ?? null,
@@ -297,13 +298,6 @@ const actionTitle: React.CSSProperties = {
   color: "var(--ob-text)",
   fontSize: 15,
   fontWeight: 900,
-};
-
-const actionCopy: React.CSSProperties = {
-  margin: "4px 0 0",
-  color: "var(--ob-muted)",
-  fontSize: 13,
-  fontWeight: 650,
 };
 
 const bookAgainLink: React.CSSProperties = {

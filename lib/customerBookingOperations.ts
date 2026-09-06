@@ -241,13 +241,13 @@ export async function rescheduleCustomerBooking(
 
   const { data: bookingForDuration } = await admin
     .from("bookings")
-    .select("packages(duration_minutes)")
+    .select("duration_minutes, packages(duration_minutes)")
     .eq("id", id)
     .maybeSingle();
   const packageRow = Array.isArray(bookingForDuration?.packages)
     ? bookingForDuration.packages[0]
     : bookingForDuration?.packages;
-  if (!appointmentFitsWindow(newSlot, packageRow?.duration_minutes ?? 120)) {
+  if (!appointmentFitsWindow(newSlot, bookingForDuration?.duration_minutes ?? packageRow?.duration_minutes ?? 120)) {
     return { ok: false as const, message: APPOINTMENT_WINDOW_MESSAGE };
   }
 

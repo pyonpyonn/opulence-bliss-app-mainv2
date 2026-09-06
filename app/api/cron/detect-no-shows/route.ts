@@ -34,6 +34,8 @@ const NO_SHOW_AFTER_MIN = 45;
 const ABANDONED_AFTER_MIN = 120;
 
 type Row = {
+  duration_minutes: number | null;
+  property_size_sqm: number | null;
   id: string;
   customer_id: string | null;
   provider_id: string | null;
@@ -97,7 +99,7 @@ export async function GET(req: NextRequest) {
     const { data: due } = await admin
       .from("bookings")
       .select(
-        "id, customer_id, provider_id, scheduled_at, status, customer_email, packages(name, duration_minutes), check_ins(arrived_at)"
+        "id, customer_id, provider_id, scheduled_at, status, customer_email, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at)"
       )
       .eq("status", "scheduled")
       .lt("scheduled_at", new Date(now - LATE_AFTER_MIN * 60000).toISOString())
@@ -213,7 +215,7 @@ export async function GET(req: NextRequest) {
     const { data: running } = await admin
       .from("bookings")
       .select(
-        "id, customer_id, provider_id, scheduled_at, status, customer_email, packages(name, duration_minutes), check_ins(arrived_at)"
+        "id, customer_id, provider_id, scheduled_at, status, customer_email, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at)"
       )
       .eq("status", "in_progress")
       .limit(200);
@@ -225,7 +227,7 @@ export async function GET(req: NextRequest) {
 
       const expectedEnd =
         new Date(ci.arrived_at).getTime() +
-        (pkg?.duration_minutes ?? 120) * 60000;
+        (b.duration_minutes ?? pkg?.duration_minutes ?? 120) * 60000;
 
       if (now < expectedEnd + ABANDONED_AFTER_MIN * 60000) continue;
 
