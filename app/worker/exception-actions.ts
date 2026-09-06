@@ -256,6 +256,7 @@ export async function cannotAttend(
             .in("id", eligibleIds)
             .eq("vetting_status", "approved")
             .eq("joining_fee_paid", true)
+            .eq("is_suspended", false)
             .contains("services", [svc])
         : { data: [] };
 

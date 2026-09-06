@@ -234,7 +234,7 @@ export default function CurrentVisit({
         </div>
 
         <div className="progress-wrap">
-          <SessionCountdown bookingId={visit.id} status={visit.status} startedAt={visit.arrivedAt} durationMinutes={visit.durationMinutes} />
+          <SessionCountdown bookingId={visit.id} status={visit.status} startedAt={visit.arrivedAt} scheduledAt={visit.scheduled_at} durationMinutes={visit.durationMinutes} />
           <BookingProgress
             status={visit.status}
             stage={stageIndex(visit.status)}

@@ -141,10 +141,13 @@ export async function acceptJob(id: string) {
 
   const { data: me } = await supabase
     .from("providers")
-    .select("id")
+    .select("id, is_suspended")
     .eq("profile_id", user.id)
     .maybeSingle();
   if (!me) return { error: "Not a provider" };
+  if (me.is_suspended) {
+    return { error: "Your provider account is suspended, so you cannot accept new jobs." };
+  }
 
   try {
     await transitionBooking(supabase, id, "scheduled");
@@ -709,6 +712,7 @@ export async function checkOutJob(id: string) {
   });
 
   revalidatePath("/worker");
+  revalidatePath("/worker/earnings");
   revalidatePath("/account");
   return { earned };
 }

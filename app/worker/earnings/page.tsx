@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { SignedOut } from "@/app/account/page";
+import PayoutScheduleForm from "./PayoutScheduleForm";
 
 const gbp = (n: number) =>
   "£" + Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 });
@@ -43,7 +44,7 @@ export default async function EarningsPage() {
 
   const { data: prov } = await supabase
     .from("providers")
-    .select("id, rating_avg, rating_count, joining_fee_paid")
+    .select("id, rating_avg, rating_count, joining_fee_paid, payout_schedule")
     .eq("profile_id", user.id)
     .maybeSingle();
 
@@ -61,6 +62,12 @@ export default async function EarningsPage() {
       "id, amount, status, note, created_at, bookings(scheduled_at, status, packages(name))",
     )
     .order("created_at", { ascending: false });
+
+  const { data: invoiceData } = await supabase
+    .from("provider_job_invoices")
+    .select("id, invoice_number, issued_at, payout_amount, status, service_name")
+    .order("issued_at", { ascending: false })
+    .limit(12);
 
   const pays = (paysData ?? []) as unknown as Pay[];
   const share = (p: Pay) => Number(p.split_breakdown?.provider ?? 0);
@@ -160,6 +167,30 @@ export default async function EarningsPage() {
             }
           />
         </div>
+
+        <PayoutScheduleForm current={prov?.payout_schedule ?? "weekly"} />
+
+        <h2 style={sectionTitle}>Job invoices</h2>
+        {(invoiceData ?? []).length === 0 ? (
+          <div style={{ ...empty, marginBottom: 30 }}>Invoices appear automatically after completed jobs.</div>
+        ) : (
+          <div style={{ ...card, padding: "6px 22px", marginBottom: 30 }}>
+            {(invoiceData ?? []).map((invoice) => (
+              <div key={invoice.id} style={row}>
+                <div>
+                  <strong style={{ fontSize: 15 }}>{invoice.invoice_number}</strong>
+                  <div style={{ color: "#7A828C", fontSize: 13 }}>
+                    {invoice.service_name} · {new Date(invoice.issued_at).toLocaleDateString("en-GB")}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <strong>{gbp(invoice.payout_amount)}</strong>
+                  <div><a href={`/worker/invoices/${invoice.id}`} style={link}>View invoice</a></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <h2 style={sectionTitle}>Every payment</h2>
         {rows.length === 0 ? (

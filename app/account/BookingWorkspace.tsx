@@ -324,7 +324,7 @@ export default function BookingWorkspace({
           )}
         </div>
 
-      <SessionCountdown bookingId={booking.id} status={booking.status} startedAt={booking.arrivedAt} durationMinutes={booking.durationMinutes} />
+      <SessionCountdown bookingId={booking.id} status={booking.status} startedAt={booking.arrivedAt} scheduledAt={booking.scheduledAt} durationMinutes={booking.durationMinutes} />
         <BookingProgress
           status={booking.status}
           stage={stage}

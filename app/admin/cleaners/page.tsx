@@ -16,7 +16,7 @@ export default async function AdminCleanersPage() {
     supabase
       .from("providers")
       .select(
-        "id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, years_experience, profiles(email)",
+        "id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, years_experience, is_suspended, profiles(email)",
       )
       .order("display_name", { ascending: true }),
     supabase
@@ -89,20 +89,24 @@ export default async function AdminCleanersPage() {
                         style={{
                           ...status,
                           background:
-                            provider.vetting_status === "approved"
+                            provider.is_suspended
+                              ? "#ffe6ea"
+                              : provider.vetting_status === "approved"
                               ? "#dff5e8"
                               : pending
                                 ? "#fff3d6"
                                 : "#ffe6ea",
                           color:
-                            provider.vetting_status === "approved"
+                            provider.is_suspended
+                              ? "#b0384f"
+                              : provider.vetting_status === "approved"
                               ? "#137b4e"
                               : pending
                                 ? "#8a5a00"
                                 : "#b0384f",
                         }}
                       >
-                        {provider.vetting_status}
+                        {provider.is_suspended ? "suspended" : provider.vetting_status}
                       </span>
                     </div>
                     <p style={email}>{profile?.email ?? "No email"}</p>

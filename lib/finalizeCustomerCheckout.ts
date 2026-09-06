@@ -61,7 +61,8 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
       .select("id, profile_id")
       .in("id", candidateIds)
       .eq("vetting_status", "approved")
-      .eq("joining_fee_paid", true);
+      .eq("joining_fee_paid", true)
+      .eq("is_suspended", false);
     if (serviceType) query = query.contains("services", [serviceType]);
     const { data } = await query;
     matched = data ?? [];

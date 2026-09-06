@@ -289,7 +289,7 @@ export default function WorkerJobWorkspace({
           )}
         </div>
 
-      <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.checkIn.arrivedAt} durationMinutes={job.durationMinutes} />
+      <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.checkIn.arrivedAt} scheduledAt={job.scheduledAt} durationMinutes={job.durationMinutes} />
         <BookingProgress
           status={job.status}
           stage={stage}

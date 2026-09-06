@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AdminNav from "../../AdminNav";
 import { requireAdminPage } from "@/lib/adminSession";
+import { setProviderSuspension } from "../../actions";
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -18,10 +19,10 @@ function when(value: string) {
 export default async function ProfessionalRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user } = await requireAdminPage();
-  const [providerResult, bookingsResult, hoursResult] = await Promise.all([
+  const [providerResult, bookingsResult, hoursResult, suspensionResult] = await Promise.all([
     supabase
       .from("providers")
-      .select("id, profile_id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, years_experience, created_at, profiles(email, full_name, phone, address, postcode)")
+      .select("id, profile_id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, profiles(email, full_name, phone, address, postcode)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -34,6 +35,12 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
       .select("weekday, start_time, end_time")
       .eq("provider_id", id)
       .order("weekday"),
+    supabase
+      .from("provider_suspension_events")
+      .select("id, suspended, reason, created_at")
+      .eq("provider_id", id)
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   const provider = providerResult.data;
@@ -76,6 +83,40 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
           <Stat label="Released payouts" value={money(released)} />
           <Stat label="Professional rating" value={provider.rating_avg ? `${Number(provider.rating_avg).toFixed(1)} ★ (${provider.rating_count ?? 0})` : "Not rated"} />
         </div>
+
+        <section style={{ ...availability, borderColor: provider.is_suspended ? "#efb5c1" : "#d8e8dd", background: provider.is_suspended ? "#fff1f3" : "#f1fbf4" }}>
+          <strong>{provider.is_suspended ? "Account suspended" : "Account active"}</strong>
+          {provider.is_suspended && (
+            <span>
+              {provider.suspension_reason || "No reason recorded"}
+              {provider.suspended_at ? ` · since ${when(provider.suspended_at)}` : ""}
+            </span>
+          )}
+          <span>Payment schedule: {String(provider.payout_schedule ?? "weekly").replace("fortnightly", "every 2 weeks")}</span>
+          {provider.is_suspended ? (
+            <form action={setProviderSuspension.bind(null, id, false)}>
+              <button type="submit" style={restoreButton}>Restore account</button>
+            </form>
+          ) : (
+            <form action={setProviderSuspension.bind(null, id, true)} style={{ display: "grid", gap: 9, maxWidth: 620 }}>
+              <label htmlFor="suspension-reason" style={{ fontWeight: 900, color: "#8f2d43" }}>Suspension reason</label>
+              <textarea id="suspension-reason" name="reason" required rows={3} placeholder="Record the issue that requires this suspension" style={reasonInput} />
+              <button type="submit" style={suspendButton}>Suspend account</button>
+            </form>
+          )}
+        </section>
+
+        {(suspensionResult.data ?? []).length > 0 && (
+          <section style={{ ...availability, background: "#fff" }}>
+            <strong>Suspension history</strong>
+            {(suspensionResult.data ?? []).map((event) => (
+              <span key={event.id}>
+                {event.suspended ? "Suspended" : "Restored"} · {when(event.created_at)}
+                {event.reason ? ` · ${event.reason}` : ""}
+              </span>
+            ))}
+          </section>
+        )}
 
         <section style={availability}>
           <strong>Availability</strong>
@@ -136,3 +177,6 @@ const status: React.CSSProperties = { height: "fit-content", borderRadius: 999, 
 const flowRow: React.CSSProperties = { display: "grid", gridTemplateColumns: "95px minmax(0,1fr)", gap: 9, marginTop: 11, paddingTop: 10, borderTop: "1px solid #eef0f2", color: "#5f6874", fontSize: 12, overflowWrap: "anywhere" };
 const reference: React.CSSProperties = { display: "block", marginTop: 10, color: "#9aa1aa", fontSize: 10.5 };
 const empty: React.CSSProperties = { padding: 28, border: "1px dashed #d8dde3", borderRadius: 15, background: "#fff", color: "#7a828c", textAlign: "center" };
+const reasonInput: React.CSSProperties = { width: "100%", boxSizing: "border-box", resize: "vertical", border: "1px solid #efb5c1", borderRadius: 10, background: "#fff", color: "#16202a", padding: "10px 12px", font: "inherit" };
+const suspendButton: React.CSSProperties = { width: "fit-content", border: 0, borderRadius: 999, background: "#b0384f", color: "#fff", padding: "10px 17px", fontWeight: 900, cursor: "pointer" };
+const restoreButton: React.CSSProperties = { width: "fit-content", border: 0, borderRadius: 999, background: "#17653a", color: "#fff", padding: "10px 17px", fontWeight: 900, cursor: "pointer" };

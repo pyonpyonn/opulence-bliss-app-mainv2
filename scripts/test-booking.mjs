@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 // Compile the pure modules into an isolated CommonJS directory using the
 // project's locked TypeScript compiler; no extra runtime dependency is needed.
 const directory = await mkdtemp(join(tmpdir(), "opulence-tests-"));
-const modules = ["appointmentWindow", "cleaningBooking", "messageAttachments", "visitStatus"];
+const modules = ["appointmentWindow", "cleaningBooking", "messageAttachments", "providerOperations", "visitStatus"];
 try {
   for (const moduleName of modules) {
     for (const suffix of ["", ".test"]) {

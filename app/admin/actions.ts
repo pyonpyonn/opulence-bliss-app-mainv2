@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { rescheduleBookingState } from "@/lib/bookingState";
+import { rotateBookingOffer } from "@/lib/offerRotation";
 
 const admin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,6 +76,33 @@ export async function rejectProvider(id: string) {
   const s = await requireAdmin();
   await s.from("providers").update({ vetting_status: "rejected" }).eq("id", id);
   revalidatePath("/admin");
+  revalidatePath("/worker");
+}
+
+export async function setProviderSuspension(
+  id: string,
+  suspended: boolean,
+  formData: FormData,
+) {
+  const s = await requireAdmin();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const { data, error } = await s.rpc("admin_set_provider_suspension", {
+    p_provider_id: id,
+    p_suspended: suspended,
+    p_reason: reason || null,
+  });
+  if (error) throw new Error(error.message);
+
+  const affected =
+    (data as { affected_booking_ids?: string[] } | null)?.affected_booking_ids ?? [];
+  if (suspended) {
+    await Promise.allSettled(
+      affected.map((bookingId) => rotateBookingOffer(admin, bookingId)),
+    );
+  }
+
+  revalidatePath(`/admin/cleaners/${id}`);
+  revalidatePath("/admin/cleaners");
   revalidatePath("/worker");
 }
 

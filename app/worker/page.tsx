@@ -94,7 +94,18 @@ export default async function WorkerPage() {
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const active = prov?.joining_fee_paid === true;
+  const suspensionResult = prov?.id
+    ? await supabase
+        .from("providers")
+        .select("is_suspended")
+        .eq("id", prov.id)
+        .maybeSingle()
+    : { data: null };
+  const suspended = suspensionResult.data?.is_suspended === true;
+  const active =
+    prov?.joining_fee_paid === true &&
+    prov?.vetting_status === "approved" &&
+    !suspended;
 
   const { data: rowsData } = await supabase
     .from("bookings")
@@ -158,13 +169,41 @@ export default async function WorkerPage() {
     }
   }
 
+  const offerDetailMap = new Map<
+    string,
+    { customer_name?: string; payout_amount?: number | string }
+  >();
+  await Promise.all(
+    offers.map(async (offer) => {
+      const { data } = await supabase.rpc("provider_offer_details", {
+        p_booking_id: offer.id,
+      });
+      const details = data as {
+        customer_name?: string;
+        payout_amount?: number | string;
+      } | null;
+      if (!details) return;
+      offerDetailMap.set(offer.id, details);
+      if (details.payout_amount !== undefined) {
+        earnMap.set(offer.id, Number(details.payout_amount));
+      }
+    }),
+  );
+
   const running = rows.find((r) => r.status === "in_progress");
   const upcoming = rows.filter((r) => r.status === "scheduled");
   const past = rows
     .filter((r) => ["completed", "cancelled", "declined"].includes(r.status))
     .reverse();
 
-  const assigned = [...(running ? [running] : []), ...upcoming];
+  const detailBookings = Array.from(
+    new Map(
+      [...(running ? [running] : []), ...upcoming, ...offers].map((booking) => [
+        booking.id,
+        booking,
+      ]),
+    ).values(),
+  );
   const customerSummaryMap = new Map<
     string,
     {
@@ -175,7 +214,7 @@ export default async function WorkerPage() {
     }
   >();
   await Promise.all(
-    assigned.map(async (booking) => {
+    detailBookings.map(async (booking) => {
       const [{ data }, completedResult] = await Promise.all([
         supabase.rpc("booking_customer_summary", {
           p_booking_id: booking.id,
@@ -213,7 +252,11 @@ export default async function WorkerPage() {
       scheduled_at: booking.scheduled_at,
       address: booking.address,
       notes: booking.household_notes,
-      client: customer?.full_name ?? booking.customer_email ?? "Customer",
+      client:
+        customer?.full_name ??
+        offerDetailMap.get(booking.id)?.customer_name ??
+        booking.customer_email ??
+        "Customer",
       clientEmail: booking.customer_email,
       clientRating:
         customer?.client_rating_avg === null ||
@@ -224,6 +267,7 @@ export default async function WorkerPage() {
       clientCompletedBookings: customer?.completedWithProvider ?? 0,
       service: pkg?.name ?? "Service",
       durationMinutes: booking.duration_minutes ?? pkg?.duration_minutes ?? null,
+      propertySizeSqm: booking.property_size_sqm ?? null,
       earns: earnMap.get(booking.id) ?? null,
       paymentLabel: providerPaymentLabel({
         bookingStatus: booking.status,

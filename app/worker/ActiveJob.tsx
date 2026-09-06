@@ -33,6 +33,7 @@ export type ActiveJobData = {
   clientCompletedBookings?: number;
   service: string;
   durationMinutes: number | null;
+  propertySizeSqm?: number | null;
   earns: number | null;
   paymentLabel?: string | null;
   arrivedAt: string | null;
@@ -218,7 +219,7 @@ export default function ActiveJob({
         </div>
 
         <div className="progress-wrap">
-          <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.arrivedAt} durationMinutes={job.durationMinutes} />
+          <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.arrivedAt} scheduledAt={job.scheduled_at} durationMinutes={job.durationMinutes} />
           <BookingProgress
             status={job.status}
             stage={stageIndex(job.status)}
@@ -277,6 +278,23 @@ export default function ActiveJob({
           <small>{job.paymentLabel ?? "Payout updates after completion"}</small>
         </Summary>
       </div>
+
+      {job.status === "offered" && (
+        <div className="offer-facts" aria-label="Details to review before responding">
+          <div>
+            <span>Property size</span>
+            <strong>
+              {job.propertySizeSqm !== null && job.propertySizeSqm !== undefined
+                ? `${Number(job.propertySizeSqm).toFixed(1)} m²`
+                : "Not provided"}
+            </strong>
+          </div>
+          <div>
+            <span>Special instructions</span>
+            <strong>{job.notes?.trim() || "No special instructions"}</strong>
+          </div>
+        </div>
+      )}
 
       {job.status === "scheduled" && (
         <div id={checkInPanelId} className="checkin-panel-row" />
@@ -422,6 +440,33 @@ export default function ActiveJob({
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 10px;
           padding: 6px 20px 10px;
+        }
+        .offer-facts {
+          display: grid;
+          grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
+          gap: 10px;
+          margin: 0 20px 12px;
+        }
+        .offer-facts > div {
+          display: grid;
+          gap: 3px;
+          border: 1px solid var(--ob-border);
+          border-radius: 12px;
+          background: var(--ob-surface-soft);
+          padding: 10px 12px;
+        }
+        .offer-facts span {
+          color: var(--ob-muted);
+          font-size: 10.5px;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .offer-facts strong {
+          color: var(--ob-text);
+          font-size: 13px;
+          font-weight: 800;
+          overflow-wrap: anywhere;
         }
         .client-row {
           display: flex;
@@ -653,6 +698,10 @@ export default function ActiveJob({
           .summary-grid {
             grid-template-columns: 1fr;
             padding: 5px 16px 10px;
+          }
+          .offer-facts {
+            grid-template-columns: 1fr;
+            margin: 0 16px 12px;
           }
           .state-bar {
             grid-template-columns: auto minmax(0, 1fr);

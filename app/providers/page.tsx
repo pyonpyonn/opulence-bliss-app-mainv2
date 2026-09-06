@@ -37,6 +37,7 @@ export default function ProvidersPage() {
         )
         .eq("vetting_status", "approved")
         .eq("joining_fee_paid", true)
+        .eq("is_suspended", false)
         .order("rating_avg", { ascending: false, nullsFirst: false });
       setList(data ?? []);
       setLoading(false);

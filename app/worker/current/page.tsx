@@ -14,16 +14,17 @@ export default async function CurrentJobPage() {
 
   const { data: provider } = await supabase
     .from("providers")
-    .select("id, joining_fee_paid, vetting_status")
+    .select("id, joining_fee_paid, vetting_status, is_suspended")
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const blocked =
+  const inactive =
     !provider ||
     !provider.joining_fee_paid ||
     provider.vetting_status !== "approved";
+  const suspended = provider?.is_suspended === true;
 
-  const { data: rows } = !blocked
+  const { data: rows } = !inactive
     ? await supabase
         .from("bookings")
         .select("id")
@@ -38,10 +39,15 @@ export default async function CurrentJobPage() {
   return (
     <main style={wrap}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-        {blocked ? (
+        {inactive ? (
           <Empty
             title="Your account isn't active for work yet"
             body="Finish provider setup and approval before starting a job."
+          />
+        ) : suspended && !job ? (
+          <Empty
+            title="Your account is suspended"
+            body="You cannot start a new job while the team reviews your account."
           />
         ) : !job ? (
           <Empty

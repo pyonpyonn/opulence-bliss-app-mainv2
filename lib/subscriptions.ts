@@ -120,6 +120,7 @@ export async function generateBookings(subId: string, cycleStart: Date) {
         .in("id", ids)
         .eq("vetting_status", "approved")
         .eq("joining_fee_paid", true)
+        .eq("is_suspended", false)
         .contains("services", [svcType]);
       provs = data ?? [];
     }

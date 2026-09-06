@@ -88,6 +88,14 @@ export default async function WorkerLayout({
   const registered = !!prov;
   const paid = prov?.joining_fee_paid === true;
   const approved = prov?.vetting_status === "approved";
+  const suspensionResult = prov?.id
+    ? await supabase
+        .from("providers")
+        .select("is_suspended, suspension_reason")
+        .eq("id", prov.id)
+        .maybeSingle()
+    : { data: null };
+  const suspended = suspensionResult.data?.is_suspended === true;
 
   return (
     <div className="portal-shell worker-shell" style={shell}>
@@ -98,7 +106,7 @@ export default async function WorkerLayout({
         ratingCount={prov?.rating_count ?? 0}
         registered={registered}
         paid={paid}
-        approved={approved}
+        approved={approved && !suspended}
         hasCurrentJob={hasCurrentJob}
       />
 
@@ -134,6 +142,17 @@ export default async function WorkerLayout({
                 ? "Please get in touch if you think this is a mistake."
                 : "Your fee is paid and your details are with our team. Jobs arrive as soon as you're approved — meanwhile, set your hours and fill in your profile."
             }
+          />
+        )}
+        {registered && suspended && (
+          <Banner
+            tone="warn"
+            title="Your provider account is suspended"
+            body={`You cannot accept new jobs while the team reviews your account.${
+              suspensionResult.data?.suspension_reason
+                ? ` Reason: ${suspensionResult.data.suspension_reason}`
+                : ""
+            }`}
           />
         )}
 
