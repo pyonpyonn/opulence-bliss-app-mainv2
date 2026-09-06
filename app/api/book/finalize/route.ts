@@ -5,6 +5,18 @@ import { finalizeCustomerCheckout } from "@/lib/finalizeCustomerCheckout";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+function isBookingInfrastructureFailure(error: unknown) {
+  let detail: string;
+  try {
+    detail = error instanceof Error
+      ? `${error.name} ${error.message}`
+      : JSON.stringify(error);
+  } catch {
+    detail = String(error);
+  }
+  return /PGRST202|schema cache|finalize_customer_checkout|duration_minutes|checkout_session_id/i.test(detail);
+}
+
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get("session_id");
   const target = new URL("/book/success", req.nextUrl.origin);
@@ -39,14 +51,16 @@ export async function GET(req: NextRequest) {
     }
     await finalizeCustomerCheckout(session, pi);
 
-
     target.searchParams.set("session_id", sessionId);
     target.searchParams.set("saved", "1");
     return NextResponse.redirect(target);
   } catch (error) {
     console.error("Booking finalisation failed:", error);
     target.searchParams.set("session_id", sessionId);
-    target.searchParams.set("error", "finalize_failed");
+    target.searchParams.set(
+      "error",
+      isBookingInfrastructureFailure(error) ? "booking_update_pending" : "finalize_failed",
+    );
     return NextResponse.redirect(target);
   }
 }
