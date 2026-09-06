@@ -7,6 +7,7 @@
 //   stripe listen --forward-to localhost:3000/api/stripe/webhook
 // Copy the whsec_... it prints into .env.local as STRIPE_WEBHOOK_SECRET.
 
+import { finalizeCustomerCheckout } from "@/lib/finalizeCustomerCheckout";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -50,6 +51,17 @@ export async function POST(req: NextRequest) {
     // ---- Subscription just started (fires right after Checkout) ----
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      if (session.mode === "payment" && session.client_reference_id && session.payment_intent) {
+        try {
+          const paymentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent.id;
+          const payment = await stripe.paymentIntents.retrieve(paymentId);
+          if (payment.metadata.kind === "booking") await finalizeCustomerCheckout(session, payment);
+        } catch (failure) {
+          console.error("Booking webhook finalisation failed:", failure);
+          return NextResponse.json({ error: "Booking finalisation failed; retry required." }, { status: 500 });
+        }
+      }
 
       if (session.mode === "subscription" && session.subscription) {
         const subId =

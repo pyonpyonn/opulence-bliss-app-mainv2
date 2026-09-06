@@ -219,7 +219,7 @@ export default function ActiveJob({
 
         <div className="progress-wrap">
           <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.arrivedAt} durationMinutes={job.durationMinutes} />
-      <BookingProgress
+          <BookingProgress
             status={job.status}
             stage={stageIndex(job.status)}
             labels={STAGES}

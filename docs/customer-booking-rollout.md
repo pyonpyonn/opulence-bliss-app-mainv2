@@ -14,8 +14,9 @@ Customer and cleaner booking details use the paid duration snapshot. Session cou
 2. Publish the actual business Terms & Conditions and Privacy Policy. Set `NEXT_PUBLIC_TERMS_URL` and `NEXT_PUBLIC_PRIVACY_URL` to those URLs before building. Signup is deliberately unavailable until both are configured; no policy text or customer consent is invented.
 3. Set `RESEND_API_KEY`, `BOOKING_EMAIL_FROM` (a verified address such as `Opulence Bliss <no-reply@YOUR_VERIFIED_DOMAIN>`), and HTTPS `NEXT_PUBLIC_SITE_URL`.
 4. Set `CRON_SECRET` in the application. Set matching Supabase Vault secret `opulence_cron_secret` and `opulence_app_origin` to this deployment's HTTPS origin. The migration schedules delivery every minute using the existing pg_cron and pg_net extensions. Check cron execution and HTTP responses; a missing Vault setting prevents delivery.
-5. Deploy code and migrations together during a quiet checkout period. New checkouts are tied to the signed-in customer ID; in-flight checkouts created before this change do not have that metadata. Finish those first.
-6. Validate Stripe test checkout, both customer signup paths, cleaner acceptance, and the private upload/notification flows before merging or enabling production traffic.
+5. Confirm Stripe sends signed `checkout.session.completed` events to `/api/stripe/webhook`. Booking finalisation runs from both the webhook and browser return with one checkout reference, and webhook failures return HTTP 500 for retry. Configure `STRIPE_WEBHOOK_SECRET`.
+6. Deploy code and migrations together during a quiet checkout period. New checkouts are tied to the signed-in customer ID; in-flight checkouts created before this change do not have that metadata. Finish those first.
+7. Validate Stripe test checkout, both customer signup paths, cleaner acceptance, and the private upload/notification flows before merging or enabling production traffic.
 
 SMS is deferred at the owner's request. No SMS provider is configured or called.
 

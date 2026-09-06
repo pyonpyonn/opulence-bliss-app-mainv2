@@ -353,6 +353,16 @@ export default function BookPage() {
       });
       if (error) throw new Error(error.message);
       setSignedIn(true);
+      if (mode === "existing" && cleaning) {
+        const { data: cleaners } = await supabase.rpc("my_previous_cleaners");
+        setPreviousCleaners(cleaners ?? []);
+        if (cleaners?.length) {
+          setPaying(false);
+          setStep(1);
+          setHandoffError("You’re signed in. You can now request a cleaner from a previous visit.");
+          return;
+        }
+      }
       await startCheckout();
     } catch (e) {
       setPayError(e instanceof Error ? e.message : "Something went wrong");

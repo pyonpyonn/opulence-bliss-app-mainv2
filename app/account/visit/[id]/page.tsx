@@ -300,13 +300,6 @@ const actionTitle: React.CSSProperties = {
   fontWeight: 900,
 };
 
-const actionCopy: React.CSSProperties = {
-  margin: "4px 0 0",
-  color: "var(--ob-muted)",
-  fontSize: 13,
-  fontWeight: 650,
-};
-
 const bookAgainLink: React.CSSProperties = {
   color: "var(--ob-purple)",
   fontWeight: 800,
