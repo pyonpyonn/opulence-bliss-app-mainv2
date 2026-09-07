@@ -23,7 +23,7 @@ export async function automaticallyCompleteBooking(bookingId: string) {
     admin,
     bookingId,
     "completed",
-    "Automatically checked out 10 minutes after the scheduled end time",
+    "Automatically checked out 10 minutes after the selected cleaning duration ended",
     { source: "provider_auto_checkout" },
   );
   if (!transition.changed) return { changed: false, paymentSettled: false };

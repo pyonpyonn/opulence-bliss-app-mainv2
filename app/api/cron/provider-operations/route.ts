@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const checkIn = one(booking.check_ins as { arrived_at: string | null; left_at: string | null } | { arrived_at: string | null; left_at: string | null }[] | null);
     if (!checkIn?.arrived_at || checkIn.left_at) continue;
     const minutes = booking.duration_minutes ?? pkg?.duration_minutes ?? 120;
-    const autoCheckoutAt = providerAutoCheckoutAt(booking.scheduled_at, minutes).getTime();
+    const autoCheckoutAt = providerAutoCheckoutAt(checkIn.arrived_at, minutes).getTime();
     if (now < autoCheckoutAt) continue;
     completed.push(booking.id);
     if (!dry) {

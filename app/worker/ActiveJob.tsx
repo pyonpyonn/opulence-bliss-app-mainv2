@@ -188,7 +188,10 @@ export default function ActiveJob({
     )}:${String(rest).padStart(2, "0")}`;
   }
 
-  const finish = finishTime(job.scheduled_at, job.durationMinutes);
+  const finish = finishTime(
+    live && job.arrivedAt ? job.arrivedAt : job.scheduled_at,
+    job.durationMinutes,
+  );
   const maps = job.address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
         job.address,
@@ -219,7 +222,7 @@ export default function ActiveJob({
         </div>
 
         <div className="progress-wrap">
-          <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.arrivedAt} scheduledAt={job.scheduled_at} durationMinutes={job.durationMinutes} />
+          <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.arrivedAt} durationMinutes={job.durationMinutes} />
           <BookingProgress
             status={job.status}
             stage={stageIndex(job.status)}

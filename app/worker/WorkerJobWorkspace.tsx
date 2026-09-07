@@ -131,7 +131,12 @@ function statusCopy(job: WorkerJobWorkspaceData) {
 }
 
 function nextSteps(job: WorkerJobWorkspaceData) {
-  const finish = endTime(job.scheduledAt, job.durationMinutes);
+  const finish = endTime(
+    job.status === "in_progress" && job.checkIn.arrivedAt
+      ? job.checkIn.arrivedAt
+      : job.scheduledAt,
+    job.durationMinutes,
+  );
   if (job.status === "completed") {
     return [
       ["Visit complete", "Your check-out is recorded.", job.checkIn.leftAt],
@@ -199,7 +204,12 @@ export default function WorkerJobWorkspace({
     };
   }, [modalOpen]);
 
-  const finish = endTime(job.scheduledAt, job.durationMinutes);
+  const finish = endTime(
+    job.status === "in_progress" && job.checkIn.arrivedAt
+      ? job.checkIn.arrivedAt
+      : job.scheduledAt,
+    job.durationMinutes,
+  );
   const stage = workerStage(job);
   const status = statusCopy(job);
   const maps = job.address
@@ -289,7 +299,7 @@ export default function WorkerJobWorkspace({
           )}
         </div>
 
-      <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.checkIn.arrivedAt} scheduledAt={job.scheduledAt} durationMinutes={job.durationMinutes} />
+      <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.checkIn.arrivedAt} durationMinutes={job.durationMinutes} />
         <BookingProgress
           status={job.status}
           stage={stage}

@@ -120,7 +120,12 @@ function stageFor(booking: ClientBookingWorkspaceData) {
 }
 
 function nextSteps(booking: ClientBookingWorkspaceData) {
-  const end = endTime(booking.scheduledAt, booking.durationMinutes);
+  const end = endTime(
+    booking.status === "in_progress" && booking.arrivedAt
+      ? booking.arrivedAt
+      : booking.scheduledAt,
+    booking.durationMinutes,
+  );
   const arrival = booking.delayMinutes
     ? new Date(
         new Date(booking.scheduledAt).getTime() +
@@ -234,7 +239,12 @@ export default function BookingWorkspace({
   const providerName = booking.provider.assigned
     ? (booking.provider.name ?? "Assigned professional")
     : "Being matched";
-  const finish = endTime(booking.scheduledAt, booking.durationMinutes);
+  const finish = endTime(
+    booking.status === "in_progress" && booking.arrivedAt
+      ? booking.arrivedAt
+      : booking.scheduledAt,
+    booking.durationMinutes,
+  );
   const updatedArrival = booking.delayMinutes
     ? new Date(
         new Date(booking.scheduledAt).getTime() +
@@ -324,7 +334,7 @@ export default function BookingWorkspace({
           )}
         </div>
 
-      <SessionCountdown bookingId={booking.id} status={booking.status} startedAt={booking.arrivedAt} scheduledAt={booking.scheduledAt} durationMinutes={booking.durationMinutes} />
+      <SessionCountdown bookingId={booking.id} status={booking.status} startedAt={booking.arrivedAt} durationMinutes={booking.durationMinutes} />
         <BookingProgress
           status={booking.status}
           stage={stage}

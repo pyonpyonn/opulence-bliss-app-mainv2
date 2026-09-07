@@ -203,7 +203,10 @@ export default function CurrentVisit({
     )}:${String(rest).padStart(2, "0")}`;
   }
 
-  const finish = finishTime(visit.scheduled_at, visit.durationMinutes);
+  const finish = finishTime(
+    live && visit.arrivedAt ? visit.arrivedAt : visit.scheduled_at,
+    visit.durationMinutes,
+  );
   const state = stateCopy(visit, elapsed);
   const detailHref = `/account/visit/${visit.id}`;
   const assigned = Boolean(visit.providerName);
@@ -234,7 +237,7 @@ export default function CurrentVisit({
         </div>
 
         <div className="progress-wrap">
-          <SessionCountdown bookingId={visit.id} status={visit.status} startedAt={visit.arrivedAt} scheduledAt={visit.scheduled_at} durationMinutes={visit.durationMinutes} />
+          <SessionCountdown bookingId={visit.id} status={visit.status} startedAt={visit.arrivedAt} durationMinutes={visit.durationMinutes} />
           <BookingProgress
             status={visit.status}
             stage={stageIndex(visit.status)}

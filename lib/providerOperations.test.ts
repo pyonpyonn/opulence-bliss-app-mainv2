@@ -6,7 +6,7 @@ import {
   providerAutoCheckoutAt,
 } from "./providerOperations";
 
-test("automatic checkout becomes due exactly ten minutes after the booked end", () => {
+test("automatic checkout becomes due ten minutes after the chosen duration from check-in", () => {
   assert.equal(AUTO_CHECKOUT_GRACE_MINUTES, 10);
   assert.equal(
     providerAutoCheckoutAt("2026-09-07T07:00:00.000Z", 150).toISOString(),

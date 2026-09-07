@@ -1,11 +1,11 @@
 export const AUTO_CHECKOUT_GRACE_MINUTES = 10;
 
 export function providerAutoCheckoutAt(
-  scheduledAt: string,
+  startedAt: string,
   durationMinutes: number,
 ) {
   return new Date(
-    new Date(scheduledAt).getTime() +
+    new Date(startedAt).getTime() +
       (durationMinutes + AUTO_CHECKOUT_GRACE_MINUTES) * 60_000,
   );
 }
