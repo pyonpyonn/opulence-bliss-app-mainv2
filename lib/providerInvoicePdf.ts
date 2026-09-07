@@ -77,7 +77,7 @@ function actualDuration(start: string | null, end: string | null) {
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
-  const words = text.replace(/\s+/g, " ").trim().split(" ");
+  const words = pdfSafeText(text).replace(/\s+/g, " ").trim().split(" ");
   const lines: string[] = [];
   let line = "";
   for (const word of words) {
@@ -91,6 +91,18 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   }
   if (line) lines.push(line);
   return lines.length ? lines : [""];
+}
+
+function pdfSafeText(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2022/g, "-")
+    .replace(/\u00A3/g, "GBP ")
+    .replace(/[^\x20-\x7E]/g, " ");
 }
 
 function drawLabelValue(
@@ -133,7 +145,9 @@ function drawSectionTitle(page: PDFPage, font: PDFFont, title: string, y: number
 
 export async function generateProviderInvoicePdf(data: ProviderInvoicePdfData) {
   const document = await PDFDocument.create();
-  document.setTitle(`${data.invoiceNumber} - Opulence Bliss job invoice`);
+  document.setTitle(
+    `${pdfSafeText(data.invoiceNumber)} - Opulence Bliss job invoice`,
+  );
   document.setAuthor("Opulence Bliss");
   document.setSubject("Professional cleaning service invoice");
   document.setCreator("Opulence Bliss");
@@ -151,8 +165,9 @@ export async function generateProviderInvoicePdf(data: ProviderInvoicePdfData) {
 
   page.drawText("OPULENCE BLISS", { x: 48, y: 785, size: 10, font: bold, color: colours.purple });
   page.drawText("Job invoice", { x: 48, y: 751, size: 27, font: bold, color: colours.ink });
-  page.drawText(data.invoiceNumber, {
-    x: pageWidth - 48 - bold.widthOfTextAtSize(data.invoiceNumber, 12),
+  const invoiceNumber = pdfSafeText(data.invoiceNumber);
+  page.drawText(invoiceNumber, {
+    x: pageWidth - 48 - bold.widthOfTextAtSize(invoiceNumber, 12),
     y: 781,
     size: 12,
     font: bold,
@@ -223,7 +238,7 @@ export async function generateProviderInvoicePdf(data: ProviderInvoicePdfData) {
 
   page.drawLine({ start: { x: 48, y: 99 }, end: { x: pageWidth - 48, y: 99 }, thickness: 0.7, color: colours.border });
   page.drawText("Generated automatically when this cleaning session was completed.", { x: 48, y: 77, size: 8.5, font: regular, color: colours.muted });
-  const status = data.status.toUpperCase();
+  const status = pdfSafeText(data.status).toUpperCase();
   page.drawText(status, { x: pageWidth - 48 - bold.widthOfTextAtSize(status, 8.5), y: 77, size: 8.5, font: bold, color: colours.purple });
 
   return document.save();

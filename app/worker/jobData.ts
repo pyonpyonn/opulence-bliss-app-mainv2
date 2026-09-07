@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { providerPaymentLabel } from "@/lib/providerPaymentStatus";
+import type { ProviderInvoicePdfData } from "@/lib/providerInvoicePdf";
 
 export type WorkerJobWorkspaceData = {
   id: string;
@@ -39,10 +40,7 @@ export type WorkerJobWorkspaceData = {
     gpsLat: number | null;
     gpsLng: number | null;
   };
-  invoice: {
-    id: string;
-    invoiceNumber: string;
-  } | null;
+  invoice: (ProviderInvoicePdfData & { id: string }) | null;
   existingClientRating: {
     rating: number;
     comment: string | null;
@@ -52,6 +50,10 @@ export type WorkerJobWorkspaceData = {
 type BookingPackage = {
   name: string;
   duration_minutes: number | null;
+};
+
+type BookingProvider = {
+  display_name: string | null;
 };
 
 type CheckIn = {
@@ -115,7 +117,7 @@ export async function loadWorkerJob(
   const { data: row } = await supabase
     .from("bookings")
     .select(
-      "id, created_at, scheduled_at, status, address, household_notes, customer_id, customer_email, provider_id, provider_payout, subscription_id, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass, gps_lat, gps_lng)",
+      "id, created_at, scheduled_at, status, address, household_notes, customer_id, customer_email, provider_id, provider_payout, subscription_id, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), providers(display_name), check_ins(arrived_at, left_at, geofence_pass, gps_lat, gps_lng)",
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -153,7 +155,7 @@ export async function loadWorkerJob(
       .maybeSingle(),
     supabase
       .from("provider_job_invoices")
-      .select("id, invoice_number")
+      .select("id, invoice_number, issued_at, status, customer_name, service_name, address, property_size_sqm, duration_minutes, gross_amount, platform_fee, payout_amount, payout_schedule, payout_due_on")
       .eq("booking_id", row.id)
       .maybeSingle(),
   ]);
@@ -170,6 +172,7 @@ export async function loadWorkerJob(
     .reduce((total, payment) => total + Number(payment.gross_amount ?? 0), 0);
   const payoutStatus = payoutResult.data?.status ?? null;
   const packageRow = one(row.packages as never) as BookingPackage | null;
+  const provider = one(row.providers as never) as BookingProvider | null;
   const checkIn = one(row.check_ins as never) as CheckIn | null;
   const split = jobPayment?.split_breakdown as {
     provider?: number;
@@ -262,6 +265,31 @@ export async function loadWorkerJob(
       ? {
           id: invoiceResult.data.id,
           invoiceNumber: invoiceResult.data.invoice_number,
+          issuedAt: invoiceResult.data.issued_at,
+          status: invoiceResult.data.status,
+          professionalName: provider?.display_name ?? "Professional",
+          customerName: invoiceResult.data.customer_name,
+          serviceName: invoiceResult.data.service_name,
+          address: invoiceResult.data.address,
+          propertySizeSqm:
+            invoiceResult.data.property_size_sqm === null
+              ? null
+              : Number(invoiceResult.data.property_size_sqm),
+          bookedAt: row.scheduled_at,
+          durationMinutes: Number(invoiceResult.data.duration_minutes),
+          checkedInAt: checkIn?.arrived_at ?? null,
+          checkedOutAt: checkIn?.left_at ?? null,
+          grossAmount:
+            invoiceResult.data.gross_amount === null
+              ? null
+              : Number(invoiceResult.data.gross_amount),
+          platformFee:
+            invoiceResult.data.platform_fee === null
+              ? null
+              : Number(invoiceResult.data.platform_fee),
+          payoutAmount: Number(invoiceResult.data.payout_amount),
+          payoutSchedule: invoiceResult.data.payout_schedule,
+          payoutDueOn: invoiceResult.data.payout_due_on,
         }
       : null,
     existingClientRating: ratingResult.data

@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard,
-  FileText,
   Flag,
   Headphones,
   Info,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import BookingProgress from "@/components/BookingProgress";
 import MessageThread from "@/components/MessageThread";
+import InvoiceDownloadButton from "@/components/InvoiceDownloadButton";
 import JobActions, { CheckInControl } from "./JobActions";
 import JobExceptions from "./JobExceptions";
 import ReportDelay from "./ReportDelay";
@@ -261,14 +261,10 @@ export default function WorkerJobWorkspace({
           </div>
           <div className="head-actions">
             {job.invoice && (
-              <a
+              <InvoiceDownloadButton
                 className="invoice"
-                href={`/api/worker/invoices/${job.invoice.id}/pdf`}
-                download
-                title={`Download ${job.invoice.invoiceNumber}`}
-              >
-                <FileText size={18} /> Invoice
-              </a>
+                invoice={job.invoice}
+              />
             )}
             {job.status === "scheduled" && (
               <ReportDelay
@@ -425,14 +421,12 @@ export default function WorkerJobWorkspace({
                 compact
               />
               {job.invoice && (
-                <a
+                <InvoiceDownloadButton
                   className="completed-invoice"
-                  href={`/api/worker/invoices/${job.invoice.id}/pdf`}
-                  download
-                  title={`Download ${job.invoice.invoiceNumber}`}
-                >
-                  <FileText size={17} /> Download invoice
-                </a>
+                  invoice={job.invoice}
+                  label="Download invoice"
+                  iconSize={17}
+                />
               )}
             </div>
           )}
@@ -693,6 +687,9 @@ export default function WorkerJobWorkspace({
           font-size: 13px;
           font-weight: 900;
           text-decoration: none;
+          border: 0;
+          cursor: pointer;
+          font-family: inherit;
         }
         .checkin-panel-row:not(:empty) {
           width: 100%;

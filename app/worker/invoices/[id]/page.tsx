@@ -1,9 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { SignedOut } from "@/app/account/page";
 import PrintInvoiceButton from "./PrintInvoiceButton";
+import type { ProviderInvoicePdfData } from "@/lib/providerInvoicePdf";
 
 const money = (value: number | null) =>
   value === null ? "—" : `£${Number(value).toFixed(2)}`;
+
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 export default async function ProviderInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,10 +28,43 @@ export default async function ProviderInvoicePage({ params }: { params: Promise<
   const profileValue = provider?.profiles;
   const profile = Array.isArray(profileValue) ? profileValue[0] : profileValue;
   const providerName = provider?.display_name ?? profile?.full_name ?? profile?.email ?? "Professional";
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("scheduled_at, check_ins(arrived_at, left_at)")
+    .eq("id", invoice.booking_id)
+    .maybeSingle();
+  const checkIn = one(booking?.check_ins as never) as {
+    arrived_at: string | null;
+    left_at: string | null;
+  } | null;
+  const pdfInvoice: ProviderInvoicePdfData = {
+    invoiceNumber: invoice.invoice_number,
+    issuedAt: invoice.issued_at,
+    status: invoice.status,
+    professionalName: providerName,
+    customerName: invoice.customer_name,
+    serviceName: invoice.service_name,
+    address: invoice.address,
+    propertySizeSqm:
+      invoice.property_size_sqm === null
+        ? null
+        : Number(invoice.property_size_sqm),
+    bookedAt: booking?.scheduled_at ?? invoice.completed_at,
+    durationMinutes: Number(invoice.duration_minutes),
+    checkedInAt: checkIn?.arrived_at ?? null,
+    checkedOutAt: checkIn?.left_at ?? null,
+    grossAmount:
+      invoice.gross_amount === null ? null : Number(invoice.gross_amount),
+    platformFee:
+      invoice.platform_fee === null ? null : Number(invoice.platform_fee),
+    payoutAmount: Number(invoice.payout_amount),
+    payoutSchedule: invoice.payout_schedule,
+    payoutDueOn: invoice.payout_due_on,
+  };
 
   return (
     <main style={page}>
-      <div className="screen-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><a href="/worker/earnings">← Earnings</a><PrintInvoiceButton invoiceId={invoice.id} /></div>
+      <div className="screen-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><a href="/worker/earnings">← Earnings</a><PrintInvoiceButton invoice={pdfInvoice} /></div>
       <article style={invoiceCard}>
         <header style={header}>
           <div><p style={eyebrow}>Opulence Bliss</p><h1 style={title}>Job invoice</h1></div>
