@@ -67,6 +67,7 @@ const LABEL: Record<string, { text: string; bg: string; fg: string }> = {
 
 function when(iso: string) {
   return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -79,6 +80,7 @@ function when(iso: string) {
 function clock(iso: string | null | undefined) {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,

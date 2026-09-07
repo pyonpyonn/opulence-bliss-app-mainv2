@@ -44,11 +44,13 @@ function label(iso: string) {
       : d.toDateString() === tmr.toDateString()
         ? "Tomorrow"
         : d.toLocaleDateString("en-GB", {
+            timeZone: "Europe/London",
             weekday: "short",
             day: "numeric",
             month: "short",
           });
   return `${day}, ${d.toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
@@ -57,6 +59,7 @@ function label(iso: string) {
 
 function fullDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -69,6 +72,7 @@ function timeRange(iso: string, durationMinutes: number | null) {
   const end = new Date(start.getTime() + (durationMinutes ?? 120) * 60_000);
   const clock = (date: Date) =>
     date.toLocaleTimeString("en-GB", {
+      timeZone: "Europe/London",
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,

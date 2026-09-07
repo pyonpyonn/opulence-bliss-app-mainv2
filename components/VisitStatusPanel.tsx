@@ -19,12 +19,14 @@ function when(iso: string) {
   const d = new Date(iso);
   const today = new Date();
   const time = d.toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
   if (d.toDateString() === today.toDateString()) return `today, ${time}`;
   return `${d.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "short",
     day: "numeric",
     month: "short",

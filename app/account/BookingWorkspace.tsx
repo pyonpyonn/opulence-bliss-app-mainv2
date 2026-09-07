@@ -68,6 +68,7 @@ function money(value: number | null) {
 
 function clock(iso: string) {
   return new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
@@ -76,6 +77,7 @@ function clock(iso: string) {
 
 function fullDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -85,6 +87,7 @@ function fullDate(iso: string) {
 function compactDateTime(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Europe/London",
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -101,6 +104,7 @@ function relativeDate(iso: string) {
   if (date.toDateString() === today.toDateString()) return "Today";
   if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
   return date.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -239,6 +243,7 @@ export default function BookingWorkspace({
   const providerName = booking.provider.assigned
     ? (booking.provider.name ?? "Assigned professional")
     : "Being matched";
+  const bookedFinish = endTime(booking.scheduledAt, booking.durationMinutes);
   const finish = endTime(
     booking.status === "in_progress" && booking.arrivedAt
       ? booking.arrivedAt
@@ -360,7 +365,7 @@ export default function BookingWorkspace({
             </strong>
             <small>
               {clock(booking.scheduledAt)}
-              {finish ? ` – ${clock(finish)}` : ""}
+              {bookedFinish ? ` – ${clock(bookedFinish)}` : ""}
             </small>
           </SummaryCard>
           <SummaryCard
@@ -534,7 +539,7 @@ export default function BookingWorkspace({
               />
               <DetailRow
                 label="Time"
-                value={`${clock(booking.scheduledAt)}${finish ? ` – ${clock(finish)}` : ""}`}
+                value={`${clock(booking.scheduledAt)}${bookedFinish ? ` – ${clock(bookedFinish)}` : ""}`}
               />
               <DetailRow label="Booking ID" value={bookingRef} />
               <DetailRow

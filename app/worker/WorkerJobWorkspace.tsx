@@ -30,6 +30,7 @@ function money(value: number | null) {
 
 function clock(iso: string) {
   return new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
@@ -38,6 +39,7 @@ function clock(iso: string) {
 
 function fullDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -52,6 +54,7 @@ function relativeDate(iso: string) {
   if (date.toDateString() === today.toDateString()) return "Today";
   if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
   return date.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -61,6 +64,7 @@ function relativeDate(iso: string) {
 function compactDateTime(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Europe/London",
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -204,6 +208,7 @@ export default function WorkerJobWorkspace({
     };
   }, [modalOpen]);
 
+  const bookedFinish = endTime(job.scheduledAt, job.durationMinutes);
   const finish = endTime(
     job.status === "in_progress" && job.checkIn.arrivedAt
       ? job.checkIn.arrivedAt
@@ -331,7 +336,7 @@ export default function WorkerJobWorkspace({
             </strong>
             <small>
               {clock(job.scheduledAt)}
-              {finish ? ` – ${clock(finish)}` : ""}
+              {bookedFinish ? ` – ${clock(bookedFinish)}` : ""}
             </small>
           </SummaryCard>
           <SummaryCard
@@ -377,7 +382,7 @@ export default function WorkerJobWorkspace({
             <Instruction
               icon={<Clock3 size={18} />}
               title="Planned time"
-              body={`${clock(job.scheduledAt)}${finish ? ` – ${clock(finish)}` : ""}`}
+              body={`${clock(job.scheduledAt)}${bookedFinish ? ` – ${clock(bookedFinish)}` : ""}`}
             />
             <Instruction
               icon={<CreditCard size={18} />}
@@ -470,7 +475,7 @@ export default function WorkerJobWorkspace({
               />
               <DetailRow
                 label="Time"
-                value={`${clock(job.scheduledAt)}${finish ? ` – ${clock(finish)}` : ""}`}
+                value={`${clock(job.scheduledAt)}${bookedFinish ? ` – ${clock(bookedFinish)}` : ""}`}
               />
               <DetailRow label="Booking ID" value={bookingRef} />
               <DetailRow

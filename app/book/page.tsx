@@ -41,6 +41,7 @@ function dayLabel(iso: string) {
   if (d.toDateString() === t.toDateString()) return "Today";
   if (d.toDateString() === tm.toDateString()) return "Tomorrow";
   return d.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -48,6 +49,7 @@ function dayLabel(iso: string) {
 }
 const timeLabel = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,

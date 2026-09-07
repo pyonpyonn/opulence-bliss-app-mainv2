@@ -17,6 +17,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import BookingProgress from "@/components/BookingProgress";
+import { appointmentTimeLabel as clock } from "@/lib/appointmentWindow";
 import JobActions, { CheckInControl } from "./JobActions";
 import ReportDelay from "./ReportDelay";
 
@@ -62,6 +63,7 @@ function relativeDate(iso: string) {
   if (date.toDateString() === today.toDateString()) return "Today";
   if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
   return date.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -70,17 +72,10 @@ function relativeDate(iso: string) {
 
 function fullDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
-}
-
-function clock(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
   });
 }
 
@@ -188,10 +183,7 @@ export default function ActiveJob({
     )}:${String(rest).padStart(2, "0")}`;
   }
 
-  const finish = finishTime(
-    live && job.arrivedAt ? job.arrivedAt : job.scheduled_at,
-    job.durationMinutes,
-  );
+  const finish = finishTime(job.scheduled_at, job.durationMinutes);
   const maps = job.address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
         job.address,

@@ -280,12 +280,14 @@ function friendlyTime(iso: string | null, now: string): string {
   const today = new Date(now);
   const sameDay = d.toDateString() === today.toDateString();
   const time = d.toLocaleTimeString("en-GB", {
+    timeZone: "Europe/London",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
   if (sameDay) return `today at ${time}`;
   return `${d.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "long",
     day: "numeric",
     month: "long",

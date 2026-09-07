@@ -105,3 +105,13 @@ export function appointmentFitsWindow(
 
 export const APPOINTMENT_WINDOW_MESSAGE =
   "Appointments must start between 7:00 am and 8:00 pm (London time), on the hour or half hour.";
+
+export function appointmentTimeLabel(value: Date | string | number) {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toLocaleTimeString("en-GB", {
+    timeZone: APPOINTMENT_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}

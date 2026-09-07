@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appointmentFitsWindow, londonDate, londonParts } from "./appointmentWindow";
+import { appointmentFitsWindow, appointmentTimeLabel, londonDate, londonParts } from "./appointmentWindow";
 
 test("starts range from 7 AM through 8 PM, including overnight sessions", () => {
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 7), 120), true);
@@ -21,4 +21,9 @@ test("London calendar conversion handles summer, winter and DST boundaries", () 
   assert.equal(londonDate(2026, 3, 29, 7).toISOString(), "2026-03-29T06:00:00.000Z");
   assert.equal(londonDate(2026, 10, 25, 7).toISOString(), "2026-10-25T07:00:00.000Z");
   assert.equal(londonParts("2026-08-12T18:00:00.000Z").hour, 19);
+});
+
+test("booking times stay in London time regardless of the viewer's timezone", () => {
+  assert.equal(appointmentTimeLabel("2026-09-07T12:00:00.000Z"), "01:00 pm");
+  assert.equal(appointmentTimeLabel("2026-09-07T14:00:00.000Z"), "03:00 pm");
 });

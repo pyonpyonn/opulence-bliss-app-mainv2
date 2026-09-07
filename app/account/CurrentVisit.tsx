@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import BookingProgress from "@/components/BookingProgress";
 import CheckInCodePanel from "@/components/CheckInCodePanel";
+import { appointmentTimeLabel as clock } from "@/lib/appointmentWindow";
 import { BookingTools, type BookingServiceOption } from "./BookingTools";
 
 export type Visit = {
@@ -63,17 +64,10 @@ function relativeDate(iso: string) {
   if (date.toDateString() === today.toDateString()) return "Today";
   if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
   return date.toLocaleDateString("en-GB", {
+    timeZone: "Europe/London",
     weekday: "short",
     day: "numeric",
     month: "long",
-  });
-}
-
-function clock(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
   });
 }
 
@@ -203,10 +197,7 @@ export default function CurrentVisit({
     )}:${String(rest).padStart(2, "0")}`;
   }
 
-  const finish = finishTime(
-    live && visit.arrivedAt ? visit.arrivedAt : visit.scheduled_at,
-    visit.durationMinutes,
-  );
+  const finish = finishTime(visit.scheduled_at, visit.durationMinutes);
   const state = stateCopy(visit, elapsed);
   const detailHref = `/account/visit/${visit.id}`;
   const assigned = Boolean(visit.providerName);
