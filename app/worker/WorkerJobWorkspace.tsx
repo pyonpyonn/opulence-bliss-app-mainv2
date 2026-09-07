@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard,
+  FileText,
   Flag,
   Headphones,
   Info,
@@ -259,6 +260,16 @@ export default function WorkerJobWorkspace({
             <p>Booking ID: {bookingRef}</p>
           </div>
           <div className="head-actions">
+            {job.invoice && (
+              <a
+                className="invoice"
+                href={`/api/worker/invoices/${job.invoice.id}/pdf`}
+                download
+                title={`Download ${job.invoice.invoiceNumber}`}
+              >
+                <FileText size={18} /> Invoice
+              </a>
+            )}
             {job.status === "scheduled" && (
               <ReportDelay
                 bookingId={job.id}
@@ -413,6 +424,16 @@ export default function WorkerJobWorkspace({
                 showExceptions={false}
                 compact
               />
+              {job.invoice && (
+                <a
+                  className="completed-invoice"
+                  href={`/api/worker/invoices/${job.invoice.id}/pdf`}
+                  download
+                  title={`Download ${job.invoice.invoiceNumber}`}
+                >
+                  <FileText size={17} /> Download invoice
+                </a>
+              )}
             </div>
           )}
         </section>
@@ -654,9 +675,24 @@ export default function WorkerJobWorkspace({
           text-decoration: none;
         }
         .head-actions .message,
+        .head-actions .invoice,
         .support-bar button {
           border-color: var(--ob-purple);
           color: var(--ob-purple);
+        }
+        .completed-invoice {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          margin-top: 9px;
+          border-radius: 999px;
+          background: var(--ob-purple);
+          color: #fff;
+          padding: 9px 15px;
+          font-size: 13px;
+          font-weight: 900;
+          text-decoration: none;
         }
         .checkin-panel-row:not(:empty) {
           width: 100%;

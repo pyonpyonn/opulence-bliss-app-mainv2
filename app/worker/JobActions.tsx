@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   acceptJob,
   declineJob,
@@ -58,6 +59,7 @@ export default function JobActions({
   showExceptions?: boolean;
   compact?: boolean;
 }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [note, setNote] = useState<string | null>(null);
   const dim = (s: React.CSSProperties) => ({
@@ -152,6 +154,8 @@ export default function JobActions({
                     )} is on its way to you.`
                   : "Job complete — the customer has been charged.",
               );
+              router.replace(`/worker/job/${id}`);
+              router.refresh();
             })
           }
           disabled={pending}

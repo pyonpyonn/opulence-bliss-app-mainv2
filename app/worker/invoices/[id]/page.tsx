@@ -25,7 +25,7 @@ export default async function ProviderInvoicePage({ params }: { params: Promise<
 
   return (
     <main style={page}>
-      <div className="screen-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><a href="/worker/earnings">← Earnings</a><PrintInvoiceButton /></div>
+      <div className="screen-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><a href="/worker/earnings">← Earnings</a><PrintInvoiceButton invoiceId={invoice.id} /></div>
       <article style={invoiceCard}>
         <header style={header}>
           <div><p style={eyebrow}>Opulence Bliss</p><h1 style={title}>Job invoice</h1></div>
@@ -44,7 +44,7 @@ export default async function ProviderInvoicePage({ params }: { params: Promise<
         </section>
         <footer style={footer}>Payment schedule: {String(invoice.payout_schedule).replace("fortnightly", "every 2 weeks")} · due {new Date(`${invoice.payout_due_on}T12:00:00`).toLocaleDateString("en-GB")}</footer>
       </article>
-      <p className="print-help" style={printHelp}>Use your browser’s print command to print this invoice or save it as a PDF.</p>
+      <p className="print-help" style={printHelp}>Your PDF invoice is generated from this completed cleaning session.</p>
       <style>{`@media print { .portal-nav, .screen-actions, .print-help { display:none !important } body { background:white !important } }`}</style>
     </main>
   );

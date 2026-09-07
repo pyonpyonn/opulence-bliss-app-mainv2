@@ -39,6 +39,10 @@ export type WorkerJobWorkspaceData = {
     gpsLat: number | null;
     gpsLng: number | null;
   };
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+  } | null;
   existingClientRating: {
     rating: number;
     comment: string | null;
@@ -124,6 +128,7 @@ export async function loadWorkerJob(
     payoutResult,
     eventResult,
     ratingResult,
+    invoiceResult,
   ] = await Promise.all([
     supabase.rpc("booking_customer_summary", { p_booking_id: row.id }),
     supabase
@@ -145,6 +150,11 @@ export async function loadWorkerJob(
       .select("rating, comment")
       .eq("booking_id", row.id)
       .eq("reviewer", "provider")
+      .maybeSingle(),
+    supabase
+      .from("provider_job_invoices")
+      .select("id, invoice_number")
+      .eq("booking_id", row.id)
       .maybeSingle(),
   ]);
 
@@ -248,6 +258,12 @@ export async function loadWorkerJob(
       gpsLat: checkIn?.gps_lat ?? null,
       gpsLng: checkIn?.gps_lng ?? null,
     },
+    invoice: invoiceResult.data
+      ? {
+          id: invoiceResult.data.id,
+          invoiceNumber: invoiceResult.data.invoice_number,
+        }
+      : null,
     existingClientRating: ratingResult.data
       ? {
           rating: Number(ratingResult.data.rating),

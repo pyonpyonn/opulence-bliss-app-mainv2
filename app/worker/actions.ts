@@ -712,6 +712,8 @@ export async function checkOutJob(id: string) {
   });
 
   revalidatePath("/worker");
+  revalidatePath("/worker/current");
+  revalidatePath(`/worker/job/${id}`);
   revalidatePath("/worker/earnings");
   revalidatePath("/account");
   return { earned };
