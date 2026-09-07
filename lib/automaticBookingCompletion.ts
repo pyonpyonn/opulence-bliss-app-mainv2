@@ -174,7 +174,7 @@ export async function automaticallyCompleteBooking(bookingId: string) {
   const service = (Array.isArray(packageValue) ? packageValue[0]?.name : packageValue?.name) ?? "Your visit";
   const title = paymentSettled ? "Visit automatically completed" : "Visit completed — payment under review";
   const body = paymentSettled
-    ? `${service} was checked out automatically after the booked end time.`
+    ? `${service} was checked out automatically after the selected cleaning duration ended.`
     : `${service} was checked out automatically. We are checking the payment; do not retry it.`;
   if (booking.customer_id) {
     await admin.from("notifications").insert({ user_id: booking.customer_id, title, body, href: `/account/visit/${bookingId}` });
@@ -190,7 +190,7 @@ export async function automaticallyCompleteBooking(bookingId: string) {
     await admin.from("notifications").insert({
       user_id: provider.profile_id,
       title: "Job automatically checked out",
-      body: `${service} was checked out 10 minutes after its booked end time. Your invoice is ready in Earnings.`,
+      body: `${service} was checked out 10 minutes after the selected cleaning duration ended. Your invoice is ready in Earnings.`,
       href: "/worker/earnings",
     });
   }
@@ -200,7 +200,7 @@ export async function automaticallyCompleteBooking(bookingId: string) {
     to: providerEmail,
     subject: "Your job was automatically checked out",
     title: "Job checked out",
-    body: `<p><strong>${service}</strong> was checked out automatically 10 minutes after its booked end time. Your invoice is ready in Earnings.</p>`,
+    body: `<p><strong>${service}</strong> was checked out automatically 10 minutes after the selected cleaning duration ended. Your invoice is ready in Earnings.</p>`,
     cta: { text: "View earnings", url: "/worker/earnings" },
   });
   await sendEmail({

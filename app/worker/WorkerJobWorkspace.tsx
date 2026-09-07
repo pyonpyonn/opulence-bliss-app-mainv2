@@ -152,7 +152,7 @@ function nextSteps(job: WorkerJobWorkspaceData) {
         "Follow the client's booking notes.",
         job.checkIn.arrivedAt,
       ],
-      ["Expected finish", "Use the planned duration as your guide.", finish],
+      ["Expected finish", "Based on check-in time and the customer's chosen duration.", finish],
       ["Check out", "Finish the job only when the work is done.", null],
       ["Payout", "Your payout status updates after completion.", null],
     ];

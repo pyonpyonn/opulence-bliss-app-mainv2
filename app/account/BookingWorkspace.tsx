@@ -147,7 +147,7 @@ function nextSteps(booking: ClientBookingWorkspaceData) {
         "Your provider is taking care of it now.",
         booking.arrivedAt,
       ],
-      ["Expected finish", "The planned visit duration ends here.", end],
+      ["Expected finish", "Based on check-in time and the cleaning duration you chose.", end],
       ["Check-out", "You will see the recorded finish time.", null],
       ["Payment", "Your card is charged after the visit finishes.", null],
     ];
