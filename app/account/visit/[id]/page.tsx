@@ -13,6 +13,11 @@ import {
 } from "../../BookingTools";
 import ReportNoShow from "../../ReportNoShow";
 import { SignedOut } from "../../page";
+import CustomerInvoiceDownloadButton from "@/components/CustomerInvoiceDownloadButton";
+import {
+  customerInvoiceNumber,
+  type CustomerInvoicePdfData,
+} from "@/lib/invoicePdf";
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -44,7 +49,7 @@ export default async function VisitPage({
   const { data: row } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, household_notes, package_id, provider_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, rating_avg, rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, household_notes, package_id, provider_id, subscription_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, rating_avg, rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -67,7 +72,14 @@ export default async function VisitPage({
     );
   }
 
-  const [status, reviewResult, paymentResult, eventResult, packagesResult] =
+  const [
+    status,
+    reviewResult,
+    paymentResult,
+    eventResult,
+    packagesResult,
+    profileResult,
+  ] =
     await Promise.all([
     getVisitStatus(supabase, row.id),
     supabase
@@ -91,12 +103,22 @@ export default async function VisitPage({
       .eq("active", true)
       .eq("billing_type", "per_visit")
       .order("price"),
+    supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", user.id)
+      .maybeSingle(),
   ]);
 
   const pays = paymentResult.data ?? [];
   const events = eventResult.data ?? [];
   const review = reviewResult.data;
   const jobPay = pays.find((payment) => payment.kind !== "tip");
+  const tipAmount = pays
+    .filter(
+      (payment) => payment.kind === "tip" && payment.status === "succeeded",
+    )
+    .reduce((sum, payment) => sum + Number(payment.gross_amount ?? 0), 0);
   const serviceOptions: BookingServiceOption[] = (
     packagesResult.data ?? []
   ).map((item) => ({
@@ -126,6 +148,45 @@ export default async function VisitPage({
     arrived_at: string | null;
     left_at: string | null;
   } | null;
+  const completedAt =
+    events.find((event) => event.to_status === "completed")?.created_at ??
+    checkIn?.left_at ??
+    row.scheduled_at;
+  const clientInvoice: CustomerInvoicePdfData | null =
+    row.status === "completed"
+      ? {
+          invoiceNumber: customerInvoiceNumber(row.id, completedAt),
+          issuedAt: completedAt,
+          status: row.subscription_id
+            ? "Included with membership"
+            : jobPay?.status === "succeeded"
+              ? "Paid"
+              : "Payment recorded",
+          customerName:
+            profileResult.data?.full_name ??
+            profileResult.data?.email ??
+            user.email ??
+            "Customer",
+          professionalName: provider?.display_name ?? "Professional",
+          serviceName: pkg?.name ?? "Service",
+          address: row.address,
+          propertySizeSqm:
+            row.property_size_sqm === null
+              ? null
+              : Number(row.property_size_sqm),
+          bookedAt: row.scheduled_at,
+          durationMinutes: Number(
+            row.duration_minutes ?? pkg?.duration_minutes ?? 0,
+          ),
+          checkedInAt: checkIn?.arrived_at ?? null,
+          checkedOutAt: checkIn?.left_at ?? null,
+          serviceAmount: row.subscription_id
+            ? null
+            : Number(jobPay?.gross_amount ?? pkg?.price ?? 0),
+          tipAmount,
+          membership: Boolean(row.subscription_id),
+        }
+      : null;
 
   let latestProviderReview: ClientBookingWorkspaceData["latestReview"] = null;
   if (row.provider_id) {
@@ -213,26 +274,34 @@ export default async function VisitPage({
           booking={booking}
           visitStatus={status}
           canCancel={canCancel}
-          canModify={canReschedule}
+          canModify={canReschedule || Boolean(clientInvoice)}
           chatClosed={chatClosed}
           modifyControl={
-            canReschedule ? (
-              <BookingTools
-                id={row.id}
-                postcode={row.address}
-                showCancel={false}
-                service={booking.service}
-                durationMinutes={booking.durationMinutes}
-                scheduledAt={booking.scheduledAt}
-                providerName={booking.provider.name}
-                address={booking.address}
-                paymentAmount={booking.paymentAmount}
-                packageId={row.package_id}
-                bookingNotes={row.household_notes}
-                serviceOptions={serviceOptions}
-                triggerVariant="header"
-              />
-            ) : null
+            <>
+              {canReschedule && (
+                <BookingTools
+                  id={row.id}
+                  postcode={row.address}
+                  showCancel={false}
+                  service={booking.service}
+                  durationMinutes={booking.durationMinutes}
+                  scheduledAt={booking.scheduledAt}
+                  providerName={booking.provider.name}
+                  address={booking.address}
+                  paymentAmount={booking.paymentAmount}
+                  packageId={row.package_id}
+                  bookingNotes={row.household_notes}
+                  serviceOptions={serviceOptions}
+                  triggerVariant="header"
+                />
+              )}
+              {clientInvoice && (
+                <CustomerInvoiceDownloadButton
+                  invoice={clientInvoice}
+                  className="modify-button"
+                />
+              )}
+            </>
           }
         >
           <ReportNoShow

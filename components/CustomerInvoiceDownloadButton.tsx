@@ -2,19 +2,17 @@
 
 import { useState } from "react";
 import { FileText } from "lucide-react";
-import type { ProviderInvoicePdfData } from "@/lib/invoicePdf";
+import type { CustomerInvoicePdfData } from "@/lib/invoicePdf";
 
-export default function InvoiceDownloadButton({
+export default function CustomerInvoiceDownloadButton({
   invoice,
   className,
   label = "Invoice",
-  iconSize = 18,
   style,
 }: {
-  invoice: ProviderInvoicePdfData;
+  invoice: CustomerInvoicePdfData;
   className?: string;
   label?: string;
-  iconSize?: number;
   style?: React.CSSProperties;
 }) {
   const [pending, setPending] = useState(false);
@@ -23,10 +21,8 @@ export default function InvoiceDownloadButton({
     if (pending) return;
     setPending(true);
     try {
-      const { generateProviderInvoicePdf } = await import(
-        "@/lib/invoicePdf"
-      );
-      const bytes = await generateProviderInvoicePdf(invoice);
+      const { generateCustomerInvoicePdf } = await import("@/lib/invoicePdf");
+      const bytes = await generateCustomerInvoicePdf(invoice);
       const copy = new Uint8Array(bytes.byteLength);
       copy.set(bytes);
       const url = URL.createObjectURL(
@@ -41,7 +37,7 @@ export default function InvoiceDownloadButton({
       window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
     } catch {
       window.alert(
-        "We couldn't create this invoice. Please refresh the session page and try again.",
+        "We couldn't create this invoice. Please refresh the booking page and try again.",
       );
     } finally {
       setPending(false);
@@ -57,7 +53,7 @@ export default function InvoiceDownloadButton({
       disabled={pending}
       title={`Download ${invoice.invoiceNumber}`}
     >
-      <FileText size={iconSize} /> {pending ? "Creating PDF..." : label}
+      <FileText size={18} /> {pending ? "Creating PDF..." : label}
     </button>
   );
 }

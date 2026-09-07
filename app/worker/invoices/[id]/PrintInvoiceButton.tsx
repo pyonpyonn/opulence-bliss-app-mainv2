@@ -1,7 +1,7 @@
 "use client";
 
 import InvoiceDownloadButton from "@/components/InvoiceDownloadButton";
-import type { ProviderInvoicePdfData } from "@/lib/providerInvoicePdf";
+import type { ProviderInvoicePdfData } from "@/lib/invoicePdf";
 
 export default function PrintInvoiceButton({
   invoice,

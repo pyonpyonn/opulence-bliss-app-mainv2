@@ -11,6 +11,11 @@ import {
   type BookingServiceOption,
 } from "./BookingTools";
 import VisitHistoryCard from "@/components/VisitHistoryCard";
+import CustomerInvoiceDownloadButton from "@/components/CustomerInvoiceDownloadButton";
+import {
+  customerInvoiceNumber,
+  type CustomerInvoicePdfData,
+} from "@/lib/invoicePdf";
 
 type Row = {
   duration_minutes: number | null;
@@ -20,6 +25,7 @@ type Row = {
   status: string;
   address: string | null;
   package_id: string | null;
+  subscription_id: string | null;
   household_notes: string | null;
   provider_delay_minutes: number | null;
   provider_delay_reported_at: string | null;
@@ -130,7 +136,7 @@ export default async function AccountPage({
   const { data: rowsData } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, package_id, household_notes, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, photo_url, years_experience, vetting_status, rating_avg, rating_count), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, package_id, subscription_id, household_notes, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, photo_url, years_experience, vetting_status, rating_avg, rating_count), check_ins(arrived_at, left_at)",
     )
     .order("scheduled_at", { ascending: false });
 
@@ -183,16 +189,30 @@ export default async function AccountPage({
 
   const { data: paymentData } = await supabase
     .from("payments")
-    .select("booking_id, gross_amount, status, kind")
-    .or("kind.is.null,kind.neq.tip");
+    .select("booking_id, gross_amount, status, kind");
   const paymentMap = new Map(
     (paymentData ?? [])
-      .filter((p) => p.booking_id)
+      .filter((p) => p.booking_id && p.kind !== "tip")
       .map((p) => [
         p.booking_id as string,
         { amount: Number(p.gross_amount ?? 0), status: p.status as string },
       ]),
   );
+  const tipMap = new Map<string, number>();
+  for (const payment of paymentData ?? []) {
+    if (
+      !payment.booking_id ||
+      payment.kind !== "tip" ||
+      payment.status !== "succeeded"
+    ) {
+      continue;
+    }
+    const bookingId = payment.booking_id as string;
+    tipMap.set(
+      bookingId,
+      (tipMap.get(bookingId) ?? 0) + Number(payment.gross_amount ?? 0),
+    );
+  }
 
   const active = rows.find((r) => r.status === "in_progress");
   const upcoming = rows
@@ -383,7 +403,45 @@ export default async function AccountPage({
               const clientReview = clientReviewMap.get(b.id);
               const providerReview = providerReviewMap.get(b.id);
               const payment = paymentMap.get(b.id);
+              const tipAmount = tipMap.get(b.id) ?? 0;
               const actualDuration = elapsed(ci?.arrived_at, ci?.left_at);
+              const invoiceIssuedAt = ci?.left_at ?? b.scheduled_at;
+              const clientInvoice: CustomerInvoicePdfData | null =
+                b.status === "completed"
+                  ? {
+                      invoiceNumber: customerInvoiceNumber(
+                        b.id,
+                        invoiceIssuedAt,
+                      ),
+                      issuedAt: invoiceIssuedAt,
+                      status: b.subscription_id
+                        ? "Included with membership"
+                        : payment?.status === "succeeded"
+                          ? "Paid"
+                          : "Payment recorded",
+                      customerName:
+                        me?.full_name ?? user.email ?? "Customer",
+                      professionalName:
+                        prv?.display_name ?? "Professional",
+                      serviceName: pkg?.name ?? "Service",
+                      address: b.address,
+                      propertySizeSqm:
+                        b.property_size_sqm === null
+                          ? null
+                          : Number(b.property_size_sqm),
+                      bookedAt: b.scheduled_at,
+                      durationMinutes: Number(
+                        b.duration_minutes ?? pkg?.duration_minutes ?? 0,
+                      ),
+                      checkedInAt: ci?.arrived_at ?? null,
+                      checkedOutAt: ci?.left_at ?? null,
+                      serviceAmount: b.subscription_id
+                        ? null
+                        : (payment?.amount ?? Number(pkg?.price ?? 0)),
+                      tipAmount,
+                      membership: Boolean(b.subscription_id),
+                    }
+                  : null;
               return (
                 <VisitHistoryCard
                   key={b.id}
@@ -444,6 +502,13 @@ export default async function AccountPage({
                 >
                   {b.status === "completed" && (
                     <>
+                      {clientInvoice && (
+                        <CustomerInvoiceDownloadButton
+                          invoice={clientInvoice}
+                          label="Download invoice"
+                          style={invoiceButton}
+                        />
+                      )}
                       {!clientReview && (
                         <RateBooking id={b.id} existing={null} />
                       )}
@@ -623,6 +688,21 @@ const btnWhite: React.CSSProperties = {
   fontWeight: 900,
   fontSize: 15,
   whiteSpace: "nowrap",
+};
+const invoiceButton: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  border: 0,
+  borderRadius: 999,
+  background: "#6D28D9",
+  color: "#fff",
+  padding: "10px 16px",
+  font: "inherit",
+  fontSize: 13.5,
+  fontWeight: 900,
+  cursor: "pointer",
 };
 const banner: React.CSSProperties = {
   background: "#DFF5E8",

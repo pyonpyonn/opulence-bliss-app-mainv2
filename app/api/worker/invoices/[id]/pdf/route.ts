@@ -1,4 +1,4 @@
-import { generateProviderInvoicePdf } from "@/lib/providerInvoicePdf";
+import { generateProviderInvoicePdf } from "@/lib/invoicePdf";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

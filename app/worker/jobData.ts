@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { providerPaymentLabel } from "@/lib/providerPaymentStatus";
-import type { ProviderInvoicePdfData } from "@/lib/providerInvoicePdf";
+import type { ProviderInvoicePdfData } from "@/lib/invoicePdf";
 
 export type WorkerJobWorkspaceData = {
   id: string;

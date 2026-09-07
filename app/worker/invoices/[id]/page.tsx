@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { SignedOut } from "@/app/account/page";
 import PrintInvoiceButton from "./PrintInvoiceButton";
-import type { ProviderInvoicePdfData } from "@/lib/providerInvoicePdf";
+import type { ProviderInvoicePdfData } from "@/lib/invoicePdf";
 
 const money = (value: number | null) =>
   value === null ? "—" : `£${Number(value).toFixed(2)}`;
