@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -52,6 +53,7 @@ export default function PortalNav({
   const path = usePathname() ?? "";
   const [hover, setHover] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -94,6 +96,13 @@ export default function PortalNav({
     href === "/worker" ? path === "/worker" : path.startsWith(href);
 
   const first = (name || "P").trim().charAt(0).toUpperCase();
+
+  async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  }
 
   return (
     <>
@@ -201,12 +210,10 @@ export default function PortalNav({
         <div style={foot}>
           <button
             style={footBtn}
-            onClick={async () => {
-              await supabase.auth.signOut();
-              window.location.href = "/";
-            }}
+            disabled={signingOut}
+            onClick={() => void signOut()}
           >
-            Sign out
+            {signingOut ? "Signing out…" : "Sign out"}
           </button>
           <Link href="/" style={footBtn}>
             Customer site →
@@ -219,9 +226,24 @@ export default function PortalNav({
         <Link href="/worker" style={{ ...brand, fontSize: 20 }}>
           opulence<span style={{ color: PURPLE }}>pro</span>
         </Link>
-        <span style={{ ...chip, background: status.bg, color: status.fg }}>
-          {status.text}
-        </span>
+        <div className="mobile-actions">
+          <span
+            className="mobile-status"
+            style={{ ...chip, background: status.bg, color: status.fg }}
+          >
+            {status.text}
+          </span>
+          <button
+            type="button"
+            className="mobile-signout"
+            disabled={signingOut}
+            onClick={() => void signOut()}
+            aria-label="Sign out"
+          >
+            <LogOut size={16} aria-hidden="true" />
+            <span>{signingOut ? "Signing out…" : "Sign out"}</span>
+          </button>
+        </div>
       </div>
 
       {/* ================= MOBILE TABS ================= */}
@@ -282,6 +304,52 @@ export default function PortalNav({
           padding: 6px 4px 8px;
           box-shadow: 0 -8px 26px var(--ob-shadow-soft);
           backdrop-filter: blur(18px) saturate(140%);
+        }
+        .mobile-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 8px;
+          min-width: 0;
+        }
+        .mobile-signout {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 38px;
+          padding: 7px 11px;
+          border: 1px solid var(--ob-border);
+          border-radius: 999px;
+          background: var(--ob-surface);
+          color: var(--ob-text);
+          font-family: "Nunito", system-ui, sans-serif;
+          font-size: 12px;
+          font-weight: 800;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+        .mobile-signout:disabled {
+          cursor: wait;
+          opacity: 0.65;
+        }
+        @media (max-width: 440px) {
+          .mtop {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+          .mobile-actions {
+            display: contents;
+          }
+          .mobile-status {
+            grid-column: 1 / -1;
+            grid-row: 2;
+            justify-self: start;
+          }
+          .mobile-signout {
+            grid-column: 2;
+            grid-row: 1;
+          }
         }
         @media (min-width: 900px) {
           .side {
