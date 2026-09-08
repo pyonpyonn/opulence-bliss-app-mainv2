@@ -9,6 +9,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ReviewVisibilityChoice from "@/components/ReviewVisibilityChoice";
+import type { ReviewVisibility } from "@/lib/reviewVisibility";
 
 const supabase = createClient();
 
@@ -23,6 +25,8 @@ export default function RatingGate() {
   const [job, setJob] = useState<Pending | null>(null);
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
+  const [visibility, setVisibility] =
+    useState<ReviewVisibility>("public");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [customTip, setCustomTip] = useState("");
@@ -101,6 +105,7 @@ export default function RatingGate() {
       reviewer: job.role,
       rating: stars,
       comment: comment.trim() || null,
+      visibility: job.role === "client" ? visibility : "private",
     });
 
     setBusy(false);
@@ -149,6 +154,7 @@ export default function RatingGate() {
     setJob(null);
     setStars(0);
     setComment("");
+    setVisibility("public");
     setPhase("rate");
     setErr(null);
   }
@@ -177,7 +183,12 @@ export default function RatingGate() {
                 <button
                   key={n}
                   className={n <= stars ? "star on" : "star"}
-                  onClick={() => setStars(n)}
+                  onClick={() => {
+                    setStars(n);
+                    if (job.role === "client") {
+                      setVisibility(n >= 4 ? "public" : "private");
+                    }
+                  }}
                   aria-label={`${n} star${n > 1 ? "s" : ""}`}
                 >
                   ★
@@ -196,6 +207,15 @@ export default function RatingGate() {
               onChange={(e) => setComment(e.target.value)}
               placeholder="Add a sentence (optional)"
             />
+
+            {job.role === "client" && (
+              <ReviewVisibilityChoice
+                rating={stars}
+                value={visibility}
+                onChange={setVisibility}
+                idPrefix={`rating-gate-${job.bookingId}`}
+              />
+            )}
 
             <button className="go" onClick={submit} disabled={busy || !stars}>
               {busy ? "Saving…" : "Submit rating"}

@@ -15,8 +15,8 @@ type P = {
   photo_url: string | null;
   years_experience: number | null;
   services: string[] | null;
-  rating_avg: number | null;
-  rating_count: number;
+  public_rating_avg: number | null;
+  public_rating_count: number;
 };
 
 const SERVICE_LABEL: Record<string, string> = {
@@ -33,12 +33,12 @@ export default function ProvidersPage() {
       const { data } = await supabase
         .from("providers")
         .select(
-          "id, display_name, bio, photo_url, years_experience, services, rating_avg, rating_count"
+          "id, display_name, bio, photo_url, years_experience, services, public_rating_avg, public_rating_count"
         )
         .eq("vetting_status", "approved")
         .eq("joining_fee_paid", true)
         .eq("is_suspended", false)
-        .order("rating_avg", { ascending: false, nullsFirst: false });
+        .order("public_rating_avg", { ascending: false, nullsFirst: false });
       setList(data ?? []);
       setLoading(false);
     })();
@@ -91,13 +91,13 @@ export default function ProvidersPage() {
                         : ""}
                     </p>
                     <p className="stars">
-                      {p.rating_avg ? (
+                      {p.public_rating_avg ? (
                         <>
                           <span>
-                            {"★".repeat(Math.round(Number(p.rating_avg)))}
-                            {"☆".repeat(5 - Math.round(Number(p.rating_avg)))}
+                            {"★".repeat(Math.round(Number(p.public_rating_avg)))}
+                            {"☆".repeat(5 - Math.round(Number(p.public_rating_avg)))}
                           </span>{" "}
-                          {Number(p.rating_avg).toFixed(1)} ({p.rating_count})
+                          {Number(p.public_rating_avg).toFixed(1)} ({p.public_rating_count})
                         </>
                       ) : (
                         <span className="new">Newly joined</span>

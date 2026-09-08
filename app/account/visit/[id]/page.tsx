@@ -49,7 +49,7 @@ export default async function VisitPage({
   const { data: row } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, household_notes, package_id, provider_id, subscription_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, rating_avg, rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, household_notes, package_id, provider_id, subscription_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, public_rating_avg, public_rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -84,7 +84,7 @@ export default async function VisitPage({
     getVisitStatus(supabase, row.id),
     supabase
       .from("reviews")
-      .select("rating, comment")
+      .select("rating, comment, visibility")
       .eq("booking_id", id)
       .eq("reviewer", "client")
       .maybeSingle(),
@@ -136,8 +136,8 @@ export default async function VisitPage({
   } | null;
   const provider = one(row.providers as never) as {
     display_name: string | null;
-    rating_avg: number | null;
-    rating_count: number | null;
+    public_rating_avg: number | null;
+    public_rating_count: number | null;
     bio: string | null;
     photo_url: string | null;
     years_experience: number | null;
@@ -194,6 +194,8 @@ export default async function VisitPage({
       .from("reviews")
       .select("rating, comment, bookings!inner(provider_id)")
       .eq("reviewer", "client")
+      .eq("visibility", "public")
+      .gte("rating", 4)
       .eq("bookings.provider_id", row.provider_id)
       .not("comment", "is", null)
       .order("created_at", { ascending: false })
@@ -237,10 +239,10 @@ export default async function VisitPage({
       name: provider?.display_name ?? null,
       photoUrl: provider?.photo_url ?? null,
       rating:
-        provider?.rating_avg === null || provider?.rating_avg === undefined
+        provider?.public_rating_avg === null || provider?.public_rating_avg === undefined
           ? null
-          : Number(provider.rating_avg),
-      ratingCount: provider?.rating_count ?? 0,
+          : Number(provider.public_rating_avg),
+      ratingCount: provider?.public_rating_count ?? 0,
       bio: provider?.bio ?? null,
       yearsExperience: provider?.years_experience ?? null,
       profession: professionFor(service, provider?.services ?? []),

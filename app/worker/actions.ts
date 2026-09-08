@@ -742,6 +742,7 @@ export async function rateClient(id: string, rating: number, comment: string) {
     reviewer: "provider",
     rating: clean,
     comment: comment?.trim() ? comment.trim() : null,
+    visibility: "private",
   });
 
   if (!error) {

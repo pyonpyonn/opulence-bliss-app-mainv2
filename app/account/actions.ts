@@ -5,6 +5,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+  effectiveReviewVisibility,
+  type ReviewVisibility,
+} from "@/lib/reviewVisibility";
 import { getRescheduleWindow } from "@/lib/bookingState";
 import {
   cancelCustomerBooking,
@@ -85,15 +89,24 @@ export async function modifyBooking(
 }
 
 // Rate a completed visit.
-export async function rateBooking(id: string, rating: number, comment: string) {
+export async function rateBooking(
+  id: string,
+  rating: number,
+  comment: string,
+  visibility: ReviewVisibility,
+) {
   const supabase = await createClient();
   const clean = Math.min(5, Math.max(1, Math.round(rating)));
 
-  await supabase.from("reviews").insert({
+  const { error } = await supabase.from("reviews").insert({
     booking_id: id,
+    reviewer: "client",
     rating: clean,
     comment: comment?.trim() ? comment.trim() : null,
+    visibility: effectiveReviewVisibility(clean, visibility),
   });
+
+  if (error) return { error: error.message };
 
   await notifyBookingProvider(
     id,
@@ -102,4 +115,6 @@ export async function rateBooking(id: string, rating: number, comment: string) {
   );
 
   revalidatePath("/account");
+  revalidatePath(`/account/visit/${id}`);
+  return { error: null };
 }

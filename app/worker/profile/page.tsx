@@ -8,6 +8,14 @@ import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
+type CleanerReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  visibility: "public" | "private";
+  created_at: string;
+};
+
 export default function ProviderProfilePage() {
   const [id, setId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -22,6 +30,8 @@ export default function ProviderProfilePage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(true);
+  const [reviews, setReviews] = useState<CleanerReview[]>([]);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -55,6 +65,18 @@ export default function ProviderProfilePage() {
         avg: data.rating_avg ? Number(data.rating_avg) : null,
         count: data.rating_count ?? 0,
       });
+
+      const { data: reviewRows, error: reviewError } = await supabase
+        .from("reviews")
+        .select("id, rating, comment, visibility, created_at, bookings!inner(provider_id)")
+        .eq("reviewer", "client")
+        .eq("bookings.provider_id", data.id)
+        .order("created_at", { ascending: false });
+
+      setReviews((reviewRows ?? []) as CleanerReview[]);
+      setReviewsError(
+        reviewError ? "Your feedback could not be loaded. Please refresh." : null,
+      );
       setLoading(false);
     })();
   }, []);
@@ -159,6 +181,65 @@ export default function ProviderProfilePage() {
               {saving ? "Saving…" : "Save profile"}
             </button>
             {msg && <p className="msg">{msg}</p>}
+
+            <section className="card feedback-card" aria-labelledby="feedback-title">
+              <div className="feedback-heading">
+                <div>
+                  <p className="feedback-eyebrow">Internal reference</p>
+                  <h2 id="feedback-title">Your customer feedback</h2>
+                </div>
+                <span className="review-count">{reviews.length}</span>
+              </div>
+              <p className="feedback-copy">
+                You can see every review here. Ratings of 1–3 stars stay
+                private automatically, and customers can also keep positive
+                feedback private.
+              </p>
+
+              {reviewsError ? (
+                <p className="feedback-error">{reviewsError}</p>
+              ) : reviews.length === 0 ? (
+                <p className="empty-feedback">No customer feedback yet.</p>
+              ) : (
+                <div className="review-list">
+                  {reviews.map((review) => (
+                    <article className="review" key={review.id}>
+                      <div className="review-topline">
+                        <span className="review-stars" aria-label={`${review.rating} out of 5 stars`}>
+                          {"★".repeat(review.rating)}
+                          {"☆".repeat(5 - review.rating)}
+                        </span>
+                        <span
+                          className={
+                            review.visibility === "public" && review.rating >= 4
+                              ? "visibility public"
+                              : "visibility private"
+                          }
+                        >
+                          {review.visibility === "public" && review.rating >= 4
+                            ? "Public"
+                            : "Private"}
+                        </span>
+                      </div>
+                      {review.comment ? (
+                        <p className="review-comment">“{review.comment}”</p>
+                      ) : (
+                        <p className="review-comment muted-comment">
+                          Rating submitted without a comment.
+                        </p>
+                      )}
+                      <time className="review-date" dateTime={review.created_at}>
+                        {new Date(review.created_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </time>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </>
         )}
 
@@ -210,6 +291,99 @@ export default function ProviderProfilePage() {
         }
         .card.center {
           text-align: center;
+        }
+        .feedback-card {
+          margin-top: 22px;
+        }
+        .feedback-heading,
+        .review-topline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .feedback-eyebrow {
+          margin: 0 0 3px;
+          color: #6D28D9;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+        h2 {
+          margin: 0;
+          color: var(--ob-text);
+          font-size: 21px;
+          font-weight: 900;
+        }
+        .review-count {
+          display: grid;
+          place-items: center;
+          min-width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          background: var(--ob-purple-soft);
+          color: #6D28D9;
+          font-weight: 900;
+        }
+        .feedback-copy {
+          margin: 9px 0 18px;
+          color: var(--ob-muted);
+          font-size: 13.5px;
+          line-height: 1.5;
+        }
+        .review-list {
+          display: grid;
+          gap: 10px;
+        }
+        .review {
+          padding: 14px;
+          border: 1px solid var(--ob-border);
+          border-radius: 12px;
+          background: var(--ob-surface-soft);
+        }
+        .review-stars {
+          color: #6D28D9;
+          letter-spacing: 1px;
+        }
+        .visibility {
+          border-radius: 999px;
+          padding: 4px 9px;
+          font-size: 11px;
+          font-weight: 900;
+        }
+        .visibility.public {
+          background: #E4F6EC;
+          color: #137B4E;
+        }
+        .visibility.private {
+          background: #F1E9FB;
+          color: #6D28D9;
+        }
+        .review-comment {
+          margin: 9px 0 5px;
+          color: var(--ob-text);
+          font-size: 14px;
+          line-height: 1.45;
+        }
+        .muted-comment,
+        .review-date,
+        .empty-feedback {
+          color: var(--ob-muted);
+        }
+        .review-date {
+          font-size: 11.5px;
+        }
+        .empty-feedback,
+        .feedback-error {
+          margin: 0;
+          padding: 14px;
+          border-radius: 11px;
+          background: var(--ob-surface-soft);
+          font-size: 13.5px;
+        }
+        .feedback-error {
+          color: #B0384F;
         }
         .rating {
           display: flex;

@@ -75,7 +75,7 @@ export default async function AdminPage() {
 
   const { data: reviewRows } = await supabase
     .from("reviews")
-    .select("id, reviewer, rating, comment, created_at")
+    .select("id, reviewer, rating, comment, visibility, created_at")
     .order("created_at", { ascending: false })
     .limit(30);
 

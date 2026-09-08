@@ -174,6 +174,8 @@ export default function ServicePage() {
         .from("reviews")
         .select("rating, comment, created_at")
         .eq("reviewer", "client")
+        .eq("visibility", "public")
+        .gte("rating", 4)
         .order("created_at", { ascending: false })
         .limit(6);
       setReviews((revs ?? []) as Review[]);

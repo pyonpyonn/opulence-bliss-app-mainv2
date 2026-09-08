@@ -10,6 +10,7 @@ export type Review = {
   reviewer: string;
   rating: number;
   comment: string | null;
+  visibility: "public" | "private";
   created_at: string;
 };
 
@@ -47,6 +48,19 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
                 {r.reviewer === "client"
                   ? "client → provider"
                   : "provider → client"}
+              </span>
+              <span
+                style={{
+                  marginLeft: 8,
+                  borderRadius: 999,
+                  padding: "3px 8px",
+                  background: r.visibility === "public" ? "#e4f6ec" : "#f1e9fb",
+                  color: r.visibility === "public" ? "#137b4e" : "#6d28d9",
+                  fontSize: 11,
+                  fontWeight: 800,
+                }}
+              >
+                {r.visibility === "public" ? "Public" : "Private"}
               </span>
             </div>
             {r.comment && (

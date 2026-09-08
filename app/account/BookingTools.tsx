@@ -7,7 +7,9 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
+import ReviewVisibilityChoice from "@/components/ReviewVisibilityChoice";
 import modalStyles from "./BookingToolsModal.module.css";
+import type { ReviewVisibility } from "@/lib/reviewVisibility";
 import {
   calculateCancellationPolicy,
   cancellationConfirmation,
@@ -979,12 +981,19 @@ export function RateBooking({
   existing,
 }: {
   id: string;
-  existing?: { rating: number; comment: string | null } | null;
+  existing?: {
+    rating: number;
+    comment: string | null;
+    visibility?: ReviewVisibility;
+  } | null;
 }) {
   const [pending, start] = useTransition();
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
+  const [visibility, setVisibility] =
+    useState<ReviewVisibility>("public");
   const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   if (existing) {
     return (
@@ -995,6 +1004,17 @@ export function RateBooking({
         </span>{" "}
         <span style={{ color: "#7A828C" }}>
           {existing.comment ? `“${existing.comment}”` : "Thanks for rating."}
+        </span>
+        <span
+          style={{
+            display: "inline-block",
+            marginLeft: 8,
+            color: "#6D28D9",
+            fontSize: 12,
+            fontWeight: 800,
+          }}
+        >
+          {existing.visibility === "public" ? "Public" : "Private"}
         </span>
       </p>
     );
@@ -1017,7 +1037,11 @@ export function RateBooking({
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            onClick={() => setStars(n)}
+            onClick={() => {
+              setStars(n);
+              setVisibility(n >= 4 ? "public" : "private");
+              setMessage(null);
+            }}
             aria-label={`${n} star${n > 1 ? "s" : ""}`}
             style={{
               background: "none",
@@ -1050,9 +1074,20 @@ export function RateBooking({
           resize: "vertical",
         }}
       />
+      <ReviewVisibilityChoice
+        rating={stars}
+        value={visibility}
+        onChange={setVisibility}
+        idPrefix={`booking-review-${id}`}
+      />
       <button
         disabled={pending || stars === 0}
-        onClick={() => start(() => rateBooking(id, stars, comment))}
+        onClick={() =>
+          start(async () => {
+            const result = await rateBooking(id, stars, comment, visibility);
+            setMessage(result.error);
+          })
+        }
         style={{
           background: "#16202A",
           color: "#FFFFFF",
@@ -1068,6 +1103,11 @@ export function RateBooking({
       >
         {pending ? "Sending…" : "Submit rating"}
       </button>
+      {message && (
+        <p style={{ color: "#B0384F", fontSize: 13, margin: "9px 0 0" }}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }

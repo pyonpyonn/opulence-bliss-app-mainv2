@@ -109,7 +109,6 @@ export async function setProviderSuspension(
 export async function deleteReview(id: string) {
   const s = await requireAdmin();
   await s.from("reviews").delete().eq("id", id);
-  await recalcRatings(s);
   revalidatePath("/admin");
 }
 
@@ -117,20 +116,7 @@ export async function wipeReviews() {
   const s = await requireAdmin();
   assertTestMode("Clear all reviews");
   await s.from("reviews").delete().neq("id", ALL);
-  await recalcRatings(s);
   revalidatePath("/admin");
-}
-
-// Reset cached rating figures after deletions.
-async function recalcRatings(s: Awaited<ReturnType<typeof requireAdmin>>) {
-  await s
-    .from("providers")
-    .update({ rating_avg: null, rating_count: 0 })
-    .neq("id", ALL);
-  await s
-    .from("profiles")
-    .update({ client_rating_avg: null, client_rating_count: 0 })
-    .neq("id", ALL);
 }
 
 export async function bringBookingToNow() {
