@@ -4,7 +4,7 @@
 // role-specific quick replies.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   attachmentMimeType,
@@ -247,13 +247,22 @@ export default function MessageThread({
         );
         if (uploadError) throw uploadError;
       }
-      const { error: sendError } = await withTimeout(
+      const { data: sendResult, error: sendError } = await withTimeout(
         uploadedPath
           ? supabase.rpc("send_booking_attachment", { p_booking_id: bookingId, p_body: trimmed || "Shared an attachment", p_path: uploadedPath, p_name: attachment!.name.slice(0, 160) })
           : supabase.rpc("send_booking_message", { p_booking_id: bookingId, p_body: trimmed }),
         "Sending took too long. Please try again.",
       );
       if (sendError) throw sendError;
+      const moderation = sendResult as {
+        blocked?: boolean;
+        category?: string;
+      } | null;
+      if (moderation?.blocked) {
+        throw new Error(
+          "This message was not sent. It was flagged for hateful, threatening or abusive language and added to the safety review queue. Please rewrite it respectfully.",
+        );
+      }
       setBody("");
       setAttachment(null);
       if (fileRef.current) fileRef.current.value = "";
@@ -435,6 +444,9 @@ export default function MessageThread({
                   }} />
               </label>
               {attachment && <button type="button" disabled={busy} onClick={() => { setAttachment(null); if (fileRef.current) fileRef.current.value = ""; }}>Remove {attachment.name}</button>}
+              <p style={moderationNotice}>
+                <ShieldAlert size={15} aria-hidden="true" /> Messages are checked for hate speech, threats and abusive language.
+              </p>
               <div style={composer}>
                 <input
                   value={body}
@@ -595,6 +607,15 @@ const lateChip: React.CSSProperties = {
   boxShadow: "0 3px 10px rgba(242,184,75,0.16)",
 };
 const composer: React.CSSProperties = { display: "flex", gap: 8 };
+const moderationNotice: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  margin: "8px 0 9px",
+  color: "#6B7280",
+  fontSize: 12,
+  fontWeight: 700,
+};
 const input: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
