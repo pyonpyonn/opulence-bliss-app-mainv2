@@ -5,7 +5,6 @@
 // Landing page — two-level nav, hero, coloured service bands.
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SiteFooter from "@/components/SiteFooter";
 
@@ -65,9 +64,9 @@ export default function Home() {
               onChange={(e) => setPostcode(e.target.value)}
               aria-label="Postcode"
             />
-            <Link className="btn" href={bookLink}>
+            <a className="btn" href={bookLink}>
               Book my cleaning
-            </Link>
+            </a>
           </div>
           <p className="micro">
             Central, North &amp; West London · pay per visit or subscribe
@@ -77,16 +76,16 @@ export default function Home() {
 
       {/* ---------- SERVICE BANDS ---------- */}
       <section className="bands" id="services">
-        <Link className="band clean" href="/services/cleaning">
+        <a className="band clean" href="/services/cleaning">
           <div>
             <h2>Cleaning</h2>
             <p>and ironing, at home</p>
             {from.clean > 0 && <span className="from">from £{from.clean}</span>}
           </div>
           <span className="arrow">→</span>
-        </Link>
+        </a>
 
-        <Link className="band massage" href="/services/massage">
+        <a className="band massage" href="/services/massage">
           <div>
             <h2>Massage</h2>
             <p>at home</p>
@@ -95,16 +94,16 @@ export default function Home() {
             )}
           </div>
           <span className="arrow">→</span>
-        </Link>
+        </a>
 
-        <Link className="band member" href="/subscribe">
+        <a className="band member" href="/subscribe">
           <div>
             <h2>Memberships</h2>
             <p>regular visits, handled for you</p>
             <span className="from">from £189 / month</span>
           </div>
           <span className="arrow">→</span>
-        </Link>
+        </a>
       </section>
 
       {/* ---------- TRUST ---------- */}
@@ -179,9 +178,9 @@ export default function Home() {
       <section className="cta-band">
         <h2>Ready to hand it over?</h2>
         <p>Enter your postcode and see what&apos;s free this week.</p>
-        <Link className="btn light" href="/book">
+        <a className="btn light" href="/book">
           Book a service
-        </Link>
+        </a>
       </section>
 
       <SiteFooter />
