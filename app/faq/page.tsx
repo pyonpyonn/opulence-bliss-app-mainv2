@@ -26,7 +26,8 @@ const faqGroups: Array<{
     items: [
       ["When will my card be charged?", "Your card is authorised when you book and charged after the visit is completed. If no professional accepts the booking, the authorisation is released and you pay nothing."],
       ["Can I leave a tip?", "Yes. After the visit you can enter the tip amount you choose. The tip is separate from the service total."],
-      ["How do I change or cancel a booking?", "Open the booking in your customer account to see the available change and cancellation controls. Your booking details show the timing and any conditions that apply."],
+      ["What is the cancellation policy?", "Cancel at least 48 hours before the booking for a full refund. Cancellations made from 24 hours up to 48 hours before the booking receive a 50% refund. Cancellations made less than 24 hours before the booking are non-refundable. If your card has only been authorised, the refundable part of the hold is released instead."],
+      ["How do I change or cancel a booking?", "Open the booking in your customer account and choose Cancel booking. Before you confirm, the cancellation screen shows the refund or charge that applies at that moment. Rescheduling has its own availability and notice rules."],
       ["Will I receive a receipt or invoice?", "Yes. Once a completed visit is settled, its booking page provides the related invoice details and download option."],
     ],
   },

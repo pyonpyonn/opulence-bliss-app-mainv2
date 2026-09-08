@@ -21,6 +21,7 @@ import BookingProgress from "@/components/BookingProgress";
 import CheckInCodePanel from "@/components/CheckInCodePanel";
 import MessageThread from "@/components/MessageThread";
 import type { VisitStatus } from "@/lib/visitStatus";
+import { calculateCancellationPolicy } from "@/lib/cancellationPolicy";
 import { cancelBooking } from "./actions";
 
 export type ClientBookingWorkspaceData = {
@@ -270,6 +271,10 @@ export default function BookingWorkspace({
     stage >= 2 ? "Arrived" : "Arriving",
     "Done",
   ];
+  const cancellationPolicy = calculateCancellationPolicy(
+    booking.scheduledAt,
+    booking.paymentAmount ?? 0,
+  );
 
   function closeDialogs() {
     setChatOpen(false);
@@ -282,7 +287,11 @@ export default function BookingWorkspace({
     startTransition(async () => {
       try {
         const selected = reason === "Other reason" ? otherReason : reason;
-        const result = await cancelBooking(booking.id, selected);
+        const result = await cancelBooking(
+          booking.id,
+          selected,
+          cancellationPolicy.tier,
+        );
         if (!result.ok) {
           setCancelError(result.message);
           return;
@@ -714,8 +723,11 @@ export default function BookingWorkspace({
             )}
 
             <p className="cancel-notice">
-              <Info size={18} /> {booking.paymentExplanation} Your bank may take
-              a few days to remove a released hold.
+              <Info size={18} />
+              <span>
+                <strong>{cancellationPolicy.title}</strong>
+                {cancellationPolicy.explanation}
+              </span>
             </p>
             {cancelError && <p className="cancel-error">{cancelError}</p>}
             <div className="cancel-buttons">
@@ -1329,6 +1341,11 @@ export default function BookingWorkspace({
         }
         .cancel-error {
           display: block;
+        }
+        .cancel-notice strong {
+          display: block;
+          margin-bottom: 2px;
+          color: inherit;
         }
         .cancel-buttons {
           display: grid;

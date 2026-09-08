@@ -18,6 +18,43 @@ export type BlogPost = {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "cancellation-policy-explained",
+    category: "Booking guide",
+    title: "Our cancellation policy, explained",
+    summary:
+      "Know exactly what is refunded when plans change before your home visit.",
+    published: "8 September 2026",
+    publishedIso: "2026-09-08",
+    readTime: "2 min read",
+    accent: "pink",
+    sections: [
+      {
+        heading: "The refund depends on when you cancel",
+        paragraphs: [
+          "We calculate the cancellation window from the moment you confirm cancellation to the scheduled start time of your booking.",
+        ],
+        points: [
+          "48 hours or more before the booking: full refund.",
+          "From 24 hours up to 48 hours before the booking: 50% refund.",
+          "Less than 24 hours before the booking: no refund.",
+        ],
+      },
+      {
+        heading: "What happens to a card hold",
+        paragraphs: [
+          "For a normal one-off visit, your card is authorised when you book and is usually charged after the work is complete. If you cancel, we release the refundable part of that hold and charge only the cancellation amount that applies. If the payment was already captured, the eligible refund is sent back through Stripe.",
+          "Banks can take a few working days to remove a released hold or show a refund on your statement.",
+        ],
+      },
+      {
+        heading: "You will see the amount before confirming",
+        paragraphs: [
+          "Open the visit in My bookings and choose Cancel booking. The confirmation window shows whether you receive a full refund, a 50% refund or no refund, together with the exact amount. The policy is recorded with the cancellation for a clear payment history.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "how-many-cleaning-hours-do-i-need",
     category: "Cleaning guide",
     title: "How many cleaning hours does your home need?",

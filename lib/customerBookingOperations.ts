@@ -15,6 +15,10 @@ import {
   APPOINTMENT_WINDOW_MESSAGE,
   appointmentFitsWindow,
 } from "@/lib/appointmentWindow";
+import {
+  calculateCancellationPolicy,
+  cancellationPaymentAction,
+} from "@/lib/cancellationPolicy";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -118,86 +122,265 @@ export async function cancelCustomerBooking(
   id: string,
   reason?: string,
   source: "account" | "assistant" = "account",
+  expectedPolicyTier?: "full" | "half" | "none",
 ) {
   const cleanReason = reason?.trim().slice(0, 240) || null;
-  await transitionBooking(supabase, id, "cancelled", {
+
+  const { data: ownedBooking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("scheduled_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (bookingError || !ownedBooking) {
+    return {
+      ok: false as const,
+      message: "This booking could not be found or cancelled.",
+    };
+  }
+
+  const { data: payments } = await admin
+    .from("payments")
+    .select("id, stripe_payment_ref, status, gross_amount, split_breakdown")
+    .eq("booking_id", id)
+    .or("kind.is.null,kind.neq.tip")
+    .limit(1);
+
+  const payment = payments?.[0];
+  const originalGross = Number(payment?.gross_amount ?? 0);
+  const policy = calculateCancellationPolicy(
+    ownedBooking.scheduled_at,
+    originalGross,
+  );
+  if (expectedPolicyTier && expectedPolicyTier !== policy.tier) {
+    return {
+      ok: false as const,
+      message: `The cancellation window changed before confirmation. Please review the updated policy: ${policy.explanation}`,
+      policy,
+    };
+  }
+
+  const cancellation = await transitionBooking(supabase, id, "cancelled", {
     reason: cleanReason
       ? `Customer cancelled: ${cleanReason}`
       : "Customer cancelled the booking",
     meta: {
       source,
+      cancellation_policy: policy.tier,
+      refund_percent: policy.refundPercent,
+      refund_amount: policy.refundAmount,
+      cancellation_charge: policy.cancellationCharge,
       ...(cleanReason ? { cancellation_reason: cleanReason } : {}),
     },
   });
+  if (!cancellation.changed) {
+    return {
+      ok: true as const,
+      message: "This booking was already cancelled.",
+      policy,
+    };
+  }
 
-  const { data: payments } = await admin
-    .from("payments")
-    .select("id, stripe_payment_ref, status, gross_amount")
-    .eq("booking_id", id)
-    .limit(1);
+  let paymentMessage = "Booking cancelled. No payment adjustment was needed.";
+  if (payment?.stripe_payment_ref && originalGross > 0) {
+    const isCaptured = ["succeeded", "partially_refunded"].includes(payment.status);
+    const paymentAction = cancellationPaymentAction(payment.status, policy);
+    const shouldRefundCaptured = paymentAction === "refund";
+    const shouldReleaseHold = paymentAction === "release";
+    const shouldCaptureCharge = paymentAction === "capture";
+    const operationType = shouldRefundCaptured
+      ? "refund"
+      : shouldReleaseHold
+        ? "release"
+        : "capture";
+    const operationAmount = shouldRefundCaptured
+      ? policy.refundAmount
+      : shouldReleaseHold
+        ? originalGross
+        : policy.cancellationCharge;
+    const operationKey = shouldRefundCaptured
+      ? policy.tier === "full"
+        ? `refund:booking:${id}:full`
+        : `refund:booking:${id}:50`
+      : shouldReleaseHold
+        ? `release:booking:${id}`
+        : `capture:cancellation:${id}:${policy.cancellationChargePence}`;
 
-  const payment = payments?.[0];
-  if (payment?.stripe_payment_ref) {
-    const refunding = payment.status === "succeeded";
-    const operationKey = refunding
-      ? `refund:booking:${id}:full`
-      : `release:booking:${id}`;
-
+    let moneyOperationSucceeded = false;
     try {
-      if (refunding) {
+      if (shouldRefundCaptured) {
         await systemTransitionPayment(admin, payment.id, "refund_pending", {
-          reason: "Customer cancelled the booking",
+          reason: `Customer cancellation policy: ${policy.title}`,
         });
-      } else {
+      } else if (shouldReleaseHold) {
         await systemTransitionPayment(admin, payment.id, "cancelling");
+      } else if (shouldCaptureCharge) {
+        await systemTransitionPayment(admin, payment.id, "capturing");
+      } else {
+        paymentMessage =
+          "Booking cancelled. The booking amount is non-refundable.";
       }
 
-      const operation = await claimMoneyOperation(admin, {
-        operationKey,
-        operationType: refunding ? "refund" : "release",
-        bookingId: id,
-        amount: Number(payment.gross_amount ?? 0),
-      });
-
-      if (operation.should_run) {
-        const stripeObject = refunding
-          ? await stripe.refunds.create(
-              {
-                payment_intent: payment.stripe_payment_ref,
-                metadata: { operation_key: operationKey, booking_id: id },
-              },
-              { idempotencyKey: operationKey },
-            )
-          : await stripe.paymentIntents.cancel(
-              payment.stripe_payment_ref,
-              {},
-              { idempotencyKey: operationKey },
-            );
-
-        await systemFinaliseMoneyOperation(admin, operation.id, "succeeded", {
-          stripeObjectId: stripeObject.id,
+      if (shouldRefundCaptured || shouldReleaseHold || shouldCaptureCharge) {
+        const operation = await claimMoneyOperation(admin, {
+          operationKey,
+          operationType,
+          bookingId: id,
+          amount: operationAmount,
         });
-        await systemTransitionPayment(
-          admin,
-          payment.id,
-          refunding ? "refunded" : "cancelled",
-        );
-      } else if (operation.status === "succeeded") {
-        await systemTransitionPayment(
-          admin,
-          payment.id,
-          refunding ? "refunded" : "cancelled",
-        );
-      } else if (operation.status === "ambiguous") {
-        throw new Error("Stripe outcome is ambiguous; reconciliation required");
+        moneyOperationSucceeded = operation.status === "succeeded";
+
+        if (operation.should_run) {
+          try {
+            let stripeObject: Stripe.Refund | Stripe.PaymentIntent;
+            if (shouldRefundCaptured) {
+              stripeObject = await stripe.refunds.create(
+                {
+                  payment_intent: payment.stripe_payment_ref,
+                  amount: policy.refundPence,
+                  metadata: {
+                    operation_key: operationKey,
+                    booking_id: id,
+                    policy_tier: policy.tier,
+                  },
+                },
+                { idempotencyKey: operationKey },
+              );
+            } else if (shouldReleaseHold) {
+              stripeObject = await stripe.paymentIntents.cancel(
+                payment.stripe_payment_ref,
+                {},
+                { idempotencyKey: operationKey },
+              );
+            } else {
+              const split = (payment.split_breakdown ?? {}) as Record<
+                string,
+                unknown
+              >;
+              const originalPlatformFee = Number(
+                split.platform_margin ?? originalGross,
+              );
+              const retainedRatio = policy.cancellationCharge / originalGross;
+              const platformFeePence = Math.min(
+                policy.cancellationChargePence,
+                Math.max(
+                  0,
+                  Math.round(originalPlatformFee * retainedRatio * 100),
+                ),
+              );
+              stripeObject = await stripe.paymentIntents.capture(
+                payment.stripe_payment_ref,
+                {
+                  amount_to_capture: policy.cancellationChargePence,
+                  application_fee_amount: platformFeePence,
+                  metadata: {
+                    operation_key: operationKey,
+                    booking_id: id,
+                    policy_tier: policy.tier,
+                  },
+                },
+                { idempotencyKey: operationKey },
+              );
+
+              if (policy.tier === "half") {
+                const platformFee = platformFeePence / 100;
+                const update = await admin
+                  .from("payments")
+                  .update({
+                    gross_amount: policy.cancellationCharge,
+                    split_breakdown: {
+                      ...split,
+                      provider: Number(
+                        (policy.cancellationCharge - platformFee).toFixed(2),
+                      ),
+                      platform_margin: platformFee,
+                      original_gross_amount: originalGross,
+                      cancellation_refund: policy.refundAmount,
+                      cancellation_policy: policy.tier,
+                    },
+                  })
+                  .eq("id", payment.id);
+                if (update.error) {
+                  await admin.rpc("open_review_case", {
+                    p_booking_id: id,
+                    p_category: "payment_failure",
+                    p_priority: "high",
+                    p_blocks_payment: false,
+                    p_blocks_payout: true,
+                    p_notes: `Cancellation charge captured, but payment totals need reconciliation: ${update.error.message}`,
+                    p_created_by: null,
+                  });
+                }
+              }
+            }
+
+            moneyOperationSucceeded = true;
+            await systemFinaliseMoneyOperation(admin, operation.id, "succeeded", {
+              stripeObjectId: stripeObject.id,
+            });
+          } catch (error) {
+            const failure =
+              error instanceof Error
+                ? error.message
+                : "Stripe cancellation adjustment failed";
+            const definite =
+              error instanceof Stripe.errors.StripeCardError ||
+              error instanceof Stripe.errors.StripeInvalidRequestError;
+            await systemFinaliseMoneyOperation(
+              admin,
+              operation.id,
+              definite ? "failed" : "ambiguous",
+              { error: failure },
+            ).catch(() => undefined);
+            throw error;
+          }
+        } else if (operation.status === "ambiguous") {
+          throw new Error(
+            "Stripe outcome is ambiguous; reconciliation required",
+          );
+        }
+
+        if (operation.status === "succeeded" || operation.should_run) {
+          await systemTransitionPayment(
+            admin,
+            payment.id,
+            shouldRefundCaptured
+              ? policy.tier === "full"
+                ? "refunded"
+                : "partially_refunded"
+              : shouldReleaseHold
+                ? "cancelled"
+                : "succeeded",
+          );
+        }
       }
+
+      paymentMessage =
+        paymentAction === "none" && !isCaptured
+          ? "Booking cancelled. No completed card payment needed adjustment."
+          : policy.tier === "full"
+          ? isCaptured
+            ? `Booking cancelled. Your full £${policy.refundAmount.toFixed(2)} refund has been started.`
+            : "Booking cancelled. Your full card hold is being released."
+          : policy.tier === "half"
+            ? isCaptured
+              ? `Booking cancelled. Your 50% refund of £${policy.refundAmount.toFixed(2)} has been started.`
+              : `Booking cancelled. £${policy.cancellationCharge.toFixed(2)} has been charged and the remaining 50% of the hold is being released.`
+            : `Booking cancelled. The £${policy.cancellationCharge.toFixed(2)} booking amount is non-refundable.`;
     } catch (error) {
       const failure =
         error instanceof Error ? error.message : "Stripe cancellation failed";
-      const fallback = refunding ? "succeeded" : "authorised";
-      await systemTransitionPayment(admin, payment.id, fallback, {
-        reason: failure,
-      }).catch(() => undefined);
+      const fallback = shouldRefundCaptured
+        ? payment.status === "partially_refunded"
+          ? "partially_refunded"
+          : "succeeded"
+        : shouldReleaseHold
+          ? "authorised"
+          : "capture_failed";
+      if (!moneyOperationSucceeded) {
+        await systemTransitionPayment(admin, payment.id, fallback, {
+          reason: failure,
+        }).catch(() => undefined);
+      }
       await admin.rpc("open_review_case", {
         p_booking_id: id,
         p_category: "payment_failure",
@@ -207,13 +390,15 @@ export async function cancelCustomerBooking(
         p_notes: failure,
         p_created_by: null,
       });
+      paymentMessage =
+        "Booking cancelled. The payment adjustment needs attention; support has been notified and you should not pay again.";
     }
   }
 
   await notifyBookingProvider(
     id,
     "Booking cancelled",
-    "The customer cancelled this visit. It's been removed from your schedule.",
+    `The customer cancelled this visit. It's been removed from your schedule. ${policy.title} applies.`,
   );
 
   revalidatePath("/account");
@@ -222,10 +407,8 @@ export async function cancelCustomerBooking(
 
   return {
     ok: true as const,
-    message:
-      payment?.status === "succeeded"
-        ? "Booking cancelled. Your refund has been started."
-        : "Booking cancelled. Your card hold is being released.",
+    message: paymentMessage,
+    policy,
   };
 }
 

@@ -290,23 +290,45 @@ export async function GET(req: NextRequest) {
       // Approved refund totals are decisions; Stripe's refunded amount is the
       // evidence. Reconciliation reports disagreement and never heals it.
       if (p.booking_id && p.status !== "refund_pending") {
-        const { data: approvals, error: approvalsError } = await admin
-          .from("review_cases")
-          .select("id, resolution_amount, resolution_currency")
-          .eq("booking_id", p.booking_id)
-          .eq("status", "resolved")
-          .eq("resolution_currency", "gbp")
-          .gt("resolution_amount", 0);
+        const [approvalResult, policyRefundResult] = await Promise.all([
+          admin
+            .from("review_cases")
+            .select("id, resolution_amount, resolution_currency")
+            .eq("booking_id", p.booking_id)
+            .eq("status", "resolved")
+            .eq("resolution_currency", "gbp")
+            .gt("resolution_amount", 0),
+          admin
+            .from("money_operations")
+            .select("id, amount")
+            .eq("booking_id", p.booking_id)
+            .eq("operation_type", "refund")
+            .eq("status", "succeeded")
+            .like("operation_key", `refund:booking:${p.booking_id}:%`),
+        ]);
+        const { data: approvals, error: approvalsError } = approvalResult;
+        const { data: policyRefunds, error: policyRefundsError } =
+          policyRefundResult;
         throwOnQueryError(
           `Reading refund approvals for payment ${p.id}`,
           approvalsError,
         );
-
-        const approvedPence = (approvals ?? []).reduce(
-          (sum, reviewCase) =>
-            sum + Math.round(Number(reviewCase.resolution_amount) * 100),
-          0,
+        throwOnQueryError(
+          `Reading cancellation-policy refunds for payment ${p.id}`,
+          policyRefundsError,
         );
+
+        const approvedPence =
+          (approvals ?? []).reduce(
+            (sum, reviewCase) =>
+              sum + Math.round(Number(reviewCase.resolution_amount) * 100),
+            0,
+          ) +
+          (policyRefunds ?? []).reduce(
+            (sum, operation) =>
+              sum + Math.round(Number(operation.amount) * 100),
+            0,
+          );
 
         if (approvedPence !== refunded) {
           findings.push({
@@ -319,6 +341,9 @@ export async function GET(req: NextRequest) {
               amount_refunded_pence: approvedPence,
               review_case_ids: (approvals ?? []).map(
                 (reviewCase) => reviewCase.id,
+              ),
+              cancellation_operation_ids: (policyRefunds ?? []).map(
+                (operation) => operation.id,
               ),
             },
             actual: { amount_refunded_pence: refunded },

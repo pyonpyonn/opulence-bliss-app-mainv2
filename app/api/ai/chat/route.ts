@@ -15,6 +15,7 @@ import {
   cancelCustomerBooking,
   rescheduleCustomerBooking,
 } from "@/lib/customerBookingOperations";
+import { calculateCancellationPolicy } from "@/lib/cancellationPolicy";
 import { getRescheduleWindow } from "@/lib/bookingState";
 import { getVisitStatus } from "@/lib/visitStatus";
 
@@ -411,6 +412,7 @@ async function executeConfirmedAction(context: AgentContext, token: string) {
       action.bookingId,
       action.reason ?? undefined,
       "assistant",
+      action.expectedPolicyTier,
     );
   }
 
@@ -669,13 +671,22 @@ async function runTool(
       const status = await getVisitStatus(context.client, bookingId);
       const pkg = one(owned.booking.packages);
       const reason = String(args.reason ?? "").trim().slice(0, 240) || null;
+      const cancellationPolicy = calculateCancellationPolicy(
+        owned.booking.scheduled_at,
+        status?.money.amount ?? 0,
+      );
       const token = signAssistantMutation(
-        { type: "cancel_booking", bookingId, reason },
+        {
+          type: "cancel_booking",
+          bookingId,
+          reason,
+          expectedPolicyTier: cancellationPolicy.tier,
+        },
         context.user.id,
       );
       const summary = `${pkg?.name ?? "Visit"} · ${friendlyDate(
         owned.booking.scheduled_at,
-      )}. ${status?.money.explanation ?? "Any eligible card hold will be released."}`;
+      )}. ${cancellationPolicy.explanation}`;
       return {
         ok: true,
         requires_customer_confirmation: true,
@@ -684,7 +695,7 @@ async function runTool(
           label: "Cancel this booking",
           summary,
           confirmText:
-            "Cancel this booking now? This cannot be undone from the chat.",
+            `Cancel this booking now? ${cancellationPolicy.title} applies. This cannot be undone from the chat.`,
           token,
           tone: "danger",
         },

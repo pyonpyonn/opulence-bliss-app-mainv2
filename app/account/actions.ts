@@ -13,10 +13,20 @@ import {
   rescheduleCustomerBooking,
 } from "@/lib/customerBookingOperations";
 
-// Cancel — releases the held payment (nothing was charged yet).
-export async function cancelBooking(id: string, reason?: string) {
+// Cancel — applies the time-based refund or cancellation charge on the server.
+export async function cancelBooking(
+  id: string,
+  reason?: string,
+  expectedPolicyTier?: "full" | "half" | "none",
+) {
   const supabase = await createClient();
-  return cancelCustomerBooking(supabase, id, reason, "account");
+  return cancelCustomerBooking(
+    supabase,
+    id,
+    reason,
+    "account",
+    expectedPolicyTier,
+  );
 }
 
 export async function loadRescheduleWindow(id: string) {

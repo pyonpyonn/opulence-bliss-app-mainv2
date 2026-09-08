@@ -364,6 +364,29 @@ test("a partial refund states the amount", () => {
   assert.match(s.money.explanation, /£25\.00/);
 });
 
+test("a cancelled visit explains its 50% refund", () => {
+  const s = projectVisitStatus(
+    facts({
+      bookingStatus: "cancelled",
+      paymentStatus: "partially_refunded",
+      refundedAmount: 46.58,
+    }),
+  );
+  assert.match(s.detail, /£46\.58/);
+  assert.match(s.detail, /cancellation policy/i);
+});
+
+test("a non-refundable cancellation shows the retained charge", () => {
+  const s = projectVisitStatus(
+    facts({
+      bookingStatus: "cancelled",
+      paymentStatus: "succeeded",
+      grossAmount: 93.15,
+    }),
+  );
+  assert.match(s.detail, /cancellation charge was £93\.15/i);
+});
+
 test("a membership visit does not claim money was held", () => {
   const s = projectVisitStatus(
     facts({

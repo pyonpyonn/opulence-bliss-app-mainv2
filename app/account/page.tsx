@@ -260,6 +260,8 @@ export default async function AccountPage({
     const paymentLabel =
       payment?.status === "refunded"
         ? `£${amount.toFixed(2)} refunded`
+        : payment?.status === "partially_refunded"
+          ? "Partly refunded"
         : payment?.status === "cancelled"
           ? "Hold released"
           : payment?.status === "capture_failed"

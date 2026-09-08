@@ -7,6 +7,7 @@ export type AssistantMutation =
       type: "cancel_booking";
       bookingId: string;
       reason: string | null;
+      expectedPolicyTier?: "full" | "half" | "none";
     }
   | {
       type: "reschedule_booking";

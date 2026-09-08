@@ -9,6 +9,10 @@ import { useRouter } from "next/navigation";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 import modalStyles from "./BookingToolsModal.module.css";
 import {
+  calculateCancellationPolicy,
+  cancellationConfirmation,
+} from "@/lib/cancellationPolicy";
+import {
   CalendarDays,
   Check,
   Clock3,
@@ -533,14 +537,24 @@ export function BookingTools({
             style={{ ...linkBtn, color: "#B0384F" }}
             disabled={pending}
             onClick={() => {
-              if (
-                !window.confirm(
-                  "Cancel this booking? Your card won't be charged.",
-                )
-              )
+              const policy = scheduledAt
+                ? calculateCancellationPolicy(
+                    scheduledAt,
+                    paymentAmount ?? 0,
+                  )
+                : null;
+              const confirmation = policy
+                ? cancellationConfirmation(policy)
+                : "Cancel this booking?";
+              if (!window.confirm(confirmation))
                 return;
               start(async () => {
-                await cancelBooking(id);
+                const result = await cancelBooking(
+                  id,
+                  undefined,
+                  policy?.tier,
+                );
+                if (!result.ok) setMessage(result.message);
               });
             }}
           >

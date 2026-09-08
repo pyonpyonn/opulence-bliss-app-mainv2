@@ -64,7 +64,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "Changing or pausing a membership",
     content:
-      "You can modify or cancel any individual visit from /account before it starts. A replacement time must still meet the minimum booking notice and the permitted appointment window. Your card isn't charged for a cancelled visit. To pause your membership or cancel it after the three-month minimum term, contact the Opulence Bliss team and they'll arrange it.",
+      "You can modify or cancel an individual visit from /account before it starts. A replacement time must still meet the minimum booking notice and the permitted appointment window. For a paid visit, cancelling 48 hours or more before the start gives a full refund, cancelling from 24 hours up to 48 hours before gives a 50% refund, and cancelling less than 24 hours before gives no refund. When the card is only authorised, the refundable part of the hold is released and only the applicable cancellation amount is captured. To pause your membership or cancel it after the three-month minimum term, contact the Opulence Bliss team and they'll arrange it.",
   },
   {
     title: "How booking works",
@@ -84,7 +84,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "Cancelling and rescheduling",
     content:
-      "You can cancel or modify a visit from My bookings in your account or ask the assistant to prepare a time change. The assistant always shows a confirmation button before changing anything. A new time must meet the minimum notice and permitted appointment window. If you cancel before the visit is complete, the card hold is released; if an eligible paid booking is cancelled, the refund process starts. Every modification keeps its audited history and the customer, provider and admin schedule are updated.",
+      "You can cancel or modify a visit from My bookings in your account or ask the assistant to prepare a time change. The assistant always shows a confirmation button before changing anything. A new time must meet the minimum notice and permitted appointment window. The cancellation policy is: 48 hours or more before the booking gives a full refund; from 24 hours up to 48 hours gives a 50% refund; and less than 24 hours gives no refund. The cancellation screen shows the exact amount before confirmation. Every modification keeps its audited history and the customer, provider and admin schedule are updated.",
   },
   {
     title: "Tipping",

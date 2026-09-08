@@ -566,7 +566,7 @@ export default function BookPage() {
                   <em>✓</em> Card held, not charged until the visit is done
                 </li>
                 <li>
-                  <em>✓</em> Free cancellation up to 24 hours before
+                  <em>✓</em> Full refund when cancelled 48+ hours before
                 </li>
               </ul>
             </section>

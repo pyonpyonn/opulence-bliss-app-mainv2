@@ -506,11 +506,17 @@ export function projectVisitStatus(f: VisitFacts): VisitStatus {
       return {
         headline: "Cancelled",
         detail:
-          money.state === "released"
-            ? "This visit was cancelled and the hold was released. You weren't charged."
-            : money.state === "refunded"
-              ? "This visit was cancelled and your payment was refunded."
-              : "This visit was cancelled.",
+           money.state === "released"
+             ? "This visit was cancelled and the hold was released. You weren't charged."
+             : money.state === "refunded"
+               ? "This visit was cancelled and your payment was refunded."
+              : money.state === "partially_refunded"
+                ? `This visit was cancelled and £${(money.refunded ?? 0).toFixed(2)} was refunded under the cancellation policy.`
+                : money.state === "charged"
+                  ? `This visit was cancelled. The cancellation charge was £${(money.amount ?? 0).toFixed(2)}.`
+                  : money.state === "under_review"
+                    ? "This visit was cancelled and its payment adjustment is being processed."
+               : "This visit was cancelled.",
         tone: "neutral",
         nextActor: "client",
         nextActorLabel: ACTOR_LABEL.client,

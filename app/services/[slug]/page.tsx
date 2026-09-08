@@ -267,7 +267,7 @@ export default function ServicePage() {
               ],
               [
                 "We're flexible",
-                "Something come up? Reschedule or cancel free of charge before your visit.",
+                "Cancel 48+ hours before for a full refund, or 24–48 hours before for a 50% refund.",
               ],
               [
                 "We're fair",
