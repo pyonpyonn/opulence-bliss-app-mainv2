@@ -6,7 +6,7 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
- const PUBLIC = [
+  const PUBLIC = [
     "/api",
     "/admin/login",
     "/login",
@@ -14,6 +14,8 @@ export async function updateSession(request: NextRequest) {
     "/services",
     "/subscribe",
     "/providers",
+    "/blog",
+    "/faq",
     "/provider",
     "/account",
     "/worker",

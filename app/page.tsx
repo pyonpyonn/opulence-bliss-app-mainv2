@@ -5,7 +5,9 @@
 // Landing page — two-level nav, hero, coloured service bands.
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import SiteFooter from "@/components/SiteFooter";
 
 const supabase = createClient();
 
@@ -63,9 +65,9 @@ export default function Home() {
               onChange={(e) => setPostcode(e.target.value)}
               aria-label="Postcode"
             />
-            <a className="btn" href={bookLink}>
+            <Link className="btn" href={bookLink}>
               Book my cleaning
-            </a>
+            </Link>
           </div>
           <p className="micro">
             Central, North &amp; West London · pay per visit or subscribe
@@ -75,16 +77,16 @@ export default function Home() {
 
       {/* ---------- SERVICE BANDS ---------- */}
       <section className="bands" id="services">
-        <a className="band clean" href="/services/cleaning">
+        <Link className="band clean" href="/services/cleaning">
           <div>
             <h2>Cleaning</h2>
             <p>and ironing, at home</p>
             {from.clean > 0 && <span className="from">from £{from.clean}</span>}
           </div>
           <span className="arrow">→</span>
-        </a>
+        </Link>
 
-        <a className="band massage" href="/services/massage">
+        <Link className="band massage" href="/services/massage">
           <div>
             <h2>Massage</h2>
             <p>at home</p>
@@ -93,16 +95,16 @@ export default function Home() {
             )}
           </div>
           <span className="arrow">→</span>
-        </a>
+        </Link>
 
-        <a className="band member" href="/subscribe">
+        <Link className="band member" href="/subscribe">
           <div>
             <h2>Memberships</h2>
             <p>regular visits, handled for you</p>
             <span className="from">from £189 / month</span>
           </div>
           <span className="arrow">→</span>
-        </a>
+        </Link>
       </section>
 
       {/* ---------- TRUST ---------- */}
@@ -177,25 +179,12 @@ export default function Home() {
       <section className="cta-band">
         <h2>Ready to hand it over?</h2>
         <p>Enter your postcode and see what&apos;s free this week.</p>
-        <a className="btn light" href="/book">
+        <Link className="btn light" href="/book">
           Book a service
-        </a>
+        </Link>
       </section>
 
-      {/* ---------- FOOTER ---------- */}
-      <footer className="foot">
-        <div>
-          <strong>Opulence Bliss</strong>
-          <p>Premium home &amp; wellness care, London.</p>
-        </div>
-        <div className="foot-links">
-          <a href="/services/cleaning">Cleaning</a>
-          <a href="/services/massage">Massage</a>
-          <a href="/subscribe">Memberships</a>
-          <a href="/provider/join">Work with us</a>
-          <a href="/provider/login">Provider login</a>
-        </div>
-      </footer>
+      <SiteFooter />
 
       <style jsx>{`
         .site {
@@ -571,40 +560,6 @@ export default function Home() {
         .cta-band p {
           color: #cfdcd2;
           margin: 0 0 26px;
-        }
-
-        /* FOOTER */
-        .foot {
-          max-width: 1080px;
-          margin: 0 auto;
-          padding: 44px 28px 76px;
-          display: flex;
-          justify-content: space-between;
-          gap: 24px;
-          flex-wrap: wrap;
-        }
-        .foot strong {
-          font-family: inherit;
-          font-size: 18px;
-          color: var(--green);
-        }
-        .foot p {
-          color: var(--muted);
-          font-size: 14px;
-          margin: 6px 0 0;
-        }
-        .foot-links {
-          display: flex;
-          gap: 22px;
-          flex-wrap: wrap;
-        }
-        .foot-links a {
-          color: var(--green-mid);
-          text-decoration: none;
-          font-size: 14.5px;
-        }
-        .foot-links a:hover {
-          color: var(--green);
         }
 
         /* RESPONSIVE */
