@@ -26,7 +26,6 @@ create policy "public and recipients read reviews"
 on public.reviews for select to public
 using (
   visibility = 'public'
-  or public.is_admin()
   or (
     reviewer = 'client'
     and exists (
