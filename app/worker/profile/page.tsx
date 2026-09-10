@@ -191,9 +191,9 @@ export default function ProviderProfilePage() {
                 <span className="review-count">{reviews.length}</span>
               </div>
               <p className="feedback-copy">
-                You can see every review here. Ratings of 1–3 stars stay
-                private automatically, and customers can also keep positive
-                feedback private.
+                You can see every review you received here. Public feedback can
+                be seen by everyone. Private feedback is visible here only to
+                you. Customer ratings of 1–3 stars always stay private.
               </p>
 
               {reviewsError ? (

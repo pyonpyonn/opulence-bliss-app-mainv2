@@ -296,6 +296,14 @@ export default async function WorkerPage() {
     string,
     { rating: number; comment: string | null }
   >();
+  const { data: submissionRows } = await supabase.rpc(
+    "my_review_submission_states",
+  );
+  const providerSubmissionMap = new Map(
+    (submissionRows ?? [])
+      .filter((review) => review.reviewer === "provider")
+      .map((review) => [review.booking_id as string, review.visibility as string]),
+  );
   if (pastIds.length) {
     const { data: revs } = await supabase
       .from("reviews")
@@ -371,6 +379,7 @@ export default async function WorkerPage() {
               const ci = one(r.check_ins);
               const clientReview = clientReviewMap.get(r.id);
               const providerReview = providerReviewMap.get(r.id);
+              const providerSubmitted = providerSubmissionMap.get(r.id);
               const actualDuration = elapsed(ci?.arrived_at, ci?.left_at);
               const completed = r.status === "completed";
               return (
@@ -402,7 +411,10 @@ export default async function WorkerPage() {
                           label: "Your rating of the client",
                           rating: providerReview?.rating ?? null,
                           comment: providerReview?.comment ?? null,
-                          pending: "You still need to rate this client",
+                          submitted: Boolean(providerSubmitted),
+                          pending: providerSubmitted
+                            ? "Your private review was sent to the client"
+                            : "You still need to rate this client",
                         }
                       : null
                   }
@@ -451,7 +463,7 @@ export default async function WorkerPage() {
                       <strong>Client notes:</strong> {r.household_notes}
                     </p>
                   )}
-                  {completed && !providerReview && (
+                  {completed && !providerSubmitted && (
                     <JobActions
                       id={r.id}
                       status={r.status}

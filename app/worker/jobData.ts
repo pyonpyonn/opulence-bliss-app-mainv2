@@ -45,6 +45,7 @@ export type WorkerJobWorkspaceData = {
     rating: number;
     comment: string | null;
   } | null;
+  hasRatedClient: boolean;
 };
 
 type BookingPackage = {
@@ -131,6 +132,7 @@ export async function loadWorkerJob(
     eventResult,
     ratingResult,
     invoiceResult,
+    submissionResult,
   ] = await Promise.all([
     supabase.rpc("booking_customer_summary", { p_booking_id: row.id }),
     supabase
@@ -158,6 +160,7 @@ export async function loadWorkerJob(
       .select("id, invoice_number, issued_at, status, customer_name, service_name, address, property_size_sqm, duration_minutes, gross_amount, platform_fee, payout_amount, payout_schedule, payout_due_on")
       .eq("booking_id", row.id)
       .maybeSingle(),
+    supabase.rpc("my_review_submission_states"),
   ]);
 
   const customer = one(customerResult.data as never) as {
@@ -298,5 +301,14 @@ export async function loadWorkerJob(
           comment: ratingResult.data.comment,
         }
       : null,
+    hasRatedClient: (
+      (submissionResult.data ?? []) as Array<{
+        booking_id: string;
+        reviewer: string;
+      }>
+    ).some(
+      (review) =>
+        review.booking_id === row.id && review.reviewer === "provider",
+    ),
   };
 }

@@ -7,6 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { revalidatePath } from "next/cache";
+import {
+  effectiveReviewVisibility,
+  type ReviewVisibility,
+} from "@/lib/reviewVisibility";
 import { sendEmail } from "@/lib/email";
 import { rotateBookingOffer } from "@/lib/offerRotation";
 import {
@@ -733,7 +737,12 @@ export async function markAllRead() {
 }
 
 // Provider rates the client after a completed visit.
-export async function rateClient(id: string, rating: number, comment: string) {
+export async function rateClient(
+  id: string,
+  rating: number,
+  comment: string,
+  visibility: ReviewVisibility,
+) {
   const supabase = await createClient();
   const clean = Math.min(5, Math.max(1, Math.round(rating)));
 
@@ -742,7 +751,7 @@ export async function rateClient(id: string, rating: number, comment: string) {
     reviewer: "provider",
     rating: clean,
     comment: comment?.trim() ? comment.trim() : null,
-    visibility: "private",
+    visibility: effectiveReviewVisibility(clean, visibility, "provider"),
   });
 
   if (!error) {

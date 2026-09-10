@@ -24,3 +24,7 @@ test("a customer can keep a positive review private", () => {
   assert.equal(effectiveReviewVisibility(5, undefined), "private");
 });
 
+test("a professional can make any client review public or private", () => {
+  assert.equal(effectiveReviewVisibility(1, "public", "provider"), "public");
+  assert.equal(effectiveReviewVisibility(5, "private", "provider"), "private");
+});

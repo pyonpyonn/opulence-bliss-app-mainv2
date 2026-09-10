@@ -8,6 +8,34 @@ import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
+type ReceivedReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  visibility: "public" | "private";
+  created_at: string;
+  bookings:
+    | {
+        providers:
+          | { display_name: string | null }
+          | { display_name: string | null }[]
+          | null;
+        packages: { name: string } | { name: string }[] | null;
+      }
+    | {
+        providers:
+          | { display_name: string | null }
+          | { display_name: string | null }[]
+          | null;
+        packages: { name: string } | { name: string }[] | null;
+      }[];
+};
+
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 export default function ClientProfilePage() {
   const [uid, setUid] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -20,6 +48,8 @@ export default function ClientProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [receivedReviews, setReceivedReviews] = useState<ReceivedReview[]>([]);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -45,6 +75,19 @@ export default function ClientProfilePage() {
       setPhone(data?.phone ?? "");
       setAddress(data?.address ?? "");
       setPostcode(data?.postcode ?? "");
+
+      const { data: reviews, error: reviewError } = await supabase
+        .from("reviews")
+        .select(
+          "id, rating, comment, visibility, created_at, bookings!inner(customer_id, providers(display_name), packages(name))",
+        )
+        .eq("reviewer", "provider")
+        .eq("bookings.customer_id", user.id)
+        .order("created_at", { ascending: false });
+      setReceivedReviews((reviews ?? []) as unknown as ReceivedReview[]);
+      setReviewsError(
+        reviewError ? "Your reviews could not be loaded. Please refresh." : null,
+      );
       setLoading(false);
     })();
   }, []);
@@ -132,6 +175,60 @@ export default function ClientProfilePage() {
               {saving ? "Saving…" : "Save details"}
             </button>
             {msg && <p className="msg">{msg}</p>}
+
+            <section className="card received" aria-labelledby="received-reviews-title">
+              <div className="review-heading">
+                <div>
+                  <p className="review-eyebrow">Reviews you received</p>
+                  <h2 id="received-reviews-title">Professional feedback</h2>
+                </div>
+                <span className="review-count">{receivedReviews.length}</span>
+              </div>
+              <p className="review-help">
+                Public feedback can be seen by everyone. Private feedback is
+                visible here only to you.
+              </p>
+              {reviewsError ? (
+                <p className="review-error">{reviewsError}</p>
+              ) : receivedReviews.length === 0 ? (
+                <p className="review-empty">No professional feedback yet.</p>
+              ) : (
+                <div className="review-list">
+                  {receivedReviews.map((review) => {
+                    const booking = one(review.bookings);
+                    const provider = one(booking?.providers);
+                    const service = one(booking?.packages);
+                    return (
+                      <article className="review" key={review.id}>
+                        <div className="review-top">
+                          <span className="stars">
+                            {"★".repeat(review.rating)}
+                            {"☆".repeat(5 - review.rating)}
+                          </span>
+                          <span className={`visibility ${review.visibility}`}>
+                            {review.visibility === "public" ? "Public" : "Private"}
+                          </span>
+                        </div>
+                        <strong className="reviewer">
+                          {provider?.display_name ?? "Your professional"}
+                          {service?.name ? ` · ${service.name}` : ""}
+                        </strong>
+                        <p className={review.comment ? "review-comment" : "review-comment muted"}>
+                          {review.comment || "Rating submitted without a comment."}
+                        </p>
+                        <time dateTime={review.created_at}>
+                          {new Date(review.created_at).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </time>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           </>
         )}
 
@@ -182,6 +279,102 @@ export default function ClientProfilePage() {
         }
         .card.center {
           text-align: center;
+        }
+        .received {
+          margin-top: 22px;
+        }
+        .review-heading,
+        .review-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .review-eyebrow {
+          margin: 0 0 3px;
+          color: var(--ob-purple);
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+        }
+        h2 {
+          margin: 0;
+          font-family: "Fraunces", serif;
+          font-size: 22px;
+          font-weight: 500;
+        }
+        .review-count {
+          display: grid;
+          place-items: center;
+          min-width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          background: var(--ob-purple-soft);
+          color: var(--ob-purple);
+          font-weight: 800;
+        }
+        .review-help {
+          margin: 9px 0 18px;
+          color: var(--ob-muted);
+          font-size: 13.5px;
+          line-height: 1.5;
+        }
+        .review-list {
+          display: grid;
+          gap: 10px;
+        }
+        .review {
+          padding: 14px;
+          border: 1px solid var(--ob-border);
+          border-radius: 12px;
+          background: var(--ob-surface-soft);
+        }
+        .stars {
+          color: var(--ob-purple);
+          letter-spacing: 1px;
+        }
+        .visibility {
+          border-radius: 999px;
+          padding: 4px 9px;
+          font-size: 11px;
+          font-weight: 800;
+        }
+        .visibility.public {
+          background: #e4f6ec;
+          color: #137b4e;
+        }
+        .visibility.private {
+          background: var(--ob-purple-soft);
+          color: var(--ob-purple);
+        }
+        .reviewer {
+          display: block;
+          margin-top: 9px;
+          color: var(--ob-text);
+          font-size: 13px;
+        }
+        .review-comment {
+          margin: 5px 0;
+          color: var(--ob-text);
+          font-size: 14px;
+          line-height: 1.45;
+        }
+        .review time {
+          color: var(--ob-muted);
+          font-size: 11.5px;
+        }
+        .review-empty,
+        .review-error {
+          margin: 0;
+          padding: 14px;
+          border-radius: 11px;
+          background: var(--ob-surface-soft);
+          color: var(--ob-muted);
+          font-size: 13.5px;
+        }
+        .review-error {
+          color: #b0384f;
         }
         label {
           display: block;

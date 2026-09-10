@@ -15,6 +15,8 @@ import {
   rateClient,
 } from "./actions";
 import JobExceptions from "./JobExceptions";
+import ReviewVisibilityChoice from "@/components/ReviewVisibilityChoice";
+import type { ReviewVisibility } from "@/lib/reviewVisibility";
 
 const green: React.CSSProperties = {
   background: "#16202A",
@@ -49,6 +51,7 @@ export default function JobActions({
   status,
   scheduledAt,
   existingRating,
+  hasSubmittedRating = false,
   showExceptions = true,
   compact = false,
 }: {
@@ -56,6 +59,7 @@ export default function JobActions({
   status: string;
   scheduledAt: string;
   existingRating?: { rating: number; comment: string | null } | null;
+  hasSubmittedRating?: boolean;
   showExceptions?: boolean;
   compact?: boolean;
 }) {
@@ -207,7 +211,11 @@ export default function JobActions({
         >
           ✓ Completed — payment taken and your share sent.
         </p>
-        <RateClientBox id={id} existing={existingRating ?? null} />
+        <RateClientBox
+          id={id}
+          existing={existingRating ?? null}
+          submittedPrivately={hasSubmittedRating && !existingRating}
+        />
       </div>
     );
   }
@@ -428,15 +436,27 @@ export function CheckInControl({
 function RateClientBox({
   id,
   existing,
+  submittedPrivately,
 }: {
   id: string;
   existing: { rating: number; comment: string | null } | null;
+  submittedPrivately: boolean;
 }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
+  const [visibility, setVisibility] =
+    useState<ReviewVisibility>("public");
   const [done, setDone] = useState<string | null>(null);
+
+  if (submittedPrivately) {
+    return (
+      <p style={{ margin: "8px 0 0", color: "#6D28D9", fontSize: 13.5 }}>
+        Your private review was sent to this client.
+      </p>
+    );
+  }
 
   if (existing) {
     return (
@@ -485,13 +505,17 @@ function RateClientBox({
   return (
     <div>
       <p style={{ margin: "0 0 8px", fontSize: 13.5, color: "#7A828C" }}>
-        How was this client? Only admins see individual ratings.
+        How was this client? Choose whether everyone or only the client can see
+        your review.
       </p>
       <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            onClick={() => setStars(n)}
+            onClick={() => {
+              setStars(n);
+              setVisibility("public");
+            }}
             aria-label={`${n} star${n > 1 ? "s" : ""}`}
             style={{
               background: "none",
@@ -524,11 +548,18 @@ function RateClientBox({
           resize: "vertical",
         }}
       />
+      <ReviewVisibilityChoice
+        rating={stars}
+        value={visibility}
+        onChange={setVisibility}
+        idPrefix={`client-review-${id}`}
+        reviewer="provider"
+      />
       <button
         disabled={pending || stars === 0}
         onClick={() =>
           start(async () => {
-            const r = await rateClient(id, stars, comment);
+            const r = await rateClient(id, stars, comment, visibility);
             setDone(
               r?.error
                 ? "You've already rated this client."

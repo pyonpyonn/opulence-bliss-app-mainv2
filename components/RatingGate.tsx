@@ -61,12 +61,13 @@ export default function RatingGate() {
     // Which have I already rated?
     const ids = done.map((b) => b.id);
     const { data: mine } = await supabase
-      .from("reviews")
-      .select("booking_id")
-      .in("booking_id", ids)
-      .eq("reviewer", role);
+      .rpc("my_review_submission_states");
 
-    const rated = new Set((mine ?? []).map((r) => r.booking_id));
+    const rated = new Set(
+      (mine ?? [])
+        .filter((review) => review.reviewer === role && ids.includes(review.booking_id))
+        .map((review) => review.booking_id),
+    );
     const next = done.find((b) => !rated.has(b.id));
     if (!next) return;
 
@@ -105,7 +106,7 @@ export default function RatingGate() {
       reviewer: job.role,
       rating: stars,
       comment: comment.trim() || null,
-      visibility: job.role === "client" ? visibility : "private",
+      visibility,
     });
 
     setBusy(false);
@@ -175,7 +176,7 @@ export default function RatingGate() {
             <p className="sub">
               {job.role === "client"
                 ? `Rate ${job.other}. This takes a second and helps everyone.`
-                : "Rate the client. Only admins see individual client ratings."}
+                : "Rate the client, then choose who can see your review."}
             </p>
 
             <div className="stars">
@@ -185,9 +186,9 @@ export default function RatingGate() {
                   className={n <= stars ? "star on" : "star"}
                   onClick={() => {
                     setStars(n);
-                    if (job.role === "client") {
-                      setVisibility(n >= 4 ? "public" : "private");
-                    }
+                    setVisibility(
+                      job.role === "client" && n < 4 ? "private" : "public",
+                    );
                   }}
                   aria-label={`${n} star${n > 1 ? "s" : ""}`}
                 >
@@ -208,14 +209,13 @@ export default function RatingGate() {
               placeholder="Add a sentence (optional)"
             />
 
-            {job.role === "client" && (
-              <ReviewVisibilityChoice
-                rating={stars}
-                value={visibility}
-                onChange={setVisibility}
-                idPrefix={`rating-gate-${job.bookingId}`}
-              />
-            )}
+            <ReviewVisibilityChoice
+              rating={stars}
+              value={visibility}
+              onChange={setVisibility}
+              idPrefix={`rating-gate-${job.bookingId}`}
+              reviewer={job.role}
+            />
 
             <button className="go" onClick={submit} disabled={busy || !stars}>
               {busy ? "Saving…" : "Submit rating"}

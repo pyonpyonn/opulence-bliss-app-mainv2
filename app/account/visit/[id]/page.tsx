@@ -79,6 +79,7 @@ export default async function VisitPage({
     eventResult,
     packagesResult,
     profileResult,
+    submissionResult,
   ] =
     await Promise.all([
     getVisitStatus(supabase, row.id),
@@ -108,11 +109,22 @@ export default async function VisitPage({
       .select("full_name, email")
       .eq("id", user.id)
       .maybeSingle(),
+    supabase.rpc("my_review_submission_states"),
   ]);
 
   const pays = paymentResult.data ?? [];
   const events = eventResult.data ?? [];
   const review = reviewResult.data;
+  const hasSubmittedReview = (
+    (submissionResult.data ?? []) as Array<{
+      booking_id: string;
+      reviewer: string;
+      visibility: string;
+    }>
+  ).some(
+    (submitted) =>
+      submitted.booking_id === id && submitted.reviewer === "client",
+  );
   const jobPay = pays.find((payment) => payment.kind !== "tip");
   const tipAmount = pays
     .filter(
@@ -313,11 +325,15 @@ export default async function VisitPage({
             hasArrived={Boolean(checkIn?.arrived_at)}
           />
 
-          {(canRate || canTip || review) && (
+          {(canRate || canTip || review || hasSubmittedReview) && (
             <div id="review" style={actionBlock}>
               <strong style={actionTitle}>Your review</strong>
-              {(canRate || review) && (
-                <RateBooking id={row.id} existing={review ?? null} />
+              {(canRate || review || hasSubmittedReview) && (
+                <RateBooking
+                  id={row.id}
+                  existing={review ?? null}
+                  submittedPrivately={hasSubmittedReview && !review}
+                />
               )}
               {canTip && <TipBooking id={row.id} />}
               <p style={{ margin: "12px 0 0" }}>

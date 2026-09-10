@@ -21,6 +21,7 @@ const columns: Array<{
       ["Meet our professionals", "/providers"],
       ["How it works", "/#how"],
       ["Blog", "/blog"],
+      ["Public reviews", "/reviews"],
       ["Frequently asked questions", "/faq"],
     ],
   },

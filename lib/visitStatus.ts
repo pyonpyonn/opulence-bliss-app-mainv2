@@ -657,11 +657,7 @@ export async function getVisitStatus(
     supabase.rpc("get_client_visit_status_facts", {
       p_booking_id: bookingId,
     }),
-    supabase
-      .from("reviews")
-      .select("*", { count: "exact", head: true })
-      .eq("booking_id", bookingId)
-      .eq("reviewer", "client"),
+    supabase.rpc("my_review_submission_states"),
   ]);
 
   if (paymentResult.error || privateResult.error || ratingResult.error) {
@@ -669,6 +665,12 @@ export async function getVisitStatus(
   }
 
   const pay = paymentResult.data;
+  const hasSubmittedClientReview = (
+    (ratingResult.data ?? []) as Array<{ booking_id: string; reviewer: string }>
+  ).some(
+    (review) =>
+      review.booking_id === bookingId && review.reviewer === "client",
+  );
   const privateRows = privateResult.data as
     | {
         open_offer_count: number | string;
@@ -713,7 +715,7 @@ export async function getVisitStatus(
         }
       : null,
 
-    hasRated: (ratingResult.count ?? 0) > 0,
+    hasRated: hasSubmittedClientReview,
     now: new Date().toISOString(),
   });
 }

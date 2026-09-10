@@ -979,6 +979,7 @@ export function BookingTools({
 export function RateBooking({
   id,
   existing,
+  submittedPrivately = false,
 }: {
   id: string;
   existing?: {
@@ -986,6 +987,7 @@ export function RateBooking({
     comment: string | null;
     visibility?: ReviewVisibility;
   } | null;
+  submittedPrivately?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [stars, setStars] = useState(0);
@@ -994,6 +996,14 @@ export function RateBooking({
     useState<ReviewVisibility>("public");
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  if (submittedPrivately) {
+    return (
+      <p style={{ margin: "12px 0 0", color: "#6D28D9", fontSize: 13.5 }}>
+        Your private review was sent to your professional.
+      </p>
+    );
+  }
 
   if (existing) {
     return (

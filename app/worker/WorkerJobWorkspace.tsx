@@ -417,6 +417,7 @@ export default function WorkerJobWorkspace({
                 status={job.status}
                 scheduledAt={job.scheduledAt}
                 existingRating={job.existingClientRating}
+                hasSubmittedRating={job.hasRatedClient}
                 showExceptions={false}
                 compact
               />

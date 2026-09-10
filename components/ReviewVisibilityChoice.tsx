@@ -3,6 +3,7 @@
 import {
   isPositiveCleanerReview,
   type ReviewVisibility,
+  type ReviewAuthor,
 } from "@/lib/reviewVisibility";
 
 export default function ReviewVisibilityChoice({
@@ -10,22 +11,24 @@ export default function ReviewVisibilityChoice({
   value,
   onChange,
   idPrefix,
+  reviewer = "client",
 }: {
   rating: number;
   value: ReviewVisibility;
   onChange: (value: ReviewVisibility) => void;
   idPrefix: string;
+  reviewer?: ReviewAuthor;
 }) {
   if (rating === 0) return null;
 
-  if (!isPositiveCleanerReview(rating)) {
+  if (reviewer === "client" && !isPositiveCleanerReview(rating)) {
     return (
       <div style={privateNote} role="status">
         <strong style={{ display: "block", marginBottom: 3 }}>
           This feedback will stay private
         </strong>
-        Ratings of 1–3 stars are shown only to your professional and the
-        Opulence Bliss team. They never appear publicly.
+        Ratings of 1–3 stars are shown only to your professional. They never
+        appear publicly.
       </div>
     );
   }
@@ -35,8 +38,14 @@ export default function ReviewVisibilityChoice({
       <legend style={legend}>Who can see your review?</legend>
       {(
         [
-          ["public", "Public", "May appear on the website."],
-          ["private", "Private", "Only your professional and our team."],
+          ["public", "Public", "Anyone can see this review."],
+          [
+            "private",
+            "Private",
+            reviewer === "provider"
+              ? "Only this client can see it."
+              : "Only your professional can see it.",
+          ],
         ] as const
       ).map(([option, title, copy]) => (
         <label
@@ -107,4 +116,3 @@ const privateNote: React.CSSProperties = {
   margin: "0 0 14px",
   textAlign: "left",
 };
-

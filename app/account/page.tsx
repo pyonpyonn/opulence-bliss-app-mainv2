@@ -170,6 +170,14 @@ export default async function AccountPage({
   const { data: reviewData } = await supabase
     .from("reviews")
     .select("booking_id, rating, comment, reviewer, visibility");
+  const { data: submissionData } = await supabase.rpc(
+    "my_review_submission_states",
+  );
+  const clientSubmissionMap = new Map(
+    (submissionData ?? [])
+      .filter((review) => review.reviewer === "client")
+      .map((review) => [review.booking_id as string, review.visibility as string]),
+  );
   const clientReviewMap = new Map<
     string,
     { rating: number; comment: string | null; visibility?: "public" | "private" }
@@ -305,7 +313,7 @@ export default async function AccountPage({
   };
 
   const unrated = history.filter(
-    (b) => b.status === "completed" && !clientReviewMap.has(b.id),
+    (b) => b.status === "completed" && !clientSubmissionMap.has(b.id),
   );
 
   return (
@@ -409,6 +417,7 @@ export default async function AccountPage({
               const ci = one(b.check_ins);
               const st = LABEL[b.status] ?? LABEL.completed;
               const clientReview = clientReviewMap.get(b.id);
+              const submittedVisibility = clientSubmissionMap.get(b.id);
               const providerReview = providerReviewMap.get(b.id);
               const payment = paymentMap.get(b.id);
               const tipAmount = tipMap.get(b.id) ?? 0;
@@ -463,7 +472,10 @@ export default async function AccountPage({
                           label: "Your rating for the provider",
                           rating: clientReview?.rating ?? null,
                           comment: clientReview?.comment ?? null,
-                          pending: "Your rating is still needed",
+                          submitted: Boolean(submittedVisibility),
+                          pending: submittedVisibility
+                            ? "Your private review was sent to the provider"
+                            : "Your rating is still needed",
                         }
                       : null
                   }
@@ -517,7 +529,7 @@ export default async function AccountPage({
                           style={invoiceButton}
                         />
                       )}
-                      {!clientReview && (
+                      {!submittedVisibility && (
                         <RateBooking id={b.id} existing={null} />
                       )}
                       <TipBooking id={b.id} />

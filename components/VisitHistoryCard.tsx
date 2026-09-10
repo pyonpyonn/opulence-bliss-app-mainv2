@@ -10,6 +10,7 @@ export type HistoryRating = {
   rating?: number | null;
   comment?: string | null;
   pending?: string;
+  submitted?: boolean;
 };
 
 export default function VisitHistoryCard({
@@ -94,8 +95,8 @@ export default function VisitHistoryCard({
           {rating && (
             <span
               style={{
-                color: rating.rating ? "#6D28D9" : "#8A5A00",
-                background: rating.rating ? "#F4ECFE" : "#FFF3D6",
+                color: rating.rating || rating.submitted ? "#6D28D9" : "#8A5A00",
+                background: rating.rating || rating.submitted ? "#F4ECFE" : "#FFF3D6",
                 borderRadius: 999,
                 padding: "5px 10px",
                 fontSize: 12.5,
@@ -103,7 +104,11 @@ export default function VisitHistoryCard({
                 whiteSpace: "nowrap",
               }}
             >
-              {rating.rating ? `${rating.rating} ★` : "Rating needed"}
+              {rating.rating
+                ? `${rating.rating} ★`
+                : rating.submitted
+                  ? "Review sent"
+                  : "Rating needed"}
             </span>
           )}
           <span
