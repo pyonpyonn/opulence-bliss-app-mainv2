@@ -14,7 +14,7 @@ export default function BlogPage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.hero}>
+      <header className={`${styles.hero} ${styles.blogHero}`}>
         <div className={styles.heroInner}>
           <p className={styles.eyebrow}>The Opulence Bliss journal</p>
           <h1>Helpful ideas for a calmer home</h1>

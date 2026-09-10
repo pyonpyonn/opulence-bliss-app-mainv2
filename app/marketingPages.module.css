@@ -16,6 +16,11 @@
   text-align: center;
 }
 
+.blogHero {
+  padding-top: clamp(42px, 6vw, 68px);
+  padding-bottom: clamp(44px, 6vw, 68px);
+}
+
 .heroInner,
 .content,
 .articleShell {
