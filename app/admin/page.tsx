@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import AdminButtons from "./AdminButtons";
 import VettingButtons from "./VettingButtons";
-import ReviewList, { type Review } from "./ReviewList";
+import ReviewList from "./ReviewList";
 import AdminNav from "./AdminNav";
+import { loadAdminReviews } from "@/lib/adminReviews";
 
 async function count(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -73,11 +74,8 @@ export default async function AdminPage() {
     (p) => p.vetting_status === "pending"
   );
 
-  const { data: reviewRows } = await supabase
-    .from("reviews")
-    .select("id, reviewer, rating, comment, visibility, created_at")
-    .order("created_at", { ascending: false })
-    .limit(30);
+  const { reviews: recentReviews, error: reviewsError } =
+    await loadAdminReviews(supabase, 3);
 
   return (
     <main style={{ ...wrap, display: "block", padding: "0 20px 80px" }}>
@@ -277,9 +275,21 @@ export default async function AdminPage() {
         </div>
 
         {/* Reviews */}
-        <h2 style={sectionTitle}>Reviews</h2>
+        <div style={sectionHeading}>
+          <div>
+            <h2 style={{ ...sectionTitle, marginBottom: 3 }}>Recent reviews</h2>
+            <p style={{ margin: 0, color: "#7A828C", fontSize: 12.5 }}>
+              App activity covering cleaner and client reviews.
+            </p>
+          </div>
+          <Link href="/admin/reviews" style={showAllLink}>Show all →</Link>
+        </div>
         <div style={{ ...card, padding: "6px 20px", marginBottom: 34 }}>
-          <ReviewList reviews={(reviewRows ?? []) as Review[]} />
+          {reviewsError ? (
+            <p style={{ color: "#a52e47", padding: "14px 0" }}>{reviewsError}</p>
+          ) : (
+            <ReviewList reviews={recentReviews} compact />
+          )}
         </div>
 
         {/* Tools */}
@@ -339,6 +349,8 @@ const sectionTitle: React.CSSProperties = {
   color: "#16202A",
   margin: "0 0 14px",
 };
+const sectionHeading: React.CSSProperties = { display: "flex", alignItems: "end", justifyContent: "space-between", gap: 14, margin: "0 0 14px", flexWrap: "wrap" };
+const showAllLink: React.CSSProperties = { borderRadius: 999, padding: "8px 14px", background: "#f4ecfe", color: "#6d28d9", fontSize: 12.5, fontWeight: 900, textDecoration: "none" };
 const btn: React.CSSProperties = {
   display: "inline-block",
   background: "#16202A",
