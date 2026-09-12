@@ -23,6 +23,19 @@ export function durationLabel(minutes: number) {
   return minutes % 60 ? `${hours}h 30m` : `${hours}h`;
 }
 
+/** Return a cleaning package's proportional hourly rate, rounded to pence. */
+export function cleaningHourlyRatePence(pkg: {
+  price: number | string;
+  duration_minutes: number | null;
+}) {
+  const baseMinutes = pkg.duration_minutes ?? 120;
+  const price = Number(pkg.price);
+  if (!Number.isFinite(price) || price <= 0 || baseMinutes <= 0) {
+    throw new Error("This package needs a valid price and duration.");
+  }
+  return Math.round(price * 100 * 60 / baseMinutes);
+}
+
 /** Round exactly once, in pence; checkout and promotional previews share this rule. */
 export function bookingPricePence(pkg: {
   price: number | string;

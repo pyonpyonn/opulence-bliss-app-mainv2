@@ -59,12 +59,24 @@ export const blogPosts: BlogPost[] = [
     category: "Cleaning guide",
     title: "How many cleaning hours does your home need?",
     summary:
-      "A practical room-by-room guide to choosing enough time for a calm, thorough visit.",
-    published: "8 September 2026",
-    publishedIso: "2026-09-08",
-    readTime: "4 min read",
+      "Compare our four cleaning sessions and choose enough time for a calm, thorough visit.",
+    published: "13 September 2026",
+    publishedIso: "2026-09-13",
+    readTime: "5 min read",
     accent: "purple",
     sections: [
+      {
+        heading: "Choose the cleaning session that fits",
+        paragraphs: [
+          "Every cleaning session can be booked for two to eight hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
+        ],
+        points: [
+          "Essential Clean — £18.90 per hour. Our regular standard clean covers dusting, floors, bedroom, kitchen and bathroom to keep your home fresh week to week.",
+          "One-Time Essential Clean — £22.90 per hour. A single standard clean with no ongoing commitment, perfect for a one-off refresh.",
+          "Express Clean — £22.90 per hour. A same-day standard clean for when time is tight, subject to available cleaners and time slots.",
+          "Signature Deep Clean — £24.90 per hour. A thorough, top-to-bottom clean that reaches the spots regular cleaning misses, ideal for a seasonal reset or before hosting.",
+        ],
+      },
       {
         heading: "Start with the size of your home",
         paragraphs: [

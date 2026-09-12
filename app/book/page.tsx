@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CLEANING_DURATIONS, isCleaning, validPropertySize, recommendedCleaningMinutes, bookingPricePence } from "@/lib/cleaningBooking";
+import { CLEANING_DURATIONS, isCleaning, validPropertySize, recommendedCleaningMinutes, bookingPricePence, cleaningHourlyRatePence } from "@/lib/cleaningBooking";
 import ConsentCheckbox from "@/components/ConsentCheckbox";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
@@ -596,10 +596,16 @@ export default function BookPage() {
                       <span className="optbody">
                         <span className="optTop">
                           <strong>{p.name}</strong>
-                          <b>{money(p.price)}</b>
+                          <b>
+                            {isCleaning(p.service_type)
+                              ? `${money(cleaningHourlyRatePence(p) / 100)} / hour`
+                              : money(p.price)}
+                          </b>
                         </span>
                         <span className="optMeta">
-                          {duration(p.duration_minutes)}
+                          {isCleaning(p.service_type)
+                            ? "2–8 hours · 30-minute steps"
+                            : duration(p.duration_minutes)}
                           {p.service_type
                             ? ` · ${
                                 p.service_type.includes("massage")

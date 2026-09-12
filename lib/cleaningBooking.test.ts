@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bookingPricePence, CLEANING_DURATIONS, recommendedCleaningMinutes, validCleaningDuration, validPropertySize } from "./cleaningBooking";
+import { bookingPricePence, CLEANING_DURATIONS, cleaningHourlyRatePence, recommendedCleaningMinutes, validCleaningDuration, validPropertySize } from "./cleaningBooking";
 
 test("cleaning has exactly 13 valid half-hour choices", () => {
   assert.equal(CLEANING_DURATIONS.length, 13);
@@ -16,7 +16,10 @@ test("property-size guidance rounds up and caps at eight hours", () => {
   assert.equal(recommendedCleaningMinutes(90), 180);
   assert.equal(recommendedCleaningMinutes(500), 480);
 });
-test("checkout quotes use the original package rate and round to pence", () => {
+test("cleaning hourly rates and checkout totals stay proportional", () => {
+  assert.equal(cleaningHourlyRatePence({ price: 37.8, duration_minutes: 120 }), 1890);
+  assert.equal(cleaningHourlyRatePence({ price: 45.8, duration_minutes: 120 }), 2290);
+  assert.equal(cleaningHourlyRatePence({ price: 74.7, duration_minutes: 180 }), 2490);
   const pkg = { price: 50, duration_minutes: 120, service_type: "cleaning" };
   assert.equal(bookingPricePence(pkg, 120), 5000);
   assert.equal(bookingPricePence(pkg, 150), 6250);

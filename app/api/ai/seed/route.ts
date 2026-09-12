@@ -172,10 +172,16 @@ export async function GET(req: NextRequest) {
         "Single visits, charged per visit: " +
         perVisit
           .map(
-            (p) =>
-              `${p.name} — £${Number(p.price).toFixed(0)} per visit${
-                p.duration_minutes ? `, ${p.duration_minutes} minutes` : ""
-              } (${p.service_type ?? "service"}). ${p.description ?? ""}`
+            (p) => {
+              const isCleaning = (p.service_type ?? "").toLowerCase().includes("clean");
+              const duration = Number(p.duration_minutes ?? 120);
+              const hourly = Number(p.price) * 60 / duration;
+              return isCleaning
+                ? `${p.name} — £${hourly.toFixed(2)} per cleaner-hour; cleaning bookings run from two to eight hours in 30-minute steps. ${p.description ?? ""}`
+                : `${p.name} — £${Number(p.price).toFixed(0)} per visit${
+                    p.duration_minutes ? `, ${p.duration_minutes} minutes` : ""
+                  } (${p.service_type ?? "service"}). ${p.description ?? ""}`;
+            }
           )
           .join(" ") +
         " Book a single visit at /book. Monthly memberships, billed monthly on a three-month minimum term: " +

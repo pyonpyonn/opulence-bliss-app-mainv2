@@ -5,12 +5,14 @@
 // Landing page — two-level nav, hero, coloured service bands.
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SiteFooter from "@/components/SiteFooter";
+import { cleaningHourlyRatePence } from "@/lib/cleaningBooking";
 
 const supabase = createClient();
 
-type Pkg = { price: number; service_type: string | null; billing_type: string };
+type Pkg = { price: number; service_type: string | null; billing_type: string; duration_minutes: number | null };
 
 export default function Home() {
   const [from, setFrom] = useState<{ clean: number; massage: number }>({
@@ -23,7 +25,7 @@ export default function Home() {
     (async () => {
       const { data } = await supabase
         .from("packages")
-        .select("price, service_type, billing_type")
+        .select("price, service_type, billing_type, duration_minutes")
         .eq("active", true)
         .eq("billing_type", "per_visit");
 
@@ -34,7 +36,13 @@ export default function Home() {
           .map((x) => Number(x.price));
         return p.length ? Math.min(...p) : 0;
       };
-      setFrom({ clean: min("clean"), massage: min("massage") });
+      const cleaningRates = list
+        .filter((x) => (x.service_type ?? "").includes("clean"))
+        .map((x) => cleaningHourlyRatePence(x) / 100);
+      setFrom({
+        clean: cleaningRates.length ? Math.min(...cleaningRates) : 0,
+        massage: min("massage"),
+      });
     })();
   }, []);
 
@@ -76,16 +84,16 @@ export default function Home() {
 
       {/* ---------- SERVICE BANDS ---------- */}
       <section className="bands" id="services">
-        <a className="band clean" href="/services/cleaning">
+        <Link className="band clean" href="/services/cleaning">
           <div>
             <h2>Cleaning</h2>
             <p>and ironing, at home</p>
-            {from.clean > 0 && <span className="from">from £{from.clean}</span>}
+            {from.clean > 0 && <span className="from">from £{from.clean.toFixed(2)} / hour</span>}
           </div>
           <span className="arrow">→</span>
-        </a>
+        </Link>
 
-        <a className="band massage" href="/services/massage">
+        <Link className="band massage" href="/services/massage">
           <div>
             <h2>Massage</h2>
             <p>at home</p>
@@ -94,16 +102,16 @@ export default function Home() {
             )}
           </div>
           <span className="arrow">→</span>
-        </a>
+        </Link>
 
-        <a className="band member" href="/subscribe">
+        <Link className="band member" href="/subscribe">
           <div>
             <h2>Memberships</h2>
             <p>regular visits, handled for you</p>
             <span className="from">from £189 / month</span>
           </div>
           <span className="arrow">→</span>
-        </a>
+        </Link>
       </section>
 
       {/* ---------- TRUST ---------- */}

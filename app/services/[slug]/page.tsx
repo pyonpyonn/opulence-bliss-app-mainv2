@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { cleaningHourlyRatePence } from "@/lib/cleaningBooking";
 
 const supabase = createClient();
 
@@ -46,7 +47,7 @@ const COPY: Record<
       "Vetted, insured cleaners in your area",
       "One-off or regular cleaning",
       "All products and equipment included",
-      "7 days a week, 8am to 8pm",
+      "7 days a week, 7am to 7pm",
     ],
     proLink: "/provider/join",
     proText: "Become an Opulence cleaner",
@@ -54,10 +55,10 @@ const COPY: Record<
       "Book a cleaner who learns your home — your products, your preferences, your rhythm. Choose a single visit, or set up regular ones and stop thinking about it.",
     alsoTitle: "Looking for something else in cleaning?",
     also: [
-      { label: "Regular cleaning", type: "clean" },
-      { label: "One-off cleaning", type: "clean" },
-      { label: "Deep cleaning", type: "clean" },
-      { label: "Cleaning & ironing", type: "clean" },
+      { label: "Essential Clean", type: "clean" },
+      { label: "One-Time Essential Clean", type: "clean" },
+      { label: "Express Clean", type: "clean" },
+      { label: "Signature Deep Clean", type: "clean" },
     ],
     faq: [
       {
@@ -69,8 +70,12 @@ const COPY: Record<
         a: "No. Your cleaner brings all products and equipment, including eco-friendly cleaning products as standard. Someone does need to be home to let them in, or you can leave access instructions when you book.",
       },
       {
-        q: "How long does a clean take?",
-        a: "Our Essential Clean is two hours, which suits regular upkeep of a one or two bedroom home. The Signature Deep Clean is three hours and covers the whole home including inside appliances — better for a first visit or a seasonal reset.",
+        q: "Which cleaning session should I choose?",
+        a: "Essential Clean is for regular week-to-week upkeep at £18.90 per hour. One-Time Essential Clean is a one-off standard refresh at £22.90 per hour. Express Clean is our same-day standard clean at £22.90 per hour, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset at £24.90 per hour.",
+      },
+      {
+        q: "How long can I book a clean for?",
+        a: "Choose from two to eight hours in 30-minute steps. Enter your property size during booking and we will suggest a suitable duration; you can adjust it before choosing a time.",
       },
       {
         q: "When am I charged?",
@@ -183,7 +188,11 @@ export default function ServicePage() {
   }, [copy.match]);
 
   const cheapest = items.length
-    ? Math.min(...items.map((i) => Number(i.price)))
+    ? Math.min(...items.map((i) =>
+        slug === "cleaning"
+          ? cleaningHourlyRatePence(i) / 100
+          : Number(i.price)
+      ))
     : 0;
   const avg =
     reviews.length > 0
@@ -228,7 +237,7 @@ export default function ServicePage() {
                 <li>
                   <strong>
                     {slug === "massage" ? "Sessions" : "Cleans"} from{" "}
-                    {money(cheapest)}
+                    {slug === "cleaning" ? `£${cheapest.toFixed(2)} / hour` : money(cheapest)}
                   </strong>
                 </li>
               )}
@@ -341,11 +350,14 @@ export default function ServicePage() {
                   {i === 0 && <span className="pill">Popular</span>}
                   <h3>{p.name}</h3>
                   <p className="price">
-                    {money(p.price)}
+                    {slug === "cleaning"
+                      ? `£${(cleaningHourlyRatePence(p) / 100).toFixed(2)}`
+                      : money(p.price)}
                     <span>
                       {" "}
-                      per visit
-                      {p.duration_minutes ? ` · ${p.duration_minutes} min` : ""}
+                      {slug === "cleaning"
+                        ? "per hour · 2-hour minimum"
+                        : `per visit${p.duration_minutes ? ` · ${p.duration_minutes} min` : ""}`}
                     </span>
                   </p>
                   {p.description && <p className="desc">{p.description}</p>}
