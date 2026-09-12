@@ -30,7 +30,7 @@ export default function AppointmentTimePicker({
           onChange={(event) => { setDraftDate(event.target.value); onChange(""); }}
           style={{ padding: 12, border: "1px solid #ccb9ee", borderRadius: 10, font: "inherit", color: "#241b2f", background: "#fff" }} />
       </label>}
-      <p style={{ fontSize: 13, color: "#736a7d" }}>Start between 7:00 AM and 8:00 PM, London time. Morning, afternoon and evening options are welcome—choose what suits you. Cleaner matching follows booking.</p>
+      <p style={{ fontSize: 13, color: "#736a7d" }}>Appointments run between 7:00 AM and 7:00 PM, London time. The available start times make sure your full visit finishes by 7:00 PM. Cleaner matching follows booking.</p>
       {!date ? <p>Select a date using the calendar to see times.</p> : times.length === 0 ? <p role="status">No times on this date. Please choose another date.</p> : (
         <div role="group" aria-label="Start time" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {times.map((iso) => <button type="button" key={iso} aria-pressed={value === iso} onClick={() => onChange(iso)}

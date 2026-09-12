@@ -9,6 +9,7 @@ import {
   APPOINTMENT_END_HOUR,
   APPOINTMENT_START_HOUR,
   DEFAULT_APPOINTMENT_DURATION_MINUTES,
+  appointmentFitsWindow,
   londonDate,
   londonParts,
 } from "@/lib/appointmentWindow";
@@ -89,6 +90,7 @@ export async function GET(req: NextRequest) {
           minute % 60,
         );
         if (slot.getTime() < now + 2 * 60 * 60 * 1000) continue;
+        if (!appointmentFitsWindow(slot, durationMinutes)) continue;
         slots.push(slot.toISOString());
       }
     }
@@ -116,7 +118,7 @@ export async function GET(req: NextRequest) {
       suggested,
       appointmentWindow: {
         start: "07:00",
-        end: "20:00",
+        end: "19:00",
         durationMinutes,
       },
       workerAvailabilityRequired: false,

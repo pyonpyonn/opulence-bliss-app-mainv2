@@ -1,6 +1,6 @@
 export const APPOINTMENT_TIME_ZONE = "Europe/London";
 export const APPOINTMENT_START_HOUR = 7;
-export const APPOINTMENT_END_HOUR = 20;
+export const APPOINTMENT_END_HOUR = 19;
 export const DEFAULT_APPOINTMENT_DURATION_MINUTES = 120;
 
 type LondonParts = {
@@ -91,20 +91,35 @@ export function appointmentFitsWindow(
   durationMinutes = DEFAULT_APPOINTMENT_DURATION_MINUTES,
 ) {
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime()) || durationMinutes <= 0) return false;
+  if (
+    Number.isNaN(date.getTime()) ||
+    !Number.isFinite(durationMinutes) ||
+    durationMinutes <= 0
+  ) {
+    return false;
+  }
 
   const start = londonParts(date);
+  const end = londonParts(date.getTime() + durationMinutes * 60_000);
   const startMinute = start.hour * 60 + start.minute;
-  return Number.isFinite(durationMinutes) &&
+  const endMinute = end.hour * 60 + end.minute;
+  const finishesSameDay =
+    start.year === end.year &&
+    start.month === end.month &&
+    start.day === end.day;
+
+  return (
     startMinute >= APPOINTMENT_START_HOUR * 60 &&
-    startMinute <= APPOINTMENT_END_HOUR * 60 &&
+    finishesSameDay &&
+    endMinute <= APPOINTMENT_END_HOUR * 60 &&
     start.minute % 30 === 0 &&
     date.getUTCSeconds() === 0 &&
-    date.getUTCMilliseconds() === 0;
+    date.getUTCMilliseconds() === 0
+  );
 }
 
 export const APPOINTMENT_WINDOW_MESSAGE =
-  "Appointments must start between 7:00 am and 8:00 pm (London time), on the hour or half hour.";
+  "Appointments must start at or after 7:00 am and finish by 7:00 pm (London time), with start times on the hour or half hour.";
 
 export function appointmentTimeLabel(value: Date | string | number) {
   const date = value instanceof Date ? value : new Date(value);

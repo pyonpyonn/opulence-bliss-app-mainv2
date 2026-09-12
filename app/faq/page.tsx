@@ -15,7 +15,7 @@ const faqGroups: Array<{
   {
     title: "Booking a visit",
     items: [
-      ["When can I book a cleaning visit?", "Cleaning visits can be booked for two to eight hours in 30-minute steps. Start times run from 7:00 am through 8:00 pm, subject to professional availability. Same-day bookings need at least two hours of notice."],
+      ["When can I book a cleaning visit?", "You can place a booking online at any time. Cleaning visits run between 7:00 am and 7:00 pm in 30-minute steps, and the available start times ensure the full visit finishes by 7:00 pm. Same-day bookings need at least two hours of notice; professional matching follows booking."],
       ["How does the recommended duration work?", "Enter your property size during booking and we will suggest a suitable number of hours. You can still choose another available duration if your home needs more or less attention."],
       ["Can I request a professional I already know?", "Yes. After you complete a visit with a professional, you can request them on a future booking. The request depends on their availability and acceptance."],
       ["Can I add special instructions?", "Yes. Add access details and cleaning priorities before payment. Once a professional accepts, you can use the private booking chat for visit-related messages and photos."],

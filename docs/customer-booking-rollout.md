@@ -1,6 +1,6 @@
 # Customer booking changes
 
-Cleaning sessions run from 2 to 8 hours in 30-minute increments, with start times from 07:00 through 20:00 Europe/London. An 8-hour visit starting at 20:00 finishes the following day. Massage retains its existing package duration.
+Cleaning sessions run from 2 to 8 hours in 30-minute increments between 07:00 and 19:00 Europe/London. The full visit must finish by 19:00, so the latest available start depends on its duration. Massage retains its existing package duration.
 
 Pricing is proportional to the selected package's original price and duration, rounded to pence. Promotional previews and checkout use the same calculation. The property-size estimate uses 35 m² per cleaner-hour, rounded up to a half hour and clamped to 2–8 hours; customers can override the estimate. Properties above 280 m² show a multiple-visit advisory. This estimate should be calibrated with the cleaning team.
 
@@ -35,7 +35,7 @@ Custom tips support arbitrary pence amounts from Stripe's GBP card minimum of £
 Run `npm ci`, `npm test`, `npx tsc --noEmit`, and the customer-booking GitHub workflow. Pure tests cover duration boundaries, pricing, size estimates, London time/DST, and existing booking-state projections.
 
 Staging integration checks:
-- A 2.5-hour clean costs 1.25 times a 2-hour package; invalid duration/size requests fail at checkout. Try 07:00, 20:00, 20:30 and 12:45.
+- A 2.5-hour clean costs 1.25 times a 2-hour package; invalid duration/size requests fail at checkout. Try a start that finishes exactly at 19:00, one that finishes after 19:00, 06:30 and 12:45.
 - Refresh the successful Stripe checkout concurrently; exactly one booking/payment and one initial queue should exist.
 - Verify a previous cleaner is requested first only when eligible; a provider ID from someone else's history is rejected.
 - Test receipt, acceptance, reminders and 30-minute alerts with shortened staging-only due times. Invoke the cron twice concurrently and verify one app notification per event, one email submission per idempotency key, and reschedule/cancel invalidation.

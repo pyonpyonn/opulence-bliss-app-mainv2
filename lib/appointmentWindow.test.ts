@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { appointmentFitsWindow, appointmentTimeLabel, londonDate, londonParts } from "./appointmentWindow";
 
-test("starts range from 7 AM through 8 PM, including overnight sessions", () => {
+test("appointments start from 7 AM and finish by 7 PM", () => {
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 7), 120), true);
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 6, 30), 120), false);
-  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 20), 480), true);
-  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 20, 30), 120), false);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 17), 120), true);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 17, 30), 120), false);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 11), 480), true);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 11, 30), 480), false);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 19), 120), false);
 });
 test("start times reject irregular minutes, seconds and invalid inputs", () => {
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 12, 30), 150), true);
