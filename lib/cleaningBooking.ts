@@ -1,5 +1,25 @@
 export const CLEANING_DURATIONS = Array.from({ length: 13 }, (_, i) => 120 + i * 30);
 
+export const CLEANING_SESSION_ORDER = [
+  "Essential Clean",
+  "One-Time Essential Clean",
+  "Express Clean",
+  "Signature Deep Clean",
+  "End of Tenancy / Move-In Clean",
+  "Guest Ready",
+  "Linen Care",
+  "Window Cleaning",
+  "Essential Clean and Linen Care",
+] as const;
+
+export function compareCleaningSessions(a: { name: string }, b: { name: string }) {
+  const aIndex = CLEANING_SESSION_ORDER.indexOf(a.name as typeof CLEANING_SESSION_ORDER[number]);
+  const bIndex = CLEANING_SESSION_ORDER.indexOf(b.name as typeof CLEANING_SESSION_ORDER[number]);
+  return (aIndex < 0 ? CLEANING_SESSION_ORDER.length : aIndex)
+    - (bIndex < 0 ? CLEANING_SESSION_ORDER.length : bIndex)
+    || a.name.localeCompare(b.name);
+}
+
 export function isCleaning(serviceType: string | null | undefined) {
   return (serviceType ?? "").toLowerCase().includes("clean");
 }

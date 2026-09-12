@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bookingPricePence, CLEANING_DURATIONS, cleaningHourlyRatePence, recommendedCleaningMinutes, validCleaningDuration, validPropertySize } from "./cleaningBooking";
+import { bookingPricePence, CLEANING_DURATIONS, CLEANING_SESSION_ORDER, cleaningHourlyRatePence, compareCleaningSessions, recommendedCleaningMinutes, validCleaningDuration, validPropertySize } from "./cleaningBooking";
 
 test("cleaning has exactly 13 valid half-hour choices", () => {
   assert.equal(CLEANING_DURATIONS.length, 13);
   for (const minutes of [120,150,180,210,240,270,300,330,360,390,420,450,480]) assert.equal(validCleaningDuration(minutes), true);
   for (const minutes of [0,60,119,170,225,481,510,NaN,Infinity]) assert.equal(validCleaningDuration(minutes), false);
+});
+test("cleaning sessions retain the catalogue order", () => {
+  const shuffled = CLEANING_SESSION_ORDER.map((name) => ({ name })).reverse();
+  assert.deepEqual(shuffled.sort(compareCleaningSessions).map((item) => item.name), [...CLEANING_SESSION_ORDER]);
 });
 test("property-size guidance rounds up and caps at eight hours", () => {
   assert.equal(validPropertySize(0), false);

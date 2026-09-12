@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { cleaningHourlyRatePence } from "@/lib/cleaningBooking";
+import { cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 
 const supabase = createClient();
 
@@ -59,6 +59,11 @@ const COPY: Record<
       { label: "One-Time Essential Clean", type: "clean" },
       { label: "Express Clean", type: "clean" },
       { label: "Signature Deep Clean", type: "clean" },
+      { label: "End of Tenancy / Move-In Clean", type: "clean" },
+      { label: "Guest Ready", type: "clean" },
+      { label: "Linen Care", type: "clean" },
+      { label: "Window Cleaning", type: "clean" },
+      { label: "Essential Clean and Linen Care", type: "clean" },
     ],
     faq: [
       {
@@ -72,6 +77,10 @@ const COPY: Record<
       {
         q: "Which cleaning session should I choose?",
         a: "Essential Clean is for regular week-to-week upkeep at £18.90 per hour. One-Time Essential Clean is a one-off standard refresh at £22.90 per hour. Express Clean is our same-day standard clean at £22.90 per hour, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset at £24.90 per hour.",
+      },
+      {
+        q: "What specialist cleaning services can I book?",
+        a: "End of Tenancy / Move-In Clean is £25 per hour for a landlord and inspection-ready deep clean. Guest Ready is £22.90 per hour for fast holiday-rental turnarounds. Linen Care and Window Cleaning are each £16.90 per hour. Essential Clean and Linen Care combines regular cleaning, ironing and laundry for £23.90 per hour.",
       },
       {
         q: "How long can I book a clean for?",
@@ -169,11 +178,10 @@ export default function ServicePage() {
         .eq("billing_type", "per_visit")
         .order("price");
 
-      setItems(
-        ((data ?? []) as Pkg[]).filter((p) =>
-          (p.service_type ?? "").includes(copy.match)
-        )
+      const matching = ((data ?? []) as Pkg[]).filter((p) =>
+        (p.service_type ?? "").includes(copy.match)
       );
+      setItems(copy.match === "clean" ? matching.sort(compareCleaningSessions) : matching);
 
       const { data: revs } = await supabase
         .from("reviews")
@@ -345,9 +353,9 @@ export default function ServicePage() {
             <p className="muted">Loading…</p>
           ) : (
             <div className="grid">
-              {items.map((p, i) => (
-                <article key={p.id} className={i === 0 ? "card pop" : "card"}>
-                  {i === 0 && <span className="pill">Popular</span>}
+              {items.map((p) => (
+                <article key={p.id} className={p.name === "Essential Clean" ? "card pop" : "card"}>
+                  {p.name === "Essential Clean" && <span className="pill">Popular</span>}
                   <h3>{p.name}</h3>
                   <p className="price">
                     {slug === "cleaning"

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { isCleaning } from "@/lib/cleaningBooking";
+import { compareCleaningSessions, isCleaning } from "@/lib/cleaningBooking";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function CleaningMenu() {
@@ -15,7 +15,7 @@ export default function CleaningMenu() {
     void createClient().from("packages").select("id, name, service_type, billing_type").eq("active", true).order("price").then(({ data, error }) => {
       if (!active) return;
       setFailed(Boolean(error));
-      setPackages((data ?? []).filter((pkg) => isCleaning(pkg.service_type)));
+      setPackages((data ?? []).filter((pkg) => isCleaning(pkg.service_type)).sort(compareCleaningSessions));
     });
     return () => { active = false; };
   }, []);

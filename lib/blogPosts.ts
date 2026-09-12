@@ -59,10 +59,10 @@ export const blogPosts: BlogPost[] = [
     category: "Cleaning guide",
     title: "How many cleaning hours does your home need?",
     summary:
-      "Compare our four cleaning sessions and choose enough time for a calm, thorough visit.",
+      "Compare our nine cleaning sessions and choose enough time for a calm, thorough visit.",
     published: "13 September 2026",
     publishedIso: "2026-09-13",
-    readTime: "5 min read",
+    readTime: "7 min read",
     accent: "purple",
     sections: [
       {
@@ -75,6 +75,11 @@ export const blogPosts: BlogPost[] = [
           "One-Time Essential Clean — £22.90 per hour. A single standard clean with no ongoing commitment, perfect for a one-off refresh.",
           "Express Clean — £22.90 per hour. A same-day standard clean for when time is tight, subject to available cleaners and time slots.",
           "Signature Deep Clean — £24.90 per hour. A thorough, top-to-bottom clean that reaches the spots regular cleaning misses, ideal for a seasonal reset or before hosting.",
+          "End of Tenancy / Move-In Clean — £25 per hour. A detailed deep clean that leaves a property spotless for moving out or moving in, ready for a landlord or inspection.",
+          "Guest Ready — £22.90 per hour. Fast-turnaround cleaning between guests, tailored for Airbnb and holiday-rental hosts.",
+          "Linen Care — £16.90 per hour. Ironing and laundry service to keep linens and clothing fresh, crisp and ready to use.",
+          "Window Cleaning — £16.90 per hour. Interior and exterior window cleaning for a streak-free shine, available alone or added to a clean.",
+          "Essential Clean and Linen Care — £23.90 per hour. Regular dusting, floors, kitchen and bathroom cleaning combined with ironing and laundry care.",
         ],
       },
       {

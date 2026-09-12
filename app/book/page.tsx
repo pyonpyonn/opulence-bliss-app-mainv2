@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CLEANING_DURATIONS, isCleaning, validPropertySize, recommendedCleaningMinutes, bookingPricePence, cleaningHourlyRatePence } from "@/lib/cleaningBooking";
+import { CLEANING_DURATIONS, isCleaning, validPropertySize, recommendedCleaningMinutes, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 import ConsentCheckbox from "@/components/ConsentCheckbox";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
@@ -458,9 +458,10 @@ export default function BookPage() {
     );
   }
 
-  const shown = serviceType
+  const shown = (serviceType
     ? packages.filter((p) => (p.service_type ?? "").includes(serviceType))
-    : packages;
+    : packages
+  ).sort(serviceType === "clean" ? compareCleaningSessions : () => 0);
 
   const total = selected
     ? promoInfo?.ok && promoInfo.total !== undefined
