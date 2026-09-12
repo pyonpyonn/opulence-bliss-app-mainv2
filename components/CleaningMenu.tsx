@@ -1,34 +1,165 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ChevronDown } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { compareCleaningSessions, isCleaning } from "@/lib/cleaningBooking";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  CLEANING_SESSION_ORDER,
+  compareCleaningSessions,
+  isCleaning,
+} from "@/lib/cleaningBooking";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import styles from "./CleaningMenu.module.css";
+
+type CleaningPackage = {
+  id: string;
+  name: string;
+  billing_type: string;
+};
 
 export default function CleaningMenu() {
-  const [packages, setPackages] = useState<{ id: string; name: string; billing_type: string }[]>([]);
+  const pathname = usePathname() ?? "";
+  const [packages, setPackages] = useState<CleaningPackage[]>([]);
   const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     let active = true;
-    void createClient().from("packages").select("id, name, service_type, billing_type").eq("active", true).order("price").then(({ data, error }) => {
-      if (!active) return;
-      setFailed(Boolean(error));
-      setPackages((data ?? []).filter((pkg) => isCleaning(pkg.service_type)).sort(compareCleaningSessions));
-    });
-    return () => { active = false; };
+    void createClient()
+      .from("packages")
+      .select("id, name, service_type, billing_type")
+      .eq("active", true)
+      .order("price")
+      .then(({ data, error }) => {
+        if (!active) return;
+        setFailed(Boolean(error));
+        setPackages(
+          (data ?? [])
+            .filter((pkg) => isCleaning(pkg.service_type))
+            .sort(compareCleaningSessions),
+        );
+      });
+    return () => {
+      active = false;
+    };
   }, []);
-  return <DropdownMenu>
-    <DropdownMenuTrigger style={{ display: "flex", alignItems: "center", gap: 5, padding: "14px 0", border: 0, background: "transparent", color: "#16202a", font: "inherit", fontWeight: 800, whiteSpace: "nowrap" }}>
-      Cleaning <ChevronDown size={16} />
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="start" style={{ minWidth: 250, maxWidth: "calc(100vw - 24px)" }}>
-      <DropdownMenuItem asChild><Link href="/services/cleaning">Explore cleaning services</Link></DropdownMenuItem>
-      {packages.map((pkg) => <DropdownMenuItem asChild key={pkg.id}>
-        <Link href={pkg.billing_type === "per_visit" ? `/book?type=clean&service=${encodeURIComponent(pkg.id)}` : "/subscribe"}>{pkg.name}</Link>
-      </DropdownMenuItem>)}
-      {failed && <DropdownMenuItem disabled>Packages could not load. Try again shortly.</DropdownMenuItem>}
-    </DropdownMenuContent>
-  </DropdownMenu>;
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  function supportsHover() {
+    return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  }
+
+  function showOnHover() {
+    if (!supportsHover()) return;
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  }
+
+  function hideAfterHover() {
+    if (!supportsHover()) return;
+    closeTimer.current = setTimeout(() => setOpen(false), 180);
+  }
+
+  function keepOpen() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }
+
+  const active = pathname.startsWith("/services/cleaning");
+  const serviceLinks = packages.length
+    ? packages.map((pkg) => ({
+        key: pkg.id,
+        label: pkg.name,
+        href:
+          pkg.billing_type === "per_visit"
+            ? `/book?type=clean&service=${encodeURIComponent(pkg.id)}`
+            : "/subscribe",
+      }))
+    : CLEANING_SESSION_ORDER.map((name) => ({
+        key: name,
+        label: name,
+        href: "/services/cleaning#services",
+      }));
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+      <span
+        className={styles.triggerWrap}
+        onMouseEnter={showOnHover}
+        onMouseLeave={hideAfterHover}
+      >
+        <DropdownMenuTrigger
+          className={`${styles.trigger} ${active ? styles.active : ""}`}
+          aria-label="Open cleaning services"
+        >
+          Cleaning
+          <ChevronDown
+            size={16}
+            className={open ? styles.chevronOpen : styles.chevron}
+          />
+        </DropdownMenuTrigger>
+      </span>
+
+      <DropdownMenuContent
+        align="start"
+        sideOffset={8}
+        collisionPadding={16}
+        className={styles.menu}
+        onMouseEnter={keepOpen}
+        onMouseLeave={hideAfterHover}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        <section className={styles.hero} aria-labelledby="cleaning-menu-title">
+          <h2 id="cleaning-menu-title">Domestic cleaning near you</h2>
+          <DropdownMenuItem asChild className={styles.bookItem}>
+            <Link href="/book?type=clean">Book my cleaning</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className={styles.proItem}>
+            <Link href="/provider/join">
+              Become an Opulence cleaner <ArrowRight size={23} />
+            </Link>
+          </DropdownMenuItem>
+        </section>
+
+        <section className={styles.details} aria-label="Cleaning services">
+          <h3>Cleaning services</h3>
+          <div className={styles.serviceGrid}>
+            {serviceLinks.map((service) => (
+              <DropdownMenuItem
+                asChild
+                key={service.key}
+                className={styles.serviceItem}
+              >
+                <Link href={service.href}>{service.label}</Link>
+              </DropdownMenuItem>
+            ))}
+          </div>
+
+          {failed && (
+            <p className={styles.error} role="status">
+              Live packages could not load. You can still explore our cleaning
+              services.
+            </p>
+          )}
+
+          <DropdownMenuItem asChild className={styles.allItem}>
+            <Link href="/services/cleaning">Explore all cleaning services</Link>
+          </DropdownMenuItem>
+        </section>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }

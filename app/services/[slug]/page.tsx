@@ -47,7 +47,7 @@ const COPY: Record<
       "Vetted, insured cleaners in your area",
       "One-off or regular cleaning",
       "All products and equipment included",
-      "7 days a week, 7am to 7pm",
+      "Book online 24/7 · visits finish by 7pm",
     ],
     proLink: "/provider/join",
     proText: "Become an Opulence cleaner",
@@ -68,7 +68,7 @@ const COPY: Record<
     faq: [
       {
         q: "How do I book a cleaner near me?",
-        a: "Enter your postcode, choose the session that suits you, then pick a time from the slots our cleaners actually have free. You'll be matched with a vetted cleaner in your area and told as soon as one accepts.",
+        a: "Enter your postcode, choose the session that suits you, then select a permitted appointment time. We'll offer the booking to vetted cleaners in your area and tell you as soon as one accepts.",
       },
       {
         q: "Do I need to provide anything?",
@@ -104,7 +104,7 @@ const COPY: Record<
       "Qualified, insured therapists in your area",
       "60 or 90 minute sessions",
       "Table, linens and oils provided",
-      "7 days a week, 8am to 8pm",
+      "Book online 24/7 · visits finish by 7pm",
     ],
     proLink: "/provider/join",
     proText: "Become an Opulence therapist",
