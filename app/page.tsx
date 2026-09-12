@@ -1,11 +1,12 @@
 "use client";
 
+/* eslint-disable @next/next/no-html-link-for-pages */
+
 // SETUP: code "app/page.tsx"
 //
 // Landing page — two-level nav, hero, coloured service bands.
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SiteFooter from "@/components/SiteFooter";
 import { cleaningHourlyRatePence } from "@/lib/cleaningBooking";
@@ -84,16 +85,16 @@ export default function Home() {
 
       {/* ---------- SERVICE BANDS ---------- */}
       <section className="bands" id="services">
-        <Link className="band clean" href="/services/cleaning">
+        <a className="band clean" href="/services/cleaning">
           <div>
             <h2>Cleaning</h2>
             <p>and ironing, at home</p>
             {from.clean > 0 && <span className="from">from £{from.clean.toFixed(2)} / hour</span>}
           </div>
           <span className="arrow">→</span>
-        </Link>
+        </a>
 
-        <Link className="band massage" href="/services/massage">
+        <a className="band massage" href="/services/massage">
           <div>
             <h2>Massage</h2>
             <p>at home</p>
@@ -102,16 +103,16 @@ export default function Home() {
             )}
           </div>
           <span className="arrow">→</span>
-        </Link>
+        </a>
 
-        <Link className="band member" href="/subscribe">
+        <a className="band member" href="/subscribe">
           <div>
             <h2>Memberships</h2>
             <p>regular visits, handled for you</p>
             <span className="from">from £189 / month</span>
           </div>
           <span className="arrow">→</span>
-        </Link>
+        </a>
       </section>
 
       {/* ---------- TRUST ---------- */}
