@@ -27,7 +27,6 @@ type CleaningPackage = {
 export default function CleaningMenu() {
   const pathname = usePathname() ?? "";
   const [packages, setPackages] = useState<CleaningPackage[]>([]);
-  const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,7 +39,7 @@ export default function CleaningMenu() {
       .order("price")
       .then(({ data, error }) => {
         if (!active) return;
-        setFailed(Boolean(error));
+        if (error) return;
         setPackages(
           (data ?? [])
             .filter((pkg) => isCleaning(pkg.service_type))
@@ -124,14 +123,16 @@ export default function CleaningMenu() {
       >
         <section className={styles.hero} aria-labelledby="cleaning-menu-title">
           <h2 id="cleaning-menu-title">Domestic cleaning near you</h2>
-          <DropdownMenuItem asChild className={styles.bookItem}>
-            <Link href="/book?type=clean">Book my cleaning</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild className={styles.proItem}>
-            <Link href="/provider/join">
-              Become an Opulence cleaner <ArrowRight size={23} />
-            </Link>
-          </DropdownMenuItem>
+          <div className={styles.heroActions}>
+            <DropdownMenuItem asChild className={styles.bookItem}>
+              <Link href="/book?type=clean">Book my cleaning</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className={styles.proItem}>
+              <Link href="/provider/join">
+                Become an Opulence cleaner <ArrowRight size={20} />
+              </Link>
+            </DropdownMenuItem>
+          </div>
         </section>
 
         <section className={styles.details} aria-label="Cleaning services">
@@ -147,13 +148,6 @@ export default function CleaningMenu() {
               </DropdownMenuItem>
             ))}
           </div>
-
-          {failed && (
-            <p className={styles.error} role="status">
-              Live packages could not load. You can still explore our cleaning
-              services.
-            </p>
-          )}
 
           <DropdownMenuItem asChild className={styles.allItem}>
             <Link href="/services/cleaning">Explore all cleaning services</Link>
