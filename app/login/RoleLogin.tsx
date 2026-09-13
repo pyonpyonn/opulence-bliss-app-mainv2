@@ -25,7 +25,7 @@ const COPY = {
   },
   provider: {
     eyebrow: "Professional portal",
-    title: "Ready for your next job?",
+    title: "PROFESSIONAL LOGIN",
     body: "Sign in to manage offers, visits, messages, hours and earnings.",
     button: "Sign in to professional portal",
     demoEmail: "worker@test.com",
@@ -93,14 +93,17 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
   return (
     <main className={`login-shell ${mode}`}>
       <section className="login-card">
-        <div className="role-mark" aria-hidden="true">
-          {content.icon}
-        </div>
-        <Link className="brand" href="/">
-          opulence<span>bliss</span>
-        </Link>
-
-        <p className="eyebrow">{content.eyebrow}</p>
+        {mode === "client" && (
+          <>
+            <div className="role-mark" aria-hidden="true">
+              {content.icon}
+            </div>
+            <Link className="brand" href="/">
+              opulence<span>bliss</span>
+            </Link>
+            <p className="eyebrow">{content.eyebrow}</p>
+          </>
+        )}
         <h1>{content.title}</h1>
         <p className="lede">{content.body}</p>
 
