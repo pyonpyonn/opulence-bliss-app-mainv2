@@ -1,4 +1,4 @@
-export const CLEANING_DURATIONS = Array.from({ length: 13 }, (_, i) => 120 + i * 30);
+export const CLEANING_DURATIONS = Array.from({ length: 17 }, (_, i) => 120 + i * 30);
 
 export const CLEANING_SESSION_ORDER = [
   "Essential Clean",
@@ -25,7 +25,7 @@ export function isCleaning(serviceType: string | null | undefined) {
 }
 
 export function validCleaningDuration(minutes: number) {
-  return Number.isInteger(minutes) && minutes >= 120 && minutes <= 480 && minutes % 30 === 0;
+  return Number.isInteger(minutes) && minutes >= 120 && minutes <= 600 && minutes % 30 === 0;
 }
 
 export function validPropertySize(size: number) {
@@ -35,7 +35,7 @@ export function validPropertySize(size: number) {
 /** Planning estimate: 35 square metres per cleaner-hour, rounded up to 30 minutes. */
 export function recommendedCleaningMinutes(squareMetres: number) {
   if (!validPropertySize(squareMetres)) return 120;
-  return Math.max(120, Math.min(480, Math.ceil(squareMetres / 35 * 2) * 30));
+  return Math.max(120, Math.min(600, Math.ceil(squareMetres / 35 * 2) * 30));
 }
 
 export function durationLabel(minutes: number) {
@@ -68,7 +68,7 @@ export function bookingPricePence(pkg: {
     throw new Error("This package needs a valid price and duration.");
   }
   if (isCleaning(pkg.service_type) && !validCleaningDuration(minutes)) {
-    throw new Error("Choose a cleaning duration from 2 to 8 hours in 30-minute steps.");
+    throw new Error("Choose a cleaning duration from 2 to 10 hours in 30-minute steps.");
   }
   return Math.round(price * 100 * (isCleaning(pkg.service_type) ? minutes / baseMinutes : 1));
 }

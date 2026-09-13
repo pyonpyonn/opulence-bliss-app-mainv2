@@ -1,7 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { isCleaning, validCleaningDuration, validPropertySize } from "@/lib/cleaningBooking";
+import { isCleaning, validCleaningDuration } from "@/lib/cleaningBooking";
 import { appointmentFitsWindow, APPOINTMENT_WINDOW_MESSAGE } from "@/lib/appointmentWindow";
 import { rotateBookingOffer } from "@/lib/offerRotation";
 
@@ -19,6 +19,8 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   const postcode = m.postcode || null;
   const request = m.request || null;
   const slot = m.slot || null;
+  const serviceAddress = m.service_address?.trim() || null;
+  const frequency = m.booking_frequency || "one_time";
 
   const { data: pkgRow } = await admin
     .from("packages")
@@ -27,9 +29,11 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
     .maybeSingle();
   const serviceType = pkgRow?.service_type ?? null;
   const minutes = Number(m.duration_minutes);
-  const size = m.property_size_sqm ? Number(m.property_size_sqm) : null;
-  if (isCleaning(serviceType) && (!validCleaningDuration(minutes) || size === null || !validPropertySize(size))) {
-    throw new Error("Invalid cleaning duration or property size.");
+  if (isCleaning(serviceType) && !validCleaningDuration(minutes)) {
+    throw new Error("Invalid cleaning duration.");
+  }
+  if (!serviceAddress || !["one_time", "weekly", "monthly"].includes(frequency)) {
+    throw new Error("Invalid booking address or frequency.");
   }
   if (!slot || !appointmentFitsWindow(slot, minutes)) {
     throw new Error(APPOINTMENT_WINDOW_MESSAGE);
@@ -76,10 +80,12 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
     p_payment_ref: pi.id,
     p_package_id: packageId,
     p_postcode: postcode,
+    p_address: serviceAddress,
     p_request: request,
     p_slot: slot,
     p_duration_minutes: minutes,
-    p_property_size_sqm: size,
+    p_property_size_sqm: null,
+    p_frequency: frequency,
     p_preferred_provider_id: m.preferred_provider_id || null,
     p_amount: pi.amount / 100,
     p_platform: (pi.application_fee_amount ?? 0) / 100,

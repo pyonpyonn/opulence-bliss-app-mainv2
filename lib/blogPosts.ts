@@ -68,7 +68,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Choose the cleaning session that fits",
         paragraphs: [
-          "Every cleaning session can be booked for two to eight hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
+          "Every cleaning session can be booked for two to ten hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
         ],
         points: [
           "Essential Clean — £18.90 per hour. Our regular standard clean covers dusting, floors, bedroom, kitchen and bathroom to keep your home fresh week to week.",
@@ -83,10 +83,10 @@ export const blogPosts: BlogPost[] = [
         ],
       },
       {
-        heading: "Start with the size of your home",
+        heading: "Choose the time your home needs",
         paragraphs: [
-          "When you book a cleaning visit, enter your property size and we will suggest a duration. It is a useful starting point, especially for a first visit, but the condition of the home and your priorities matter too.",
-          "Our cleaning visits run from two to eight hours in 30-minute steps, so you can choose a clear finish time without guessing at odd intervals.",
+          "After choosing a cleaning session, select the number of hours that suits the condition of your home and your priorities.",
+          "Our cleaning visits run from two to ten hours in 30-minute steps, so you can choose a clear finish time without guessing at odd intervals.",
         ],
       },
       {

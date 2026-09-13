@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
               const duration = Number(p.duration_minutes ?? 120);
               const hourly = Number(p.price) * 60 / duration;
               return isCleaning
-                ? `${p.name} — £${hourly.toFixed(2)} per cleaner-hour; cleaning bookings run from two to eight hours in 30-minute steps. ${p.description ?? ""}`
+                ? `${p.name} — £${hourly.toFixed(2)} per cleaner-hour; cleaning bookings run from two to ten hours in 30-minute steps. ${p.description ?? ""}`
                 : `${p.name} — £${Number(p.price).toFixed(0)} per visit${
                     p.duration_minutes ? `, ${p.duration_minutes} minutes` : ""
                   } (${p.service_type ?? "service"}). ${p.description ?? ""}`;

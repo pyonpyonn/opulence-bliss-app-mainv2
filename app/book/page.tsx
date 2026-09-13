@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CLEANING_DURATIONS, isCleaning, validPropertySize, recommendedCleaningMinutes, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
+import { CLEANING_DURATIONS, isCleaning, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 import ConsentCheckbox from "@/components/ConsentCheckbox";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
@@ -25,7 +25,23 @@ type Pkg = {
 
 type Area = { name: string; postcode_prefixes: string[] };
 
-const STEPS = ["Service", "Session", "Time", "Confirm"];
+const STEPS = ["Address", "Session", "Frequency", "Hours", "Time", "Confirm"];
+
+type BookingFrequency = "one_time" | "weekly" | "monthly";
+
+const FREQUENCIES: Array<{
+  value: BookingFrequency;
+  title: string;
+  note: string;
+}> = [
+  { value: "one_time", title: "One time", note: "Just this visit" },
+  { value: "weekly", title: "Every week", note: "A weekly cleaning preference" },
+  { value: "monthly", title: "Every month", note: "A monthly cleaning preference" },
+];
+
+function frequencyLabel(value: BookingFrequency) {
+  return FREQUENCIES.find((item) => item.value === value)?.title ?? "One time";
+}
 
 function outwardCode(pc: string) {
   const s = pc.toUpperCase().replace(/\s+/g, "");
@@ -72,24 +88,21 @@ export default function BookPage() {
   const [role, setRole] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [serviceType, setServiceType] = useState<string | null>("clean");
-  const [editPc, setEditPc] = useState(false);
 
   const [step, setStep] = useState(0);
   const [postcode, setPostcode] = useState("");
+  const [address, setAddress] = useState("");
   const [gate, setGate] = useState<null | { ok: boolean; area?: string }>(null);
   const [selected, setSelected] = useState<Pkg | null>(null);
 
   const [cleaningMinutes, setCleaningMinutes] = useState(120);
-  const [propertySize, setPropertySize] = useState("");
-  const [sizeUnit, setSizeUnit] = useState("sqm");
+  const [frequency, setFrequency] = useState<BookingFrequency>("one_time");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [previousCleaners, setPreviousCleaners] = useState<{ provider_id: string; display_name: string }[]>([]);
   const [preferredCleaner, setPreferredCleaner] = useState("");
   const cleaning = isCleaning(selected?.service_type);
-  const squareMetres = Number(propertySize) * (sizeUnit === "sqft" ? 0.09290304 : 1);
   const minutes = cleaning ? cleaningMinutes : selected?.duration_minutes ?? 120;
-  const recommendation = recommendedCleaningMinutes(squareMetres);
-  const propertyValid = !cleaning || validPropertySize(squareMetres);
+  const addressValid = address.trim().length >= 5;
 
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
@@ -112,8 +125,6 @@ export default function BookPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-
   /* ---------- load ---------- */
   useEffect(() => {
     (async () => {
@@ -131,12 +142,19 @@ export default function BookPage() {
           .eq("active", true),
       ]);
 
-      const list = (pkgs ?? []) as Pkg[];
+      const list = ((pkgs ?? []) as Pkg[]).sort(compareCleaningSessions);
       const areaList = (ars ?? []) as Area[];
       setPackages(list);
       setAreas(areaList);
+      const essential =
+        list.find((item) => item.name === "Essential Clean") ?? list[0] ?? null;
+      setSelected(essential);
+      if (essential) {
+        setCleaningMinutes(Math.max(120, essential.duration_minutes ?? 120));
+      }
 
       let savedPc: string | null = null;
+      let savedAddress: string | null = null;
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -144,7 +162,7 @@ export default function BookPage() {
       if (user) {
         const { data: p } = await supabase
           .from("profiles")
-          .select("role, postcode")
+          .select("role, postcode, address")
           .eq("id", user.id)
           .maybeSingle();
         setRole(p?.role ?? null);
@@ -153,6 +171,10 @@ export default function BookPage() {
         if (p?.postcode) {
           savedPc = p.postcode;
           setPostcode(p.postcode);
+        }
+        if (p?.address) {
+          savedAddress = p.address;
+          setAddress(p.address);
         }
       }
 
@@ -177,16 +199,19 @@ export default function BookPage() {
         setGate(hit ? { ok: true, area: hit.name } : { ok: false });
       }
 
-      const match = wantService ? list.find((p) => p.id === wantService) : undefined;
+      const match =
+        (wantService ? list.find((p) => p.id === wantService) : undefined) ??
+        essential;
+      if (match) {
+        setSelected(match);
+        setCleaningMinutes(Math.max(120, match.duration_minutes ?? 120));
+      }
+      const hasAddress = (savedAddress ?? "").trim().length >= 5;
 
       // Assistant handoffs are checked against the current permitted booking
-      // window before opening the payment summary. If anything changed, keep the known service and
-      // postcode and show fresh times instead of silently returning to step one.
-      if (match && isCleaning(match.service_type)) {
-        setSelected(match);
-        setServiceType("clean");
-        setStep(covered ? 1 : 0);
-      } else if (reviewHandoff && match && wantSlot && pcToCheck) {
+      // window before opening the payment summary. A saved full address is
+      // required before an assistant can skip the first screen.
+      if (reviewHandoff && match && wantSlot && pcToCheck && hasAddress) {
         try {
           const response = await fetch(
             `/api/slots?postcode=${encodeURIComponent(
@@ -217,9 +242,9 @@ export default function BookPage() {
 
           if (data.covered && liveSlot) {
             setSlot(liveSlot);
-            setStep(3);
+            setStep(5);
           } else {
-            setStep(data.covered ? 2 : 0);
+            setStep(data.covered ? 4 : 0);
             setHandoffError(
               data.covered
                 ? "That time was just taken. Choose another live time below."
@@ -227,8 +252,7 @@ export default function BookPage() {
             );
           }
         } catch {
-          setSelected(match);
-          setStep(2);
+          setStep(4);
           setHandoffError(
             "We could not recheck that time. Please choose a live time below.",
           );
@@ -240,23 +264,17 @@ export default function BookPage() {
         }
       } else if (reviewHandoff) {
         setHandoffError(
-          "That booking link is incomplete. Please ask the assistant to prepare it again.",
+          hasAddress
+            ? "That booking link is incomplete. Please ask the assistant to prepare it again."
+            : "Confirm your full service address before continuing.",
         );
-      } else if (match && wantSlot && covered) {
-        setSelected(match);
+        setStep(0);
+      } else if (match && wantSlot && covered && hasAddress) {
         setSlot(wantSlot);
-        setStep(3);
-      } else if (match && covered) {
-        setSelected(match);
-        setStep(2);
-        loadSlots(
-          pcToCheck!,
-          match.service_type ?? "",
-          match.duration_minutes,
-        );
-      } else if (wantType && covered) {
-        // Came from a category page and we know their area — straight to sessions.
-        setStep(1);
+        setStep(5);
+      } else {
+        // Every normal booking starts by confirming the service address.
+        setStep(0);
       }
 
       setLoading(false);
@@ -270,7 +288,6 @@ export default function BookPage() {
     );
     if (hit) {
       setGate({ ok: true, area: hit.name });
-      setStep(1);
     } else setGate({ ok: false });
   }
 
@@ -299,13 +316,18 @@ export default function BookPage() {
     setSelected(p);
     setPromoInfo(null);
     setPreferredCleaner("");
-    setCleaningMinutes(recommendedCleaningMinutes(squareMetres));
+    setCleaningMinutes(Math.max(120, p.duration_minutes ?? 120));
     setSlot(null);
   }
 
-  function goToTimes() {
-    if (!selected || !propertyValid) return;
+  function goToFrequency() {
+    if (!selected) return;
     setStep(2);
+  }
+
+  function goToTimes() {
+    if (!selected) return;
+    setStep(4);
     loadSlots(
       postcode,
       selected.service_type ?? "",
@@ -379,7 +401,7 @@ export default function BookPage() {
   }
 
   async function startCheckout() {
-    if (!selected || !propertyValid || !slot) return;
+    if (!selected || !addressValid || !slot) return;
     setPaying(true);
     setPayError(null);
     try {
@@ -389,7 +411,8 @@ export default function BookPage() {
         body: JSON.stringify({
           packageId: selected.id,
           durationMinutes: minutes,
-          propertySizeSqm: cleaning ? squareMetres : null,
+          address,
+          frequency,
           preferredProviderId: cleaning ? preferredCleaner || null : null,
           postcode,
           request,
@@ -481,77 +504,69 @@ export default function BookPage() {
             Step {step + 1} of 4 · <strong>{STEPS[step]}</strong>
           </p>
           <div className="prog">
-            <span style={{ width: `${((step + 1) / 4) * 100}%` }} />
+            <span style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
           </div>
 
-          {/* ---- 0 SERVICE TYPE ---- */}
+          {/* ---- 0 ADDRESS ---- */}
           {step === 0 && (
             <section>
-              <h1>Book home cleaning</h1>
-              <p className="lede">Choose cleaning, then tell us where you are.</p>
+              <p className="eyebrow">Home cleaning</p>
+              <h1>Where should we clean?</h1>
+              <p className="lede">Start with the address for this visit.</p>
 
-              <div className="types">
-                {[
-                  {
-                    key: "clean",
-                    name: "Cleaning",
-                    sub: "Regular, one-off or deep cleans",
-                    icon: "✦",
-                  },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    className={serviceType === t.key ? "type on" : "type"}
-                    onClick={() => setServiceType(t.key)}
-                  >
-                    <span className="typeIcon">{t.icon}</span>
-                    <strong>{t.name}</strong>
-                    <small>{t.sub}</small>
-                  </button>
-                ))}
+              <p className="label">Full service address</p>
+              <input
+                className="field bigAddress"
+                placeholder="e.g. 21 Baker Street, London"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                autoComplete="street-address"
+                aria-label="Full service address"
+              />
+
+              <p className="label">Postcode</p>
+              <div className="inline">
+                <input
+                  className="field big"
+                  placeholder="e.g. SW3 1AA"
+                  value={postcode}
+                  onChange={(e) => {
+                    setPostcode(e.target.value);
+                    setGate(null);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && checkPostcode()}
+                  aria-label="Postcode"
+                />
+                <button className="go" onClick={checkPostcode}>
+                  Check area
+                </button>
               </div>
 
-              {/* Only ask where if we don't already know */}
-              {!gate?.ok && (
-                <>
-                  <p className="label">Your postcode</p>
-                  <div className="inline">
-                    <input
-                      className="field big"
-                      placeholder="e.g. SW3 1AA"
-                      value={postcode}
-                      onChange={(e) => {
-                        setPostcode(e.target.value);
-                        setGate(null);
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && checkPostcode()}
-                      aria-label="Postcode"
-                    />
-                    <button className="go" onClick={checkPostcode}>
-                      Check
-                    </button>
-                  </div>
-                  {gate && !gate.ok && (
-                    <div className="alert">
-                      <strong>We&apos;re not in your area just yet.</strong>
-                      <span>
-                        Right now we cover {areas.map((a) => a.name).join(", ")}.
-                      </span>
-                    </div>
-                  )}
-                </>
+              {gate?.ok && (
+                <div className="covered">
+                  <strong>✓ We cover this address</strong>
+                  <span>{gate.area}</span>
+                </div>
+              )}
+              {gate && !gate.ok && (
+                <div className="alert">
+                  <strong>We&apos;re not in your area just yet.</strong>
+                  <span>
+                    Right now we cover {areas.map((a) => a.name).join(", ")}.
+                  </span>
+                </div>
               )}
 
               <button
                 className="next"
                 onClick={() => setStep(1)}
-                disabled={!serviceType || !gate?.ok}
+                disabled={!addressValid || !gate?.ok}
               >
-                {!serviceType
-                  ? "Choose a service"
+                {!addressValid
+                  ? "Add your full address"
                   : !gate?.ok
-                  ? "Add your postcode"
-                  : "Continue"}
+                    ? "Check your postcode"
+                    : "Continue to sessions"}
               </button>
 
               <ul className="trust">
@@ -573,9 +588,8 @@ export default function BookPage() {
             <section>
               <h1>Choose your session</h1>
               <p className="lede">
-                {gate?.area
-                  ? `Good news — we cover ${gate.area}.`
-                  : "Pick what you'd like."}
+                Essential Clean is selected to get you started. Pick another
+                session to see its details.
               </p>
 
               {loading ? (
@@ -588,79 +602,147 @@ export default function BookPage() {
                       className={selected?.id === p.id ? "opt on" : "opt"}
                       onClick={() => pick(p)}
                     >
-                      <span className="radio" />
                       <span className="optbody">
+                        {p.name === "Essential Clean" && (
+                          <span className="popular">Popular</span>
+                        )}
                         <span className="optTop">
                           <strong>{p.name}</strong>
                           <b>
-                            {isCleaning(p.service_type)
-                              ? `${money(cleaningHourlyRatePence(p) / 100)} / hour`
-                              : money(p.price)}
+                            {money(cleaningHourlyRatePence(p) / 100)} / hr
                           </b>
                         </span>
                         <span className="optMeta">
-                          {isCleaning(p.service_type)
-                            ? "2–8 hours · 30-minute steps"
-                            : duration(p.duration_minutes)}
-                          {p.service_type
-                            ? " · Cleaning"
-                            : ""}
+                          2–10 hours · 30-minute steps · Cleaning
                         </span>
-                        {p.description && (
-                          <span className="optDesc">{p.description}</span>
-                        )}
                       </span>
                     </button>
                   ))}
                 </div>
               )}
 
-              {selected && cleaning && <div style={{ marginTop: 20, padding: 20, background: "#faf7ff", borderRadius: 16 }}>
-                <label className="label" htmlFor="property-size">Property size (required)</label>
-                <div className="inline">
-                  <input id="property-size" className="field" type="number" min="0.01" step="0.01" value={propertySize}
-                    onChange={(e) => { setPropertySize(e.target.value); setPromoInfo(null); setSlot(null); }} placeholder="e.g. 90" />
-                  <select className="field" aria-label="Property size unit" value={sizeUnit} onChange={(e) => { setSizeUnit(e.target.value); setSlot(null); }}>
-                    <option value="sqm">m²</option><option value="sqft">ft²</option>
-                  </select>
+              {selected && (
+                <div className="sessionDetails">
+                  <div>
+                    <span>Selected session</span>
+                    <strong>{selected.name}</strong>
+                    <p>{selected.description ?? "Professional home cleaning tailored to this visit."}</p>
+                  </div>
+                  {(selected.inclusions?.length || selected.good_to_know?.length) && (
+                    <ul>
+                      {[...(selected.inclusions ?? []), ...(selected.good_to_know ?? [])]
+                        .slice(0, 4)
+                        .map((item) => <li key={item}>✓ {item}</li>)}
+                    </ul>
+                  )}
                 </div>
-                {validPropertySize(squareMetres) && <p role="status">
-                  Suggested: <strong>{duration(recommendation)}</strong> for your property.
-                  <button type="button" className="ghost" onClick={() => { setCleaningMinutes(recommendation); setPromoInfo(null); setSlot(null); }}>Use suggested hours</button>
-                  <small style={{ display: "block" }}>Estimate based on 35 m² per cleaner-hour. Condition and tasks can change the time needed.{squareMetres > 280 ? " This property may need multiple visits; a single session is capped at 8 hours." : ""}</small>
-                </p>}
-                <label className="label" htmlFor="cleaning-duration">How long would you like?</label>
-                <select id="cleaning-duration" className="field" value={cleaningMinutes}
-                  onChange={(e) => { setCleaningMinutes(Number(e.target.value)); setPromoInfo(null); setSlot(null); }}>
-                  {CLEANING_DURATIONS.map((n) => <option value={n} key={n}>{duration(n)} · {money(bookingPricePence(selected, n) / 100)}</option>)}
-                </select>
-                <p className="muted">2-hour minimum, 8-hour maximum. Price scales with your chosen hours.</p>
-                {previousCleaners.length > 0 && <>
-                  <label className="label" htmlFor="preferred-cleaner">Request a previous cleaner (optional)</label>
-                  <select id="preferred-cleaner" className="field" value={preferredCleaner} onChange={(e) => setPreferredCleaner(e.target.value)}>
-                    <option value="">Match me with any available cleaner</option>
-                    {previousCleaners.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.display_name}</option>)}
-                  </select>
-                  <p className="muted">We’ll ask your requested cleaner first if they still cover this service and area. Assignment depends on acceptance.</p>
-                </>}
-              </div>}
+              )}
 
               <button
                 className="next"
-                onClick={goToTimes}
-                disabled={!selected || !propertyValid}
+                onClick={goToFrequency}
+                disabled={!selected}
               >
                 {selected ? `Continue with ${selected.name}` : "Choose a session"}
               </button>
 
               <button className="back" onClick={() => setStep(0)}>
-                ← Change service
+                ← Change address
               </button>
             </section>
           )}
 
-          {/* ---- 2 TIME ---- */}
+          {/* ---- 2 FREQUENCY ---- */}
           {step === 2 && selected && (
+            <section>
+              <h1>How often?</h1>
+              <p className="lede">Choose how regularly you would like this cleaning.</p>
+
+              <div className="frequencyGrid">
+                {FREQUENCIES.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={frequency === item.value ? "frequency on" : "frequency"}
+                    onClick={() => setFrequency(item.value)}
+                  >
+                    <span className="choiceDot" />
+                    <strong>{item.title}</strong>
+                    <small>{item.note}</small>
+                  </button>
+                ))}
+              </div>
+
+              <p className="frequencyNote">
+                Your payment today secures this session. The frequency is saved
+                as your preference for future scheduling.
+              </p>
+
+              <button className="next" onClick={() => setStep(3)}>
+                Continue · {frequencyLabel(frequency)}
+              </button>
+              <button className="back" onClick={() => setStep(1)}>
+                ← Change session
+              </button>
+            </section>
+          )}
+
+          {/* ---- 3 HOURS ---- */}
+          {step === 3 && selected && (
+            <section>
+              <h1>How many hours?</h1>
+              <p className="lede">Choose from 2 to 10 hours in 30-minute steps.</p>
+
+              <div className="hoursCard">
+                <div className="hoursTop">
+                  <div>
+                    <span>Cleaning time</span>
+                    <strong>{duration(cleaningMinutes)}</strong>
+                  </div>
+                  <div className="sessionPrice">
+                    <span>Per session</span>
+                    <strong>{money(bookingPricePence(selected, cleaningMinutes) / 100)}</strong>
+                  </div>
+                </div>
+                <input
+                  className="hoursRange"
+                  type="range"
+                  min={CLEANING_DURATIONS[0]}
+                  max={CLEANING_DURATIONS[CLEANING_DURATIONS.length - 1]}
+                  step={30}
+                  value={cleaningMinutes}
+                  onChange={(event) => {
+                    setCleaningMinutes(Number(event.target.value));
+                    setPromoInfo(null);
+                    setSlot(null);
+                  }}
+                  aria-label="Cleaning duration"
+                />
+                <div className="rangeLabels"><span>2 hours</span><span>10 hours</span></div>
+              </div>
+
+              {previousCleaners.length > 0 && (
+                <div className="previousCleaner">
+                  <label className="label" htmlFor="preferred-cleaner">Request a previous cleaner (optional)</label>
+                  <select id="preferred-cleaner" className="field" value={preferredCleaner} onChange={(e) => setPreferredCleaner(e.target.value)}>
+                    <option value="">Match me with any available cleaner</option>
+                    {previousCleaners.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.display_name}</option>)}
+                  </select>
+                  <p className="muted">We’ll ask them first. Assignment still depends on their acceptance.</p>
+                </div>
+              )}
+
+              <button className="next" onClick={goToTimes}>
+                Continue · {duration(cleaningMinutes)}
+              </button>
+              <button className="back" onClick={() => setStep(2)}>
+                ← Change frequency
+              </button>
+            </section>
+          )}
+
+          {/* ---- 4 TIME ---- */}
+          {step === 4 && selected && (
             <section>
               <h1>When suits you?</h1>
               <p className="lede">
@@ -689,21 +771,21 @@ export default function BookPage() {
               {slots !== null && slots.length > 0 && (
                 <button
                   className="next"
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(5)}
                   disabled={!slot}
                 >
                   {slot ? `Continue · ${fullLabel(slot)}` : "Pick a time"}
                 </button>
               )}
 
-              <button className="back" onClick={() => setStep(1)}>
-                ← Change session
+              <button className="back" onClick={() => setStep(3)}>
+                ← Change hours
               </button>
             </section>
           )}
 
-          {/* ---- 3 CONFIRM ---- */}
-          {step === 3 && selected && (
+          {/* ---- 5 CONFIRM ---- */}
+          {step === 5 && selected && (
             <section>
               <h1>Review and pay</h1>
               <p className="lede">
@@ -719,7 +801,7 @@ export default function BookPage() {
                 <div>
                   <span>Date and time</span>
                   <strong>{slot ? fullLabel(slot) : "Choose a time"}</strong>
-                  <small>{postcode.toUpperCase()}</small>
+                  <small>{address}, {postcode.toUpperCase()}</small>
                 </div>
                 <div>
                   <span>Amount</span>
@@ -728,7 +810,7 @@ export default function BookPage() {
                 </div>
               </div>
 
-              {cleaning && <p>Property size: {propertySize} {sizeUnit === "sqm" ? "m²" : "ft²"} · {duration(minutes)}{preferredCleaner ? ` · Requested cleaner: ${previousCleaners.find((p) => p.provider_id === preferredCleaner)?.display_name ?? "Previous cleaner"}` : ""}</p>}
+              <p>{frequencyLabel(frequency)} · {duration(minutes)}{preferredCleaner ? ` · Requested cleaner: ${previousCleaners.find((p) => p.provider_id === preferredCleaner)?.display_name ?? "Previous cleaner"}` : ""}</p>
               <p className="label">Requests (optional)</p>
               <textarea
                 className="field"
@@ -816,12 +898,6 @@ export default function BookPage() {
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="Phone (optional)"
                       />
-                      <input
-                        className="field"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Address (optional)"
-                      />
                     </>
                   )}
                 </div>
@@ -837,7 +913,7 @@ export default function BookPage() {
 
               {payError && <p className="flash no">{payError}</p>}
 
-              <button className="back" onClick={() => setStep(2)}>
+              <button className="back" onClick={() => setStep(4)}>
                 ← Change time
               </button>
             </section>
@@ -850,64 +926,44 @@ export default function BookPage() {
             <p className="bhead">Your booking</p>
 
             <div className="brow">
-              <span className="k">Where</span>
+              <span className="k">Address</span>
               <span className="v">
-                {postcode.toUpperCase() || "—"}
-                <button className="chg" onClick={() => setEditPc((v) => !v)}>
-                  {editPc ? "Cancel" : "Change"}
+                {address}<br />{postcode.toUpperCase()}
+                <button className="chg" onClick={() => setStep(0)}>
+                  Change
                 </button>
               </span>
             </div>
 
-            {editPc && (
-              <div className="pcEdit">
-                <input
-                  value={postcode}
-                  onChange={(e) => {
-                    setPostcode(e.target.value);
-                    setGate(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      checkPostcode();
-                      setEditPc(false);
-                    }
-                  }}
-                  placeholder="New postcode"
-                  aria-label="New postcode"
-                />
-                <button
-                  onClick={() => {
-                    checkPostcode();
-                    setEditPc(false);
-                    if (selected) {
-                      loadSlots(
-                        postcode,
-                        selected.service_type ?? "",
-                        minutes,
-                      );
-                    }
-                  }}
-                >
-                  Update
-                </button>
+            <div className="brow">
+              <span className="k">Service</span>
+              <span className="v">Cleaning</span>
+            </div>
+
+            {selected && step >= 2 && (
+              <div className="brow">
+                <span className="k">Cleaning type</span>
+                <span className="v">{selected.name}</span>
               </div>
             )}
-
-            {selected ? (
+            {step >= 3 && (
+              <div className="brow">
+                <span className="k">Frequency</span>
+                <span className="v">{frequencyLabel(frequency)}</span>
+              </div>
+            )}
+            {step >= 4 && selected && (
               <>
                 <div className="brow">
-                  <span className="k">Service</span>
-                  <span className="v">{selected.name}</span>
-                </div>
-                <div className="brow">
-                  <span className="k">Length</span>
+                  <span className="k">Hours</span>
                   <span className="v">{duration(minutes) ?? "—"}</span>
                 </div>
-                <div className="brow">
-                  <span className="k">When</span>
-                  <span className="v">{slot ? fullLabel(slot) : "Not picked"}</span>
-                </div>
+                {step >= 5 && (
+                  <div className="brow">
+                    <span className="k">When</span>
+                    <span className="v">{slot ? fullLabel(slot) : "Not picked"}</span>
+                  </div>
+                )}
 
                 {promoInfo?.ok && promoInfo.discount !== undefined && (
                   <div className="brow">
@@ -917,27 +973,21 @@ export default function BookPage() {
                 )}
 
                 <div className="total">
-                  <span>Total</span>
+                  <span>Total per session</span>
                   <strong>{money(total)}</strong>
                 </div>
                 <p className="fee">Service fee included</p>
               </>
-            ) : (
-              <p className="hint">Pick a session to see your total.</p>
             )}
 
             {step === 1 && (
-              <p className="hint">
-                {selected ? "Looks good — continue on the left." : "Pick a session to see your total."}
-              </p>
+              <p className="hint">Choose a cleaning session on the left.</p>
             )}
             {step === 2 && (
-              <p className="hint">
-                {slot ? "Time picked — continue on the left." : "Now choose a time."}
-              </p>
+              <p className="hint">Now choose how often you would like it.</p>
             )}
-            {step === 3 && (
-              <button className="pay" onClick={checkout} disabled={paying || !slot || !propertyValid || (signedIn === false && mode === "new" && !consentAccepted)}>
+            {step === 5 && (
+              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || (signedIn === false && mode === "new" && !consentAccepted)}>
                 {paying
                   ? "Taking you to checkout…"
                   : signedIn === false
@@ -1125,6 +1175,14 @@ export default function BookPage() {
           letter-spacing: -0.025em;
           margin: 0 0 6px;
         }
+        .eyebrow {
+          margin: 0 0 7px;
+          color: var(--purple);
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.11em;
+          text-transform: uppercase;
+        }
         .lede {
           color: var(--muted);
           font-size: 16px;
@@ -1180,6 +1238,11 @@ export default function BookPage() {
           padding: 17px 18px;
           margin-bottom: 0;
         }
+        .field.bigAddress {
+          padding: 17px 18px;
+          font-size: 18px;
+          font-weight: 800;
+        }
         .inline {
           display: flex;
           gap: 10px;
@@ -1210,6 +1273,19 @@ export default function BookPage() {
           border: 2px solid var(--line);
           padding: 14px 22px;
         }
+        .covered {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 14px;
+          padding: 13px 15px;
+          border: 1.5px solid #bfe7cf;
+          border-radius: 14px;
+          background: #effaf4;
+          color: #137b4e;
+          font-size: 14px;
+          font-weight: 800;
+        }
 
         /* trust */
         .trust {
@@ -1237,17 +1313,18 @@ export default function BookPage() {
         /* session options */
         .list {
           display: grid;
-          gap: 12px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
         }
         .opt {
-          display: flex;
-          gap: 14px;
-          align-items: flex-start;
+          display: block;
+          min-width: 0;
+          min-height: 92px;
           text-align: left;
           background: #fff;
           border: 2px solid var(--line);
-          border-radius: 18px;
-          padding: 18px 20px;
+          border-radius: 15px;
+          padding: 11px 12px;
           font: inherit;
           cursor: pointer;
           transition: border-color 0.15s ease, transform 0.15s ease;
@@ -1260,52 +1337,194 @@ export default function BookPage() {
           border-color: var(--purple);
           background: var(--tint);
         }
-        .radio {
-          width: 22px;
-          height: 22px;
-          border-radius: 50%;
-          border: 2px solid #d6dae0;
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-        .opt.on .radio {
-          border-color: var(--purple);
-          background: var(--grad);
-          box-shadow: inset 0 0 0 3px #fff;
-        }
         .optbody {
-          flex: 1;
+          display: block;
           min-width: 0;
         }
+        .popular {
+          display: inline-flex;
+          margin-bottom: 5px;
+          border-radius: 999px;
+          padding: 3px 7px;
+          background: var(--grad);
+          color: #fff;
+          font-size: 9.5px;
+          font-weight: 900;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+        }
         .optTop {
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
-          align-items: baseline;
+          display: grid;
+          gap: 3px;
         }
         .optTop strong {
-          font-size: 17.5px;
+          font-size: 14px;
           font-weight: 900;
+          line-height: 1.18;
         }
         .optTop b {
-          font-size: 19px;
+          font-size: 13px;
           font-weight: 900;
           color: var(--purple);
           white-space: nowrap;
         }
         .optMeta {
           display: block;
-          font-size: 13.5px;
+          font-size: 10.5px;
           font-weight: 700;
           color: var(--muted);
-          margin-top: 2px;
+          margin-top: 4px;
+          line-height: 1.25;
         }
-        .optDesc {
+        .sessionDetails {
+          display: grid;
+          grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+          gap: 18px;
+          margin-top: 12px;
+          padding: 14px 16px;
+          border: 1.5px solid #e3d7f5;
+          border-radius: 15px;
+          background: #faf7ff;
+        }
+        .sessionDetails span {
           display: block;
-          font-size: 14.5px;
-          font-weight: 600;
+          color: var(--purple);
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .sessionDetails strong {
+          display: block;
+          margin-top: 2px;
+          font-size: 15px;
+          font-weight: 900;
+        }
+        .sessionDetails p {
+          margin: 4px 0 0;
           color: var(--muted);
-          margin-top: 8px;
+          font-size: 12px;
+          font-weight: 650;
+          line-height: 1.4;
+        }
+        .sessionDetails ul {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+          color: #4c5967;
+          font-size: 11.5px;
+          font-weight: 750;
+          line-height: 1.5;
+        }
+
+        /* frequency and duration */
+        .frequencyGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+        }
+        .frequency {
+          display: grid;
+          justify-items: start;
+          gap: 5px;
+          min-height: 128px;
+          padding: 18px;
+          border: 2px solid var(--line);
+          border-radius: 17px;
+          background: #fff;
+          color: var(--ink);
+          text-align: left;
+          font: inherit;
+          cursor: pointer;
+        }
+        .frequency:hover,
+        .frequency.on {
+          border-color: var(--purple);
+        }
+        .frequency.on {
+          background: var(--tint);
+        }
+        .choiceDot {
+          width: 19px;
+          height: 19px;
+          border: 2px solid #ced3da;
+          border-radius: 50%;
+        }
+        .frequency.on .choiceDot {
+          border-color: var(--purple);
+          background: var(--grad);
+          box-shadow: inset 0 0 0 3px #fff;
+        }
+        .frequency strong {
+          font-size: 17px;
+          font-weight: 900;
+        }
+        .frequency small {
+          color: var(--muted);
+          font-size: 12.5px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+        .frequencyNote {
+          margin: 14px 0 0;
+          padding: 12px 14px;
+          border-radius: 13px;
+          background: #f5f1fc;
+          color: #685d78;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .hoursCard {
+          padding: 24px;
+          border: 2px solid #e5d9f7;
+          border-radius: 20px;
+          background: linear-gradient(145deg, #fff, #faf7ff);
+        }
+        .hoursTop {
+          display: flex;
+          justify-content: space-between;
+          gap: 18px;
+          align-items: end;
+          margin-bottom: 24px;
+        }
+        .hoursTop span {
+          display: block;
+          color: var(--muted);
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+        }
+        .hoursTop strong {
+          display: block;
+          margin-top: 4px;
+          font-size: 30px;
+          font-weight: 900;
+        }
+        .sessionPrice {
+          text-align: right;
+        }
+        .sessionPrice strong {
+          color: var(--purple);
+        }
+        .hoursRange {
+          width: 100%;
+          accent-color: var(--purple);
+          cursor: pointer;
+        }
+        .rangeLabels {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 5px;
+          color: var(--muted);
+          font-size: 11.5px;
+          font-weight: 800;
+        }
+        .previousCleaner {
+          margin-top: 16px;
+          padding: 2px 16px 10px;
+          border-radius: 16px;
+          background: #fafafa;
         }
 
         /* times */
@@ -1559,6 +1778,18 @@ export default function BookPage() {
         }
 
         @media (max-width: 760px) {
+          .list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .sessionDetails {
+            grid-template-columns: 1fr;
+          }
+          .frequencyGrid {
+            grid-template-columns: 1fr;
+          }
+          .frequency {
+            min-height: 0;
+          }
           .reviewCard {
             grid-template-columns: 1fr;
           }
@@ -1580,6 +1811,25 @@ export default function BookPage() {
           }
           main {
             order: 1;
+          }
+        }
+        @media (max-width: 470px) {
+          .list {
+            grid-template-columns: 1fr;
+          }
+          .inline {
+            flex-direction: column;
+          }
+          .inline .go {
+            width: 100%;
+          }
+          .covered,
+          .hoursTop {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+          .sessionPrice {
+            text-align: left;
           }
         }
       `}</style>

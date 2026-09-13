@@ -97,14 +97,20 @@ export default function CleaningMenu() {
         onMouseLeave={hideAfterHover}
       >
         <DropdownMenuTrigger
+          asChild
           className={`${styles.trigger} ${active ? styles.active : ""}`}
-          aria-label="Open cleaning services"
         >
-          Cleaning
-          <ChevronDown
-            size={16}
-            className={open ? styles.chevronOpen : styles.chevron}
-          />
+          <Link
+            href="/services/cleaning"
+            aria-label="Cleaning services"
+            onClick={() => setOpen(false)}
+          >
+            Cleaning
+            <ChevronDown
+              size={16}
+              className={open ? styles.chevronOpen : styles.chevron}
+            />
+          </Link>
         </DropdownMenuTrigger>
       </span>
 

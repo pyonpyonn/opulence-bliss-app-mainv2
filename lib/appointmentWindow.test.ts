@@ -9,6 +9,8 @@ test("appointments start from 7 AM and finish by 8 PM", () => {
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 18, 30), 120), false);
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 12), 480), true);
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 12, 30), 480), false);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 7), 600), true);
+  assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 10, 30), 600), false);
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 20), 120), false);
 });
 test("start times reject irregular minutes, seconds and invalid inputs", () => {

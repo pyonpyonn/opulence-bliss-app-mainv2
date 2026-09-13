@@ -3,7 +3,7 @@
 // Needs in .env.local: STRIPE_SECRET_KEY, PROVIDER_TEST_ACCOUNT,
 //   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-import { bookingPricePence, isCleaning, validCleaningDuration, validPropertySize } from "@/lib/cleaningBooking";
+import { bookingPricePence, isCleaning, validCleaningDuration } from "@/lib/cleaningBooking";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -23,7 +23,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { packageId, postcode, request, slot, promoCode, durationMinutes, propertySizeSqm, preferredProviderId } = await req.json();
+    const { packageId, postcode, address, frequency, request, slot, promoCode, durationMinutes, preferredProviderId } = await req.json();
     if (!packageId) {
       return NextResponse.json({ error: "Missing packageId" }, { status: 400 });
     }
@@ -53,8 +53,21 @@ export async function POST(req: NextRequest) {
       );
     }
     const minutes = cleaning ? Number(durationMinutes) : pkg.duration_minutes ?? 120;
-    if (cleaning && (!validCleaningDuration(minutes) || !validPropertySize(Number(propertySizeSqm)))) {
-      return NextResponse.json({ error: "Enter your property size and choose 2–8 hours in 30-minute steps." }, { status: 400 });
+    if (cleaning && !validCleaningDuration(minutes)) {
+      return NextResponse.json({ error: "Choose 2–10 hours in 30-minute steps." }, { status: 400 });
+    }
+    const enteredAddress = String(address ?? "").trim();
+    if (enteredAddress.length < 5) {
+      return NextResponse.json({ error: "Enter the full service address." }, { status: 400 });
+    }
+    const compactPostcode = String(postcode ?? "").toUpperCase().replace(/\s+/g, "");
+    const addressHasPostcode = enteredAddress.toUpperCase().replace(/\s+/g, "").includes(compactPostcode);
+    const serviceAddress = addressHasPostcode
+      ? enteredAddress
+      : `${enteredAddress}, ${String(postcode ?? "").trim().toUpperCase()}`;
+    const bookingFrequency = String(frequency ?? "one_time");
+    if (!["one_time", "weekly", "monthly"].includes(bookingFrequency)) {
+      return NextResponse.json({ error: "Choose a valid cleaning frequency." }, { status: 400 });
     }
     if (!slot || !appointmentFitsWindow(slot, minutes) || new Date(slot).getTime() < Date.now() + 2 * 60 * 60 * 1000) {
       return NextResponse.json(
@@ -177,7 +190,8 @@ export async function POST(req: NextRequest) {
           kind: "booking",
           customer_id: user.id,
           duration_minutes: String(minutes),
-          property_size_sqm: cleaning ? String(Number(propertySizeSqm)) : "",
+          service_address: serviceAddress.slice(0, 480),
+          booking_frequency: bookingFrequency,
           preferred_provider_id: preferredProviderId || "",
           package: pkg.name,
           package_id: packageId,
