@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   APPOINTMENT_END_HOUR,
   APPOINTMENT_START_HOUR,
+  BOOKING_HORIZON_YEARS,
   DEFAULT_APPOINTMENT_DURATION_MINUTES,
   appointmentFitsWindow,
   londonDate,
@@ -19,7 +20,6 @@ const admin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const DAYS_AHEAD = 14;
 const SLOT_INTERVAL_MINUTES = 30;
 
 function outwardCode(pc: string) {
@@ -72,10 +72,14 @@ export async function GET(req: NextRequest) {
     // booking is paid. This keeps the customer flow open even with a thin
     // worker roster.
     const now = Date.now();
+    const horizon = new Date(now);
+    horizon.setUTCFullYear(horizon.getUTCFullYear() + BOOKING_HORIZON_YEARS);
     const slots: string[] = [];
     const today = londonParts(now);
 
-    for (let d = 0; d <= DAYS_AHEAD; d++) {
+    // 366 iterations covers a full calendar year when a leap day is included.
+    // The exact instant below remains the hard limit.
+    for (let d = 0; d <= 366; d++) {
       // Use a timezone-neutral calendar cursor, then convert each London wall
       // clock time to its real UTC instant. This stays correct across BST/GMT.
       const day = new Date(Date.UTC(today.year, today.month - 1, today.day + d));
@@ -96,6 +100,7 @@ export async function GET(req: NextRequest) {
           minute % 60,
         );
         if (slot.getTime() < now + 2 * 60 * 60 * 1000) continue;
+        if (slot > horizon) continue;
         if (!appointmentFitsWindow(slot, durationMinutes)) continue;
         slots.push(slot.toISOString());
       }
@@ -126,6 +131,7 @@ export async function GET(req: NextRequest) {
         start: "07:00",
         end: "20:00",
         durationMinutes,
+        bookingHorizon: horizon.toISOString(),
       },
       workerAvailabilityRequired: false,
     });

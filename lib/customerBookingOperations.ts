@@ -14,6 +14,8 @@ import {
 import {
   APPOINTMENT_WINDOW_MESSAGE,
   appointmentFitsWindow,
+  appointmentWithinBookingHorizon,
+  BOOKING_HORIZON_MESSAGE,
 } from "@/lib/appointmentWindow";
 import {
   calculateCancellationPolicy,
@@ -433,6 +435,9 @@ export async function rescheduleCustomerBooking(
   if (!appointmentFitsWindow(newSlot, bookingForDuration?.duration_minutes ?? packageRow?.duration_minutes ?? 120)) {
     return { ok: false as const, message: APPOINTMENT_WINDOW_MESSAGE };
   }
+  if (!appointmentWithinBookingHorizon(newSlot)) {
+    return { ok: false as const, message: BOOKING_HORIZON_MESSAGE };
+  }
 
   const cleanReason = reason?.trim().slice(0, 120) || "Schedule changed";
   const cleanNote = note?.trim().slice(0, 250) || null;
@@ -516,6 +521,9 @@ export async function modifyCustomerBooking(
     )
   ) {
     return { ok: false as const, message: APPOINTMENT_WINDOW_MESSAGE };
+  }
+  if (!appointmentWithinBookingHorizon(input.newSlot)) {
+    return { ok: false as const, message: BOOKING_HORIZON_MESSAGE };
   }
 
   let result;

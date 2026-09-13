@@ -12,6 +12,8 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import {
   APPOINTMENT_WINDOW_MESSAGE,
   appointmentFitsWindow,
+  appointmentWithinBookingHorizon,
+  BOOKING_HORIZON_MESSAGE,
 } from "@/lib/appointmentWindow";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -69,6 +71,12 @@ export async function POST(req: NextRequest) {
     if (!first || !appointmentFitsWindow(first, pkg.duration_minutes ?? 120)) {
       return NextResponse.json(
         { error: APPOINTMENT_WINDOW_MESSAGE },
+        { status: 400 },
+      );
+    }
+    if (!appointmentWithinBookingHorizon(first)) {
+      return NextResponse.json(
+        { error: BOOKING_HORIZON_MESSAGE },
         { status: 400 },
       );
     }

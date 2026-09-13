@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appointmentFitsWindow, appointmentTimeLabel, londonDate, londonParts } from "./appointmentWindow";
+import { appointmentFitsWindow, appointmentTimeLabel, appointmentWithinBookingHorizon, londonDate, londonParts } from "./appointmentWindow";
 
 test("appointments start from 7 AM and finish by 8 PM", () => {
   assert.equal(appointmentFitsWindow(londonDate(2026, 9, 12, 7), 120), true);
@@ -31,4 +31,13 @@ test("London calendar conversion handles summer, winter and DST boundaries", () 
 test("booking times stay in London time regardless of the viewer's timezone", () => {
   assert.equal(appointmentTimeLabel("2026-09-07T12:00:00.000Z"), "01:00 pm");
   assert.equal(appointmentTimeLabel("2026-09-07T14:00:00.000Z"), "03:00 pm");
+});
+
+test("bookings are limited to one year ahead", () => {
+  const now = new Date("2026-09-13T10:00:00.000Z");
+  assert.equal(appointmentWithinBookingHorizon("2026-09-13T10:01:00.000Z", now), true);
+  assert.equal(appointmentWithinBookingHorizon("2027-09-13T10:00:00.000Z", now), true);
+  assert.equal(appointmentWithinBookingHorizon("2027-09-13T10:00:01.000Z", now), false);
+  assert.equal(appointmentWithinBookingHorizon("2026-09-13T09:59:59.000Z", now), false);
+  assert.equal(appointmentWithinBookingHorizon("not-a-date", now), false);
 });

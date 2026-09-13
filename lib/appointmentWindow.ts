@@ -2,6 +2,7 @@ export const APPOINTMENT_TIME_ZONE = "Europe/London";
 export const APPOINTMENT_START_HOUR = 7;
 export const APPOINTMENT_END_HOUR = 20;
 export const DEFAULT_APPOINTMENT_DURATION_MINUTES = 120;
+export const BOOKING_HORIZON_YEARS = 1;
 
 type LondonParts = {
   year: number;
@@ -117,6 +118,28 @@ export function appointmentFitsWindow(
     date.getUTCMilliseconds() === 0
   );
 }
+
+/** Keep customer-created and customer-modified visits within one year. */
+export function appointmentWithinBookingHorizon(
+  value: Date | string | number,
+  now: Date | string | number = Date.now(),
+) {
+  const appointment = value instanceof Date ? value : new Date(value);
+  const current = now instanceof Date ? now : new Date(now);
+  if (
+    Number.isNaN(appointment.getTime()) ||
+    Number.isNaN(current.getTime())
+  ) {
+    return false;
+  }
+
+  const horizon = new Date(current);
+  horizon.setUTCFullYear(horizon.getUTCFullYear() + BOOKING_HORIZON_YEARS);
+  return appointment.getTime() >= current.getTime() && appointment <= horizon;
+}
+
+export const BOOKING_HORIZON_MESSAGE =
+  "Bookings can be made from now up to one year in advance.";
 
 export const APPOINTMENT_WINDOW_MESSAGE =
   "Appointments must start at or after 7:00 am and finish by 8:00 pm (London time), with start times on the hour or half hour.";

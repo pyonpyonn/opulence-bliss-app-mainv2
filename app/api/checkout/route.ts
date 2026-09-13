@@ -11,6 +11,8 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import {
   APPOINTMENT_WINDOW_MESSAGE,
   appointmentFitsWindow,
+  appointmentWithinBookingHorizon,
+  BOOKING_HORIZON_MESSAGE,
 } from "@/lib/appointmentWindow";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -69,9 +71,15 @@ export async function POST(req: NextRequest) {
     if (!["one_time", "weekly", "monthly"].includes(bookingFrequency)) {
       return NextResponse.json({ error: "Choose a valid cleaning frequency." }, { status: 400 });
     }
-    if (!slot || !appointmentFitsWindow(slot, minutes) || new Date(slot).getTime() < Date.now() + 2 * 60 * 60 * 1000) {
+    if (!slot || !appointmentFitsWindow(slot, minutes)) {
       return NextResponse.json(
         { error: APPOINTMENT_WINDOW_MESSAGE },
+        { status: 400 },
+      );
+    }
+    if (!appointmentWithinBookingHorizon(slot) || new Date(slot).getTime() < Date.now() + 2 * 60 * 60 * 1000) {
+      return NextResponse.json(
+        { error: BOOKING_HORIZON_MESSAGE },
         { status: 400 },
       );
     }
