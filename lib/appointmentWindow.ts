@@ -1,6 +1,6 @@
 export const APPOINTMENT_TIME_ZONE = "Europe/London";
 export const APPOINTMENT_START_HOUR = 7;
-export const APPOINTMENT_END_HOUR = 19;
+export const APPOINTMENT_END_HOUR = 20;
 export const DEFAULT_APPOINTMENT_DURATION_MINUTES = 120;
 
 type LondonParts = {
@@ -119,7 +119,7 @@ export function appointmentFitsWindow(
 }
 
 export const APPOINTMENT_WINDOW_MESSAGE =
-  "Appointments must start at or after 7:00 am and finish by 7:00 pm (London time), with start times on the hour or half hour.";
+  "Appointments must start at or after 7:00 am and finish by 8:00 pm (London time), with start times on the hour or half hour.";
 
 export function appointmentTimeLabel(value: Date | string | number) {
   const date = value instanceof Date ? value : new Date(value);

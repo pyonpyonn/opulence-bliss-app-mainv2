@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
       suggested,
       appointmentWindow: {
         start: "07:00",
-        end: "19:00",
+        end: "20:00",
         durationMinutes,
       },
       workerAvailabilityRequired: false,
