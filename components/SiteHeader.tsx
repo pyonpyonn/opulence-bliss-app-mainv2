@@ -5,8 +5,9 @@
 // Inline styles on purpose — nothing in globals.css can override them.
 
 import CleaningMenu from "@/components/CleaningMenu";
+import ComingSoonMenu from "@/components/ComingSoonMenu";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -109,6 +110,9 @@ export default function SiteHeader() {
         </Link>
 
         <div className="site-header-actions">
+          <Link href="/blog" style={blogBtn}>
+            Blog
+          </Link>
           {!role && (
             <Link href="/provider/login" style={proBtn}>
               Sign in as a pro
@@ -152,7 +156,13 @@ export default function SiteHeader() {
       <nav style={navRow} aria-label="Main">
         <div style={navInner}>
           {NAV.map((l) => {
-            if (l.href === "/services/cleaning") return <CleaningMenu key={l.href} />;
+            if (l.href === "/services/cleaning")
+              return (
+                <Fragment key={l.href}>
+                  <CleaningMenu />
+                  <ComingSoonMenu />
+                </Fragment>
+              );
             const on = active === l.href;
             const hot = hover === l.href;
             return (
@@ -249,7 +259,9 @@ const ghostBtn: React.CSSProperties = {
   textDecoration: "none",
   padding: "10px 16px",
   borderRadius: 999,
-  border: "2px solid #EDEDEF",
+  borderWidth: 2,
+  borderStyle: "solid",
+  borderColor: "#EDEDEF",
   whiteSpace: "nowrap",
 };
 
@@ -258,6 +270,11 @@ const proBtn: React.CSSProperties = {
   color: CORAL,
   borderColor: "#DCCBFA",
   background: "#FAF7FF",
+};
+
+const blogBtn: React.CSSProperties = {
+  ...ghostBtn,
+  background: "#fff",
 };
 
 const cta: React.CSSProperties = {
