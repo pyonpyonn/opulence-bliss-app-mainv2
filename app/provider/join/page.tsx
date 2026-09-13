@@ -19,9 +19,11 @@ export default function ProviderJoinPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const skills = ["cleaning"];
@@ -45,7 +47,10 @@ export default function ProviderJoinPage() {
   }
 
   const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-  const accountReady = Boolean(
+  const emailValid = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email.trim());
+  const phoneDigits = phone.replace(/\D/g, "");
+  const phoneValid = /^[\d\s()-]+$/.test(phone.trim()) && phoneDigits.length === 10;
+  const accountFieldsPresent = Boolean(
     salutation &&
       firstName.trim() &&
       lastName.trim() &&
@@ -55,10 +60,19 @@ export default function ProviderJoinPage() {
       address.trim() &&
       dateOfBirth,
   );
+  const accountReady = Boolean(
+    accountFieldsPresent && emailValid && phoneValid,
+  );
 
   function continueToWorkDetails() {
-    if (!accountReady) {
+    setEmailTouched(true);
+    setPhoneTouched(true);
+    if (!accountFieldsPresent) {
       setErr("Complete every account field. Your password must have at least 6 characters.");
+      return;
+    }
+    if (!emailValid || !phoneValid) {
+      setErr(null);
       return;
     }
     setErr(null);
@@ -215,9 +229,16 @@ export default function ProviderJoinPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setEmailTouched(true)}
                 placeholder="Email"
                 autoComplete="email"
+                className={emailTouched && !emailValid ? "invalid" : undefined}
+                aria-invalid={emailTouched && !emailValid}
+                aria-describedby={emailTouched && !emailValid ? "provider-email-error" : undefined}
               />
+              {emailTouched && !emailValid && (
+                <p className="field-error" id="provider-email-error">Invalid email</p>
+              )}
 
               <div className="password-field">
                 <label className="sr-only" htmlFor="provider-password">Password</label>
@@ -238,7 +259,7 @@ export default function ProviderJoinPage() {
                 </button>
               </div>
 
-              <div className="phone-field">
+              <div className={`phone-field ${phoneTouched && !phoneValid ? "invalid" : ""}`}>
                 <svg
                   className="uk-flag"
                   viewBox="0 0 60 30"
@@ -258,10 +279,17 @@ export default function ProviderJoinPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  onBlur={() => setPhoneTouched(true)}
                   placeholder="Phone"
                   autoComplete="tel"
+                  inputMode="numeric"
+                  aria-invalid={phoneTouched && !phoneValid}
+                  aria-describedby={phoneTouched && !phoneValid ? "provider-phone-error" : undefined}
                 />
               </div>
+              {phoneTouched && !phoneValid && (
+                <p className="field-error" id="provider-phone-error">Invalid phone number</p>
+              )}
 
               <label className="sr-only" htmlFor="provider-address">Address</label>
               <input
@@ -496,6 +524,11 @@ export default function ProviderJoinPage() {
           border-color: #6D28D9;
           box-shadow: 0 0 0 3px rgba(109,40,217, 0.09);
         }
+        input.invalid,
+        input.invalid:focus-visible {
+          border-color: #E5394F;
+          box-shadow: 0 0 0 3px rgba(229,57,79, 0.08);
+        }
         .account-fields,
         .work-fields {
           display: grid;
@@ -577,6 +610,11 @@ export default function ProviderJoinPage() {
           border-color: #6D28D9;
           box-shadow: 0 0 0 3px rgba(109,40,217, 0.09);
         }
+        .phone-field.invalid,
+        .phone-field.invalid:focus-within {
+          border-color: #E5394F;
+          box-shadow: 0 0 0 3px rgba(229,57,79, 0.08);
+        }
         .phone-code {
           margin: 0 7px;
           color: #5F6874;
@@ -600,6 +638,13 @@ export default function ProviderJoinPage() {
         }
         .phone-field input:focus-visible {
           box-shadow: none;
+        }
+        .field-error {
+          margin: -7px 2px 14px;
+          color: #D82F45;
+          font-size: 12.5px;
+          font-weight: 700;
+          line-height: 1.3;
         }
         input[type="date"] {
           color: #7A828C;

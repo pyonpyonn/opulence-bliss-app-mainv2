@@ -25,6 +25,9 @@ export async function POST(req: NextRequest) {
       skills,
       areaIds,
     } = await req.json();
+    const normalizedEmail = String(email ?? "").trim().toLowerCase();
+    const phoneDigits = String(phone ?? "").replace(/\D/g, "");
+    const normalizedPhone = `+44${phoneDigits}`;
 
     if (
       !email ||
@@ -39,6 +42,18 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Complete every account field before continuing." },
+        { status: 400 }
+      );
+    }
+    if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: "Invalid email" },
+        { status: 400 }
+      );
+    }
+    if (!/^[\d\s()-]+$/.test(String(phone).trim()) || phoneDigits.length !== 10) {
+      return NextResponse.json(
+        { error: "Invalid phone number" },
         { status: 400 }
       );
     }
@@ -68,7 +83,7 @@ export async function POST(req: NextRequest) {
     // 1. Create the account, already confirmed (no confirmation email).
     const { data: created, error: createErr } =
       await admin.auth.admin.createUser({
-        email,
+        email: normalizedEmail,
         password,
         email_confirm: true,
         user_metadata: {
@@ -99,10 +114,10 @@ export async function POST(req: NextRequest) {
     await admin.from("profiles").upsert(
       {
         id: userId,
-        email,
+        email: normalizedEmail,
         role: "provider",
         full_name: fullName,
-        phone,
+        phone: normalizedPhone,
         address,
       },
       { onConflict: "id" }
