@@ -11,8 +11,7 @@ type Mode = "client" | "provider";
 
 const COPY = {
   client: {
-    eyebrow: "Client account",
-    title: "Welcome back",
+    title: "CLIENT LOGIN",
     body: "Manage your bookings, messages and payments.",
     button: "Log in to my account",
     demoEmail: "client@test.com",
@@ -21,10 +20,8 @@ const COPY = {
     switchText: "Are you an Opulence Bliss professional?",
     switchLabel: "Sign in as a pro",
     switchHref: "/provider/login",
-    icon: "♡",
   },
   provider: {
-    eyebrow: "Professional portal",
     title: "PROFESSIONAL LOGIN",
     body: "Sign in to manage offers, visits, messages, hours and earnings.",
     button: "Sign in to professional portal",
@@ -34,7 +31,6 @@ const COPY = {
     switchText: "Looking for your bookings?",
     switchLabel: "Client login",
     switchHref: "/login",
-    icon: "OB",
   },
 } as const;
 
@@ -93,17 +89,6 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
   return (
     <main className={`login-shell ${mode}`}>
       <section className="login-card">
-        {mode === "client" && (
-          <>
-            <div className="role-mark" aria-hidden="true">
-              {content.icon}
-            </div>
-            <Link className="brand" href="/">
-              opulence<span>bliss</span>
-            </Link>
-            <p className="eyebrow">{content.eyebrow}</p>
-          </>
-        )}
         <h1>{content.title}</h1>
         <p className="lede">{content.body}</p>
 
