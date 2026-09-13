@@ -5,11 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import {
-  CLEANING_SESSION_ORDER,
-  compareCleaningSessions,
-  isCleaning,
-} from "@/lib/cleaningBooking";
+import { CLEANING_SESSION_ORDER } from "@/lib/cleaningBooking";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,16 +30,17 @@ export default function CleaningMenu() {
     let active = true;
     void createClient()
       .from("packages")
-      .select("id, name, service_type, billing_type")
+      .select("id, name, billing_type")
       .eq("active", true)
-      .order("price")
       .then(({ data, error }) => {
         if (!active) return;
         if (error) return;
         setPackages(
-          (data ?? [])
-            .filter((pkg) => isCleaning(pkg.service_type))
-            .sort(compareCleaningSessions),
+          (data ?? []).filter((pkg) =>
+            CLEANING_SESSION_ORDER.includes(
+              pkg.name as (typeof CLEANING_SESSION_ORDER)[number],
+            ),
+          ),
         );
       });
     return () => {
@@ -78,20 +75,19 @@ export default function CleaningMenu() {
   }
 
   const active = pathname.startsWith("/services/cleaning");
-  const serviceLinks = packages.length
-    ? packages.map((pkg) => ({
-        key: pkg.id,
-        label: pkg.name,
-        href:
-          pkg.billing_type === "per_visit"
-            ? `/book?type=clean&service=${encodeURIComponent(pkg.id)}`
-            : "/subscribe",
-      }))
-    : CLEANING_SESSION_ORDER.map((name) => ({
-        key: name,
-        label: name,
-        href: "/services/cleaning#services",
-      }));
+  const serviceLinks = CLEANING_SESSION_ORDER.map((name) => {
+    const pkg = packages.find((candidate) => candidate.name === name);
+    return {
+      key: name,
+      label: name,
+      href:
+        pkg?.billing_type === "per_visit"
+          ? `/book?type=clean&service=${encodeURIComponent(pkg.id)}`
+          : pkg
+            ? "/subscribe"
+            : "/services/cleaning#services",
+    };
+  });
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
