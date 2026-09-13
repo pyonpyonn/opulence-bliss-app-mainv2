@@ -92,7 +92,7 @@
 
 .option {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 22px;
+  grid-template-columns: minmax(0, 1fr) 22px;
   gap: 10px;
   align-items: center;
   min-width: 0;
@@ -123,16 +123,6 @@
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-}
-
-.icon {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #fff0c4, #f4e8ff 58%, #e9ddff);
-  color: #6d28d9;
 }
 
 .copy {

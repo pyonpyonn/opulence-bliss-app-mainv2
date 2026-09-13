@@ -5,8 +5,6 @@ import { useEffect, useState } from "react";
 import {
   Check,
   ChevronDown,
-  PackageOpen,
-  Wrench,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -21,14 +19,12 @@ const OPTIONS = [
     key: "moving_support",
     title: "House movers",
     detail: "Moving support, packing, unpacking and organising.",
-    Icon: PackageOpen,
   },
   {
     key: "maintenance",
     title: "Maintenance",
     detail:
       "Handyman and renovation add-ons, painting, small carpentry and furniture assembly.",
-    Icon: Wrench,
   },
 ] as const;
 
@@ -140,7 +136,7 @@ export default function ComingSoonMenu() {
         <div className={styles.form}>
           <fieldset className={styles.options}>
             <legend className={styles.srOnly}>Choose a future service</legend>
-            {OPTIONS.map(({ key, title, detail, Icon }) => {
+            {OPTIONS.map(({ key, title, detail }) => {
               const checked = selected === key;
               return (
                 <label
@@ -157,9 +153,6 @@ export default function ComingSoonMenu() {
                       setMessage(null);
                     }}
                   />
-                  <span className={styles.icon} aria-hidden="true">
-                    <Icon size={19} />
-                  </span>
                   <span className={styles.copy}>
                     <strong>{title}</strong>
                     <small>{detail}</small>
