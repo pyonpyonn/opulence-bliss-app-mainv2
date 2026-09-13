@@ -16,7 +16,6 @@ export async function buildSplit(opts: {
   grossPence: number;
   cleans: number;
   cleanHours: number;
-  massages: number;
 }) {
   const { data: cfg } = await admin
     .from("split_config")
@@ -25,25 +24,22 @@ export async function buildSplit(opts: {
     .maybeSingle();
 
   const hourly = Number(cfg?.cleaner_hourly_rate ?? 15);
-  const flat = Number(cfg?.therapist_flat_fee ?? 45);
   const marginPct = Number(cfg?.platform_margin_pct ?? 20);
   const membership = Number(cfg?.membership_fee_monthly ?? 30);
 
   const cleanerGross = opts.cleans * opts.cleanHours * hourly;
-  const therapist = opts.massages * flat;
   const cleanerNet = Math.max(0, cleanerGross - membership);
   const gross = opts.grossPence / 100;
-  const margin = Math.max(0, gross - cleanerNet - therapist - membership);
+  const margin = Math.max(0, gross - cleanerNet - membership);
 
   return {
     gross,
     cleaner_gross: Number(cleanerGross.toFixed(2)),
     membership_fee: Number(membership.toFixed(2)),
     cleaner_net: Number(cleanerNet.toFixed(2)),
-    therapist_fee: Number(therapist.toFixed(2)),
     platform_margin: Number(margin.toFixed(2)),
     platform_margin_pct_target: marginPct,
-    rates: { cleaner_hourly: hourly, therapist_flat: flat },
+    rates: { cleaner_hourly: hourly },
   };
 }
 
@@ -72,12 +68,10 @@ export async function generateBookings(subId: string, cycleStart: Date) {
     .maybeSingle();
 
   const hourly = Number(cfg?.cleaner_hourly_rate ?? 15);
-  const flat = Number(cfg?.therapist_flat_fee ?? 45);
   const membership = Number(cfg?.membership_fee_monthly ?? 30);
 
-  const isMassage = (pkg?.service_type ?? "").includes("massage");
   const hours = (pkg?.duration_minutes ?? 120) / 60;
-  const perVisit = isMassage ? flat : Number((hours * hourly).toFixed(2));
+  const perVisit = Number((hours * hourly).toFixed(2));
 
   const start = new Date(cycleStart);
   if (sub.preferred_weekday !== null && sub.preferred_weekday !== undefined) {
@@ -111,9 +105,6 @@ export async function generateBookings(subId: string, cycleStart: Date) {
       .in("service_area_id", areaIds);
     const ids = [...new Set((links ?? []).map((l) => l.provider_id))];
     if (ids.length) {
-      const svcType = (pkg?.service_type ?? "cleaning").includes("massage")
-        ? "cleaning"
-        : "cleaning";
       const { data } = await admin
         .from("providers")
         .select("id, profile_id")
@@ -121,7 +112,7 @@ export async function generateBookings(subId: string, cycleStart: Date) {
         .eq("vetting_status", "approved")
         .eq("joining_fee_paid", true)
         .eq("is_suspended", false)
-        .contains("services", [svcType]);
+        .contains("services", ["cleaning"]);
       provs = data ?? [];
     }
   }
@@ -246,19 +237,17 @@ export async function upsertSubscription(
 
   const { data: pkg } = await admin
     .from("packages")
-    .select("name, visits_per_month, duration_minutes, includes_massage")
+    .select("name, visits_per_month, duration_minutes")
     .eq("id", m.package_id ?? "")
     .maybeSingle();
 
   const visits = pkg?.visits_per_month ?? 2;
   const hours = (pkg?.duration_minutes ?? 120) / 60;
-  const massages = pkg?.includes_massage ? Math.max(1, visits / 2) : 0;
 
   const split = await buildSplit({
     grossPence: payment.amountPence,
     cleans: visits,
     cleanHours: hours,
-    massages,
   });
 
   await admin.from("payments").insert({

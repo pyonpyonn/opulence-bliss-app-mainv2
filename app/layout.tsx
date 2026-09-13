@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
-  title: "Opulence Bliss — home cleaning & massage in London",
+  title: "Opulence Bliss — trusted home cleaning in London",
   description:
-    "Vetted cleaners and massage therapists at your home across London. Book a single visit or a monthly membership. Pay after the visit.",
+    "Vetted home cleaners across London. Book a single visit or a monthly membership and pay securely after the visit.",
 };
 
 export const viewport: Viewport = {

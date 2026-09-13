@@ -39,17 +39,17 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "Where to find things on the site",
     content:
-      "Use these pages: /book to see all services in full detail and make a booking. /providers to see our vetted professionals and their ratings. /account for your bookings, to cancel, reschedule, rate a visit or add a tip. /account/profile to save your name, phone, address and default postcode. /notifications for updates on your bookings. /provider/join to sign up as a cleaner or massage therapist. /login to sign in. Providers manage jobs at /worker, hours at /worker/availability, and pay at /worker/earnings.",
+      "Use these pages: /book to see all cleaning services in full detail and make a booking. /providers to see our vetted cleaners and their ratings. /account for your bookings, to cancel, reschedule, rate a visit or add a tip. /account/profile to save your name, phone, address and default postcode. /notifications for updates on your bookings. /provider/join to sign up as a cleaner. /login to sign in. Cleaners manage jobs at /worker, hours at /worker/availability, and pay at /worker/earnings.",
   },
   {
     title: "What Opulence Bliss is",
     content:
-      "Opulence Bliss is a premium home services marketplace in London. We provide two things: professional home cleaning, and in-home massage therapy delivered by qualified therapists. Every provider is vetted and insured before they can take work. There are two ways to pay: book a single visit and pay for just that visit, or take a monthly membership where your visits are scheduled automatically.",
+      "Opulence Bliss is a premium home-cleaning marketplace in London. Every cleaner is vetted and insured before they can take work. There are two ways to pay: book a single visit and pay for just that visit, or take a monthly cleaning membership where visits are scheduled automatically.",
   },
   {
     title: "Memberships — the monthly plans",
     content:
-      "A membership is a monthly plan with a three-month minimum term, billed monthly. Your visits are scheduled automatically at your preferred day and time, so you don't have to book each one. There are four plans: Essential Bliss at £189 a month (2 cleans), Signature Bliss at £329 a month (2 deep cleans plus a monthly massage), Opulence at £599 a month (4 cleans plus 2 massages), and Opulence Elite at £949 a month (4 premium cleans plus 4 massages). You can see them all and sign up at /subscribe.",
+      "A cleaning membership is a monthly plan with a three-month minimum term, billed monthly. Your visits are scheduled automatically at your preferred day and time, so you don't have to book each one. Current plans and live prices are shown at /subscribe.",
   },
   {
     title: "How membership billing works",
@@ -109,12 +109,12 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "How to prepare for a visit",
     content:
-      "For cleaning, someone needs to be able to let the cleaner in, and we bring all products and equipment. For massage, you'll need a clear space of roughly two metres by two metres; the therapist brings a professional table and fresh linens. You can add requests such as access instructions, pets, or a preferred massage pressure in the requests box when you book.",
+      "Someone needs to be able to let the cleaner in, or you can provide clear access instructions. Cleaners bring the products and equipment needed for the booked service. You can add requests such as access instructions, pets, delicate surfaces and priority rooms in the requests box when you book.",
   },
   {
     title: "Becoming a provider",
     content:
-      "Cleaners and massage therapists can join at the Work with us page. You sign up with your name, contact details, the services you offer and the areas you cover, then pay a one-off £150 joining fee. That fee is paid once and is not a subscription. Your account is then reviewed by our team, and once approved you start receiving job offers matched to your skills, area and availability.",
+      "Home cleaners can join at the Work with us page. You sign up with your name, contact details and the areas you cover, then pay a one-off £150 joining fee. That fee is paid once and is not a subscription. Your account is then reviewed by our team, and once approved you start receiving job offers matched to your area and availability.",
   },
   {
     title: "How providers get paid",

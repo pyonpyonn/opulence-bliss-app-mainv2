@@ -46,6 +46,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Package not found" }, { status: 404 });
     }
     const cleaning = isCleaning(pkg.service_type);
+    if (!cleaning) {
+      return NextResponse.json(
+        { error: "That service is no longer available." },
+        { status: 400 },
+      );
+    }
     const minutes = cleaning ? Number(durationMinutes) : pkg.duration_minutes ?? 120;
     if (cleaning && (!validCleaningDuration(minutes) || !validPropertySize(Number(propertySizeSqm)))) {
       return NextResponse.json({ error: "Enter your property size and choose 2–8 hours in 30-minute steps." }, { status: 400 });

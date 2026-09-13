@@ -10,7 +10,6 @@ const columns: Array<{
     title: "Services",
     links: [
       ["Home cleaning", "/services/cleaning"],
-      ["Massage at home", "/services/massage"],
       ["Memberships", "/subscribe"],
       ["Book a service", "/book"],
     ],
@@ -45,8 +44,7 @@ export default function SiteFooter() {
             opulence<span>bliss</span>
           </p>
           <p className={styles.promise}>
-            Trusted home cleaning and wellness care, thoughtfully delivered
-            across London.
+            Trusted home cleaning, thoughtfully delivered across London.
           </p>
           <Link href="/book" className={styles.bookButton}>
             Book your visit <span aria-hidden="true">→</span>

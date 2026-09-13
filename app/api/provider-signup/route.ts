@@ -21,9 +21,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (!Array.isArray(skills) || skills.length === 0) {
+    if (
+      !Array.isArray(skills) ||
+      !skills.includes("cleaning") ||
+      skills.some((skill) => skill !== "cleaning")
+    ) {
       return NextResponse.json(
-        { error: "Pick at least one service you offer." },
+        { error: "Home cleaning is the available provider service." },
         { status: 400 }
       );
     }
@@ -80,7 +84,7 @@ export async function POST(req: NextRequest) {
       .from("providers")
       .insert({
         profile_id: userId,
-        services: skills,
+        services: ["cleaning"],
         display_name: fullName,
         vetting_status: "pending",
         joining_fee_paid: false,

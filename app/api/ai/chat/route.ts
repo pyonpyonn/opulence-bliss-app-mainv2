@@ -114,7 +114,7 @@ const CLIENT_TOOLS = [
         postcode: { type: "STRING", description: "UK postcode" },
         service_type: {
           type: "STRING",
-          description: "Either 'cleaning' or 'massage'",
+          description: "Use 'cleaning'",
         },
         date: {
           type: "STRING",
@@ -138,8 +138,7 @@ const CLIENT_TOOLS = [
       properties: {
         service_name: {
           type: "STRING",
-          description:
-            "Exact service name, e.g. 'Bliss Massage · 60 min' or 'Essential Clean'",
+          description: "Exact cleaning service name, e.g. 'Essential Clean'",
         },
         postcode: { type: "STRING", description: "UK postcode" },
         slot: {
@@ -370,13 +369,10 @@ async function replacementSlots(
 ) {
   const pkg = one(booking.packages);
   const postcode = postcodeFromAddress(booking.address);
-  const service = String(pkg?.service_type ?? "").includes("massage")
-    ? "massage"
-    : "cleaning";
   const response = await fetch(
     `${context.origin}/api/slots?postcode=${encodeURIComponent(
       postcode,
-    )}&service=${encodeURIComponent(service)}&duration=${encodeURIComponent(
+    )}&service=cleaning&duration=${encodeURIComponent(
       String(pkg?.duration_minutes ?? 120),
     )}`,
     { cache: "no-store" },
@@ -546,7 +542,9 @@ async function runTool(
       const { data: pkgs } = await admin
         .from("packages")
         .select("id, name, price, duration_minutes")
-        .eq("active", true);
+        .eq("active", true)
+        .eq("billing_type", "per_visit")
+        .ilike("service_type", "%clean%");
 
       const match =
         (pkgs ?? []).find((p) => p.name.toLowerCase() === wanted) ??
@@ -1086,14 +1084,14 @@ function systemPrompt(context: string, role: string) {
   const now = new Date();
   const who =
     role === "provider"
-      ? `You are talking to a PROVIDER — a cleaner or massage therapist who works through the platform. Answer from their side: their jobs, earnings, availability, how and when they get paid, the £150 joining fee, approval. Never try to sell them a customer booking or a membership. Their pages are /worker (jobs), /worker/current (live job), /worker/earnings, /worker/availability, /worker/profile.`
+      ? `You are talking to a PROVIDER — a home cleaner who works through the platform. Answer from their side: their jobs, earnings, availability, how and when they get paid, the £150 joining fee, approval. Never try to sell them a customer booking or a membership. Their pages are /worker (jobs), /worker/current (live job), /worker/earnings, /worker/availability, /worker/profile.`
       : role === "admin"
       ? `You are talking to an ADMIN of the platform. Be brief and factual. Their tools are at /admin.`
       : role === "client"
       ? `You are talking to a signed-in CUSTOMER. You can inspect their own bookings, status, money state, membership and spend. You can prepare booking, cancellation, reschedule and booking-help actions for their explicit confirmation.`
       : `You are talking to a VISITOR who isn't signed in. You can answer general questions, but for anything about their own account tell them to log in at /login. If they want to work for us, point them to /provider/join.`;
 
-  return `You are the support assistant for Opulence Bliss, a premium home cleaning and in-home massage marketplace in London.
+  return `You are the support assistant for Opulence Bliss, a premium home-cleaning marketplace in London.
 
 ${who}
 

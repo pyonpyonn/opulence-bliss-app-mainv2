@@ -26,7 +26,6 @@ function one<T>(value: T | T[] | null | undefined): T | null {
 
 function professionFor(service: string, services: string[]) {
   const value = `${service} ${services.join(" ")}`.toLowerCase();
-  if (value.includes("massage")) return "Professional therapist";
   if (value.includes("clean")) return "Professional cleaner";
   if (value.includes("beauty") || value.includes("facial")) {
     return "Beauty professional";

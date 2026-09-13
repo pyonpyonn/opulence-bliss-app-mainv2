@@ -523,11 +523,6 @@ select {
   border-color: #44355f !important;
 }
 
-.dark .site .band.massage {
-  background: linear-gradient(120deg, #352b21, #3d3023) !important;
-  border-color: #51402a !important;
-}
-
 .dark .site .band.member {
   background: linear-gradient(120deg, #1d2532, #252d3a) !important;
   border-color: #364153 !important;

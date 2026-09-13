@@ -4,16 +4,12 @@
 // Save at: app/provider/join/page.tsx  →  localhost:3000/provider/join
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
 type Area = { id: string; name: string; postcode_prefixes: string[] };
-
-const SKILLS = [
-  { key: "cleaning", label: "Home cleaning" },
-  { key: "massage", label: "Massage therapy" },
-];
 
 export default function ProviderJoinPage() {
   const [areas, setAreas] = useState<Area[]>([]);
@@ -21,7 +17,7 @@ export default function ProviderJoinPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
+  const skills = ["cleaning"];
   const [areaIds, setAreaIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState("");
@@ -101,14 +97,14 @@ export default function ProviderJoinPage() {
       <div className="grid">
         {/* ---- The pitch ---- */}
         <section className="pitch">
-          <a className="brand" href="/">
+          <Link className="brand" href="/">
             Opulence&nbsp;Bliss
-          </a>
+          </Link>
           <p className="eyebrow">Work with us</p>
           <h1>Good work, fair pay, your own hours.</h1>
           <p className="lede">
-            Join our vetted network of cleaners and massage therapists across
-            London. You set your availability — we bring you the clients.
+            Join our vetted network of home cleaners across London. You set
+            your availability — we bring you the clients.
           </p>
 
           <div className="fee">
@@ -182,16 +178,7 @@ export default function ProviderJoinPage() {
 
           <label>What do you offer?</label>
           <div className="checks">
-            {SKILLS.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                className={skills.includes(s.key) ? "chk on" : "chk"}
-                onClick={() => setSkills((l) => toggle(l, s.key))}
-              >
-                {s.label}
-              </button>
-            ))}
+            <span className="chk on">Home cleaning</span>
           </div>
 
           <label>Where do you work?</label>

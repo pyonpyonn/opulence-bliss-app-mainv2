@@ -2,7 +2,7 @@
 //
 // Start a 3-month recurring subscription (monthly billing).
 // Payment collects to the PLATFORM, because one payment has to split several
-// ways — cleaner, therapist, margin and membership fee. Providers are paid by
+// ways — cleaner, platform margin and membership fee. Providers are paid by
 // transfer as each visit is completed.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -41,15 +41,19 @@ export async function POST(req: NextRequest) {
     const { data: pkg } = await admin
       .from("packages")
       .select(
-        "id, name, price, billing_type, visits_per_month, duration_minutes",
+        "id, name, price, billing_type, visits_per_month, duration_minutes, service_type",
       )
       .eq("id", packageId ?? "")
       .eq("active", true)
       .maybeSingle();
 
-    if (!pkg || pkg.billing_type !== "monthly") {
+    if (
+      !pkg ||
+      pkg.billing_type !== "monthly" ||
+      !String(pkg.service_type ?? "").toLowerCase().includes("clean")
+    ) {
       return NextResponse.json(
-        { error: "That isn't a monthly plan." },
+        { error: "That cleaning membership is not available." },
         { status: 400 }
       );
     }

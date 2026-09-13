@@ -16,10 +16,7 @@ const supabase = createClient();
 type Pkg = { price: number; service_type: string | null; billing_type: string; duration_minutes: number | null };
 
 export default function Home() {
-  const [from, setFrom] = useState<{ clean: number; massage: number }>({
-    clean: 0,
-    massage: 0,
-  });
+  const [from, setFrom] = useState(0);
   const [postcode, setPostcode] = useState("");
 
   useEffect(() => {
@@ -31,19 +28,10 @@ export default function Home() {
         .eq("billing_type", "per_visit");
 
       const list = (data ?? []) as Pkg[];
-      const min = (t: string) => {
-        const p = list
-          .filter((x) => (x.service_type ?? "").includes(t))
-          .map((x) => Number(x.price));
-        return p.length ? Math.min(...p) : 0;
-      };
       const cleaningRates = list
         .filter((x) => (x.service_type ?? "").includes("clean"))
         .map((x) => cleaningHourlyRatePence(x) / 100);
-      setFrom({
-        clean: cleaningRates.length ? Math.min(...cleaningRates) : 0,
-        massage: min("massage"),
-      });
+      setFrom(cleaningRates.length ? Math.min(...cleaningRates) : 0);
     })();
   }, []);
 
@@ -62,8 +50,8 @@ export default function Home() {
             we&apos;ll handle the rest
           </h1>
           <p className="lede">
-            Vetted cleaners and massage therapists across London. Book a single
-            visit or a monthly membership — your call.
+            Vetted home cleaners across London. Book a single visit or a
+            monthly membership — your call.
           </p>
 
           <div className="composer">
@@ -89,18 +77,7 @@ export default function Home() {
           <div>
             <h2>Cleaning</h2>
             <p>and ironing, at home</p>
-            {from.clean > 0 && <span className="from">from £{from.clean.toFixed(2)} / hour</span>}
-          </div>
-          <span className="arrow">→</span>
-        </a>
-
-        <a className="band massage" href="/services/massage">
-          <div>
-            <h2>Massage</h2>
-            <p>at home</p>
-            {from.massage > 0 && (
-              <span className="from">from £{from.massage}</span>
-            )}
+            {from > 0 && <span className="from">from £{from.toFixed(2)} / hour</span>}
           </div>
           <span className="arrow">→</span>
         </a>
@@ -166,7 +143,7 @@ export default function Home() {
                 "Eleanor R. · Kensington",
               ],
               [
-                "Having a therapist come to the house after a long week is the best thing I've added to my routine.",
+                "The team is dependable, thoughtful and always leaves the flat feeling fresh.",
                 "James T. · Hampstead",
               ],
               [
@@ -440,9 +417,6 @@ export default function Home() {
         }
         .band.clean {
           background: linear-gradient(100deg,#F6F1FF,#EDE4FB);
-        }
-        .band.massage {
-          background: linear-gradient(100deg,#FFF8E6,#FDEEC4);
         }
         .band.member {
           background: linear-gradient(100deg,#F7F8F9,#ECEEF1);

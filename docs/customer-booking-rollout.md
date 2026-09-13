@@ -1,6 +1,6 @@
 # Customer booking changes
 
-Cleaning sessions run from 2 to 8 hours in 30-minute increments between 07:00 and 20:00 Europe/London. The full visit must finish by 20:00, so the latest available start depends on its duration. Massage retains its existing package duration.
+Cleaning sessions run from 2 to 8 hours in 30-minute increments between 07:00 and 20:00 Europe/London. The full visit must finish by 20:00, so the latest available start depends on its duration.
 
 Pricing is proportional to the selected package's original price and duration, rounded to pence. Promotional previews and checkout use the same calculation. The property-size estimate uses 35 m² per cleaner-hour, rounded up to a half hour and clamped to 2–8 hours; customers can override the estimate. Properties above 280 m² show a multiple-visit advisory. This estimate should be calibrated with the cleaning team.
 

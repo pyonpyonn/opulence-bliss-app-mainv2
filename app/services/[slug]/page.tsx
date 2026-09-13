@@ -2,10 +2,9 @@
 
 // SETUP: mkdir -p "app/services/[slug]" && code "app/services/[slug]/page.tsx"
 //
-// Service category page — /services/cleaning and /services/massage
+// Public cleaning service category page.
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 
@@ -96,53 +95,7 @@ const COPY: Record<
       },
     ],
   },
-  massage: {
-    title: "Mobile Massage near you",
-    match: "massage",
-    tagline: "Relax — we bring the treatment room to you.",
-    ticks: [
-      "Qualified, insured therapists in your area",
-      "60 or 90 minute sessions",
-      "Table, linens and oils provided",
-      "Book online 24/7 · visits finish by 8pm",
-    ],
-    proLink: "/provider/join",
-    proText: "Become an Opulence therapist",
-    intro:
-      "Need to decompress after a hard day? Book a wellness massage at home. Choose the technique that suits you — relaxing, deep tissue, or something gentler — and your therapist arrives with everything needed.",
-    alsoTitle: "Looking for something else in massage?",
-    also: [
-      { label: "Female therapist", type: "massage" },
-      { label: "Male therapist", type: "massage" },
-      { label: "Deep tissue", type: "massage" },
-      { label: "Relaxing massage", type: "massage" },
-    ],
-    faq: [
-      {
-        q: "How do I book a massage near me?",
-        a: "Enter your postcode, tell us who it's for and whether you'd prefer a female or male therapist, then choose your session and a time. Your therapist arrives with a professional table, fresh linens and oils.",
-      },
-      {
-        q: "What do I need to prepare?",
-        a: "A clear space of roughly two metres by two metres, and somewhere to hang a towel. That's it — everything else comes with your therapist.",
-      },
-      {
-        q: "How long does a massage last?",
-        a: "Choose 60 or 90 minutes. The 90-minute session includes a short consultation at the start so your therapist can tailor the pressure and focus areas.",
-      },
-      {
-        q: "Is massage suitable during pregnancy?",
-        a: "Not during the first trimester. After that, please tell us when you book so we can match you with a therapist experienced in prenatal massage.",
-      },
-      {
-        q: "Can I choose a female or male therapist?",
-        a: "Yes. You'll be asked at the start of booking, and we'll only offer the job to therapists matching your preference.",
-      },
-    ],
-  },
 };
-
-const money = (n: number) => "£" + Number(n).toFixed(0);
 
 function ago(iso: string) {
   const days = Math.floor(
@@ -158,9 +111,7 @@ function ago(iso: string) {
 }
 
 export default function ServicePage() {
-  const params = useParams<{ slug: string }>();
-  const slug = (params?.slug ?? "cleaning").toString();
-  const copy = COPY[slug] ?? COPY.cleaning;
+  const copy = COPY.cleaning;
 
   const [items, setItems] = useState<Pkg[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -181,7 +132,7 @@ export default function ServicePage() {
       const matching = ((data ?? []) as Pkg[]).filter((p) =>
         (p.service_type ?? "").includes(copy.match)
       );
-      setItems(copy.match === "clean" ? matching.sort(compareCleaningSessions) : matching);
+      setItems(matching.sort(compareCleaningSessions));
 
       const { data: revs } = await supabase
         .from("reviews")
@@ -196,11 +147,7 @@ export default function ServicePage() {
   }, [copy.match]);
 
   const cheapest = items.length
-    ? Math.min(...items.map((i) =>
-        slug === "cleaning"
-          ? cleaningHourlyRatePence(i) / 100
-          : Number(i.price)
-      ))
+    ? Math.min(...items.map((i) => cleaningHourlyRatePence(i) / 100))
     : 0;
   const avg =
     reviews.length > 0
@@ -244,8 +191,7 @@ export default function ServicePage() {
               {cheapest > 0 && (
                 <li>
                   <strong>
-                    {slug === "massage" ? "Sessions" : "Cleans"} from{" "}
-                    {slug === "cleaning" ? `£${cheapest.toFixed(2)} / hour` : money(cheapest)}
+                    Cleans from £{cheapest.toFixed(2)} / hour
                   </strong>
                 </li>
               )}
@@ -259,7 +205,7 @@ export default function ServicePage() {
                 aria-label="Postcode"
               />
               <a className="btn" href={bookLink}>
-                Book my {slug === "massage" ? "massage" : "cleaning"}
+                Book my cleaning
               </a>
             </div>
 
@@ -269,7 +215,7 @@ export default function ServicePage() {
           </div>
 
           <div className="hero-art" aria-hidden="true">
-            <span>{slug === "massage" ? "❋" : "✿"}</span>
+            <span>✿</span>
           </div>
         </div>
       </header>
@@ -305,7 +251,7 @@ export default function ServicePage() {
       {/* ---------- REVIEWS ---------- */}
       <section className="reviews" id="reviews">
         <div className="inner">
-          <h2>{slug === "massage" ? "Massage" : "Cleaning"} reviews</h2>
+          <h2>Cleaning reviews</h2>
 
           {reviews.length === 0 ? (
             <div className="empty">
@@ -346,7 +292,7 @@ export default function ServicePage() {
       {/* ---------- SERVICES ---------- */}
       <section className="services">
         <div className="inner">
-          <h2>Our {slug === "massage" ? "massage" : "cleaning"} services</h2>
+          <h2>Our cleaning services</h2>
           <p className="intro">{copy.intro}</p>
 
           {items.length === 0 ? (
@@ -358,14 +304,9 @@ export default function ServicePage() {
                   {p.name === "Essential Clean" && <span className="pill">Popular</span>}
                   <h3>{p.name}</h3>
                   <p className="price">
-                    {slug === "cleaning"
-                      ? `£${(cleaningHourlyRatePence(p) / 100).toFixed(2)}`
-                      : money(p.price)}
+                    £{(cleaningHourlyRatePence(p) / 100).toFixed(2)}
                     <span>
-                      {" "}
-                      {slug === "cleaning"
-                        ? "per hour · 2-hour minimum"
-                        : `per visit${p.duration_minutes ? ` · ${p.duration_minutes} min` : ""}`}
+                      {" "}per hour · 2-hour minimum
                     </span>
                   </p>
                   {p.description && <p className="desc">{p.description}</p>}
@@ -407,7 +348,7 @@ export default function ServicePage() {
       <section className="faq">
         <div className="inner">
           <h2>
-            All about our {slug === "massage" ? "massage" : "cleaning"} service
+            All about our cleaning service
           </h2>
           <div className="qs">
             {copy.faq.map((f, i) => (

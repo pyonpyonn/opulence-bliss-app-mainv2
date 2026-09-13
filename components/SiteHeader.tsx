@@ -23,7 +23,6 @@ type NavLink = { href: string; label: string; match: string[] };
 // lives inside the portal, reached via "My account".
 const NAV: NavLink[] = [
   { href: "/services/cleaning", label: "Cleaning", match: ["/services/cleaning"] },
-  { href: "/services/massage", label: "Massage", match: ["/services/massage"] },
   { href: "/subscribe", label: "Memberships", match: ["/subscribe"] },
   { href: "/providers", label: "Our pros", match: ["/providers"] },
   { href: "/provider/join", label: "Jobs", match: ["/provider"] },

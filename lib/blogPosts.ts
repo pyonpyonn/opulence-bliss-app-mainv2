@@ -147,42 +147,6 @@ export const blogPosts: BlogPost[] = [
       },
     ],
   },
-  {
-    slug: "benefits-of-massage-at-home",
-    category: "Wellness at home",
-    title: "Why an at-home massage makes relaxation last longer",
-    summary:
-      "Skip the return journey and turn your own space into a quiet place to reset.",
-    published: "8 September 2026",
-    publishedIso: "2026-09-08",
-    readTime: "3 min read",
-    accent: "pink",
-    sections: [
-      {
-        heading: "Comfort before and after",
-        paragraphs: [
-          "An at-home appointment removes the travel, waiting room and journey home. You choose a familiar room, your therapist brings what they need, and you can rest as soon as the session finishes.",
-        ],
-      },
-      {
-        heading: "Create a calm setup",
-        paragraphs: [
-          "Choose a warm room with enough clear floor space for the therapist to work safely. Silence notifications, lower the lights and keep a glass of water nearby. Let the therapist know about injuries, sensitivities or pressure preferences before the session begins.",
-        ],
-        points: [
-          "Wear comfortable clothes before and after the appointment.",
-          "Avoid a heavy meal immediately beforehand.",
-          "Allow a few quiet minutes after the therapist leaves.",
-        ],
-      },
-      {
-        heading: "Build it into your routine",
-        paragraphs: [
-          "A home appointment can fit around work and family life more easily than a trip across London. If regular visits suit you, memberships help put them on a predictable schedule.",
-        ],
-      },
-    ],
-  },
 ];
 
 export function getBlogPost(slug: string) {

@@ -35,6 +35,12 @@ export async function GET(req: NextRequest) {
       req.nextUrl.searchParams.get("duration") ??
         DEFAULT_APPOINTMENT_DURATION_MINUTES,
     );
+    if (!isCleaning(req.nextUrl.searchParams.get("service"))) {
+      return NextResponse.json(
+        { error: "Home cleaning is the available booking service." },
+        { status: 400 },
+      );
+    }
     const durationMinutes =
       Number.isFinite(requestedDuration) && requestedDuration > 0
         ? Math.min(Math.round(requestedDuration), 12 * 60)

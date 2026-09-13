@@ -30,5 +30,4 @@ test("cleaning hourly rates and checkout totals stay proportional", () => {
   assert.equal(bookingPricePence(pkg, 480), 20000);
   assert.throws(() => bookingPricePence(pkg, 170));
   assert.throws(() => bookingPricePence({ ...pkg, price: NaN }, 120));
-  assert.equal(bookingPricePence({ price: 75, duration_minutes: 90, service_type: "massage" }, 90), 7500);
 });

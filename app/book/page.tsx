@@ -71,7 +71,7 @@ export default function BookPage() {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [serviceType, setServiceType] = useState<string | null>(null);
+  const [serviceType, setServiceType] = useState<string | null>("clean");
   const [editPc, setEditPc] = useState(false);
 
   const [step, setStep] = useState(0);
@@ -123,6 +123,7 @@ export default function BookPage() {
           .select("*")
           .eq("active", true)
           .eq("billing_type", "per_visit")
+          .ilike("service_type", "%clean%")
           .order("price"),
         supabase
           .from("service_areas")
@@ -162,7 +163,7 @@ export default function BookPage() {
       const wantSlot = q.get("slot");
       const reviewHandoff = q.get("review") === "1";
 
-      if (wantType) setServiceType(wantType);
+      if (wantType === "clean") setServiceType("clean");
       if (wantPc) setPostcode(wantPc);
 
       // Already know where they live? Verify it quietly — no need to ask again.
@@ -486,8 +487,8 @@ export default function BookPage() {
           {/* ---- 0 SERVICE TYPE ---- */}
           {step === 0 && (
             <section>
-              <h1>What do you need?</h1>
-              <p className="lede">Pick one to see what&apos;s available.</p>
+              <h1>Book home cleaning</h1>
+              <p className="lede">Choose cleaning, then tell us where you are.</p>
 
               <div className="types">
                 {[
@@ -496,12 +497,6 @@ export default function BookPage() {
                     name: "Cleaning",
                     sub: "Regular, one-off or deep cleans",
                     icon: "✦",
-                  },
-                  {
-                    key: "massage",
-                    name: "Massage",
-                    sub: "60 or 90 minutes, at your home",
-                    icon: "❋",
                   },
                 ].map((t) => (
                   <button
@@ -608,11 +603,7 @@ export default function BookPage() {
                             ? "2–8 hours · 30-minute steps"
                             : duration(p.duration_minutes)}
                           {p.service_type
-                            ? ` · ${
-                                p.service_type.includes("massage")
-                                  ? "Massage"
-                                  : "Cleaning"
-                              }`
+                            ? " · Cleaning"
                             : ""}
                         </span>
                         {p.description && (

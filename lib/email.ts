@@ -42,7 +42,7 @@ function wrap(title: string, body: string, cta?: { text: string; url: string }) 
         : ""
     }
     <p style="color:#a89f90;font-size:12px;margin:28px 0 0;border-top:1px solid #f0ebe0;padding-top:16px;">
-      Premium home &amp; wellness care, London.
+      Premium home cleaning, London.
     </p>
   </div>
 </div>`.trim();

@@ -6,7 +6,7 @@ import styles from "../marketingPages.module.css";
 
 export const metadata: Metadata = {
   title: "Home care guides | Opulence Bliss",
-  description: "Practical cleaning and at-home wellness advice from Opulence Bliss.",
+  description: "Practical home-cleaning advice from Opulence Bliss.",
 };
 
 export default function BlogPage() {
@@ -19,7 +19,7 @@ export default function BlogPage() {
           <p className={styles.eyebrow}>The Opulence Bliss journal</p>
           <h1>Helpful ideas for a calmer home</h1>
           <p className={styles.heroIntro}>
-            Straightforward guides for getting more from your cleaning and wellness visits.
+            Straightforward guides for getting more from your cleaning visits.
           </p>
         </div>
       </header>

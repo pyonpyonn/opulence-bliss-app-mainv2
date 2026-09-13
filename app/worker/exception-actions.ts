@@ -245,10 +245,6 @@ export async function cannotAttend(
       );
       const eligibleIds = ids.filter((id) => !declined.has(id));
 
-      const svc = (pkg?.service_type ?? "cleaning").includes("massage")
-        ? "massage"
-        : "cleaning";
-
       const { data: provs } = eligibleIds.length
         ? await admin
             .from("providers")
@@ -257,7 +253,7 @@ export async function cannotAttend(
             .eq("vetting_status", "approved")
             .eq("joining_fee_paid", true)
             .eq("is_suspended", false)
-            .contains("services", [svc])
+            .contains("services", ["cleaning"])
         : { data: [] };
 
       if (provs?.length) {

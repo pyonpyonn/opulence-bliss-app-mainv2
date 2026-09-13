@@ -20,7 +20,7 @@ Real money cannot move until every one of these is answered in writing.
 
 | #   | Question | What we've assumed | Why it matters |
 | --- | --- | --- | --- |
-| 1.1 | **The exact payment split.** Cleaner's hourly rate, therapist's flat fee, platform margin, membership fee. | 20% platform / 80% provider · £15/hr cleaner · £45 flat therapist · £30/month membership fee. All placeholders. | Every payout and invoice figure comes from these. Wrong numbers mean underpaying real people. |
+| 1.1 | **The exact payment split.** Cleaner's hourly rate, platform margin and membership fee. | 20% platform / 80% provider · £15/hr cleaner · £30/month membership fee. All placeholders. | Every payout and invoice figure comes from these. Wrong numbers mean underpaying real people. |
 | 1.2 | **Payment model.** Monthly memberships as specified, pay-per-visit, or both? | Both are built and working. | Their brief specified 3-month recurring; we built per-visit first. Unresolved since the start. |
 | 1.3 | **Mobile apps.** Formally defer the two native apps and launch on responsive web, or build them now? | Treated as still in scope, nothing built. | Largest unbuilt item in the signed brief. Affects timeline, price and milestones. |
 | 1.4 | **The four packages.** Final names, prices and what each includes. | Four per-visit services and four monthly plans, invented. | Shown on every page and charged to real cards. |

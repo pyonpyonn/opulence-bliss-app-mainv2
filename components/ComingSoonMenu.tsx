@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import {
   Check,
   ChevronDown,
-  HandHeart,
   PackageOpen,
   Wrench,
 } from "lucide-react";
@@ -30,12 +29,6 @@ const OPTIONS = [
     detail:
       "Handyman and renovation add-ons, painting, small carpentry and furniture assembly.",
     Icon: Wrench,
-  },
-  {
-    key: "mobile_body_massage",
-    title: "Mobile body massage",
-    detail: "Relaxing massage treatments brought to your home.",
-    Icon: HandHeart,
   },
 ] as const;
 
