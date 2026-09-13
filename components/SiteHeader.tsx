@@ -152,7 +152,7 @@ export default function SiteHeader() {
 
       {/* ---------- row 2 ---------- */}
       <nav style={navRow} aria-label="Main">
-        <div style={navInner}>
+        <div className="site-header-nav-inner" style={navInner}>
           {NAV.map((l) => {
             if (l.href === "/services/cleaning")
               return (
@@ -194,6 +194,15 @@ export default function SiteHeader() {
           align-items: center;
           justify-content: flex-end;
           gap: 10px;
+        }
+
+        .site-header-nav-inner {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .site-header-nav-inner::-webkit-scrollbar {
+          display: none;
         }
 
         @media (max-width: 700px) {
@@ -300,6 +309,7 @@ const navInner: React.CSSProperties = {
   display: "flex",
   gap: 30,
   overflowX: "auto",
+  overflowY: "hidden",
 };
 
 const navItem: React.CSSProperties = {
