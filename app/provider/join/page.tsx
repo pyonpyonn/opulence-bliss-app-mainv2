@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -13,10 +14,16 @@ type Area = { id: string; name: string; postcode_prefixes: string[] };
 
 export default function ProviderJoinPage() {
   const [areas, setAreas] = useState<Area[]>([]);
-  const [fullName, setFullName] = useState("");
+  const [accountStep, setAccountStep] = useState<1 | 2>(1);
+  const [salutation, setSalutation] = useState<"ms_mrs" | "mr" | "">("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const skills = ["cleaning"];
   const [areaIds, setAreaIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -37,6 +44,27 @@ export default function ProviderJoinPage() {
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
   }
 
+  const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+  const accountReady = Boolean(
+    salutation &&
+      firstName.trim() &&
+      lastName.trim() &&
+      email.trim() &&
+      password.length >= 6 &&
+      phone.trim() &&
+      address.trim() &&
+      dateOfBirth,
+  );
+
+  function continueToWorkDetails() {
+    if (!accountReady) {
+      setErr("Complete every account field. Your password must have at least 6 characters.");
+      return;
+    }
+    setErr(null);
+    setAccountStep(2);
+  }
+
   async function submit() {
     setBusy(true);
     setErr(null);
@@ -49,9 +77,14 @@ export default function ProviderJoinPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
+          salutation,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           email: email.trim(),
           password,
-          phone,
+          phone: phone.trim(),
+          address: address.trim(),
+          dateOfBirth,
           skills,
           areaIds,
         }),
@@ -77,8 +110,7 @@ export default function ProviderJoinPage() {
     }
   }
 
-  const ready =
-    fullName && email && password.length >= 6 && skills.length && areaIds.length;
+  const ready = accountReady && skills.length && areaIds.length;
 
   return (
     <main className="wrap">
@@ -135,69 +167,156 @@ export default function ProviderJoinPage() {
         <section className="form">
           <h2>Create your provider account</h2>
 
-          <label>Full name</label>
-          <input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Jane Smith"
-          />
+          {accountStep === 1 ? (
+            <div className="account-fields">
+              <fieldset className="title-options">
+                <legend className="sr-only">Title</legend>
+                <label className="title-option">
+                  <input
+                    type="radio"
+                    name="salutation"
+                    checked={salutation === "ms_mrs"}
+                    onChange={() => setSalutation("ms_mrs")}
+                  />
+                  <span aria-hidden="true" /> Ms / Mrs
+                </label>
+                <label className="title-option">
+                  <input
+                    type="radio"
+                    name="salutation"
+                    checked={salutation === "mr"}
+                    onChange={() => setSalutation("mr")}
+                  />
+                  <span aria-hidden="true" /> Mr
+                </label>
+              </fieldset>
 
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
+              <label className="sr-only" htmlFor="provider-first-name">First name</label>
+              <input
+                id="provider-first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                autoComplete="given-name"
+              />
 
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-            autoComplete="new-password"
-          />
+              <label className="sr-only" htmlFor="provider-last-name">Last name</label>
+              <input
+                id="provider-last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name"
+                autoComplete="family-name"
+              />
 
-          <label>Phone (optional)</label>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="07700 900000"
-          />
+              <label className="sr-only" htmlFor="provider-email">Email</label>
+              <input
+                id="provider-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                autoComplete="email"
+              />
 
-          <label>What do you offer?</label>
-          <div className="checks">
-            <span className="chk on">Home cleaning</span>
-          </div>
-
-          <label>Where do you work?</label>
-          <div className="checks">
-            {areas.length === 0 ? (
-              <span className="muted">Loading areas…</span>
-            ) : (
-              areas.map((a) => (
+              <div className="password-field">
+                <label className="sr-only" htmlFor="provider-password">Password</label>
+                <input
+                  id="provider-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  autoComplete="new-password"
+                />
                 <button
-                  key={a.id}
                   type="button"
-                  className={areaIds.includes(a.id) ? "chk on" : "chk"}
-                  onClick={() => setAreaIds((l) => toggle(l, a.id))}
-                  title={(a.postcode_prefixes ?? []).join(", ")}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((shown) => !shown)}
                 >
-                  {a.name}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
-              ))
-            )}
-          </div>
+              </div>
 
-          <button className="go" onClick={submit} disabled={busy || !ready}>
-            {busy ? step || "Working…" : "Create professional account"}
-          </button>
-          <p className="small">
-            There is no joining charge. Jobs unlock after your application is
-            approved.
-          </p>
+              <div className="phone-field">
+                <span aria-hidden="true">🇬🇧</span>
+                <span className="phone-code">+44</span>
+                <label className="sr-only" htmlFor="provider-phone">Phone</label>
+                <input
+                  id="provider-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Phone"
+                  autoComplete="tel"
+                />
+              </div>
+
+              <label className="sr-only" htmlFor="provider-address">Address</label>
+              <input
+                id="provider-address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Address"
+                autoComplete="street-address"
+              />
+
+              <label className="sr-only" htmlFor="provider-dob">Date of birth</label>
+              <input
+                id="provider-dob"
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                aria-label="Date of birth"
+              />
+
+              <button className="go next" type="button" onClick={continueToWorkDetails}>
+                Next
+              </button>
+            </div>
+          ) : (
+            <div className="work-fields">
+              <p className="section-intro">
+                Choose where you would like to work. You can change your hours later in the professional portal.
+              </p>
+
+              <label>What do you offer?</label>
+              <div className="checks">
+                <span className="chk on">Home cleaning</span>
+              </div>
+
+              <label>Where do you work?</label>
+              <div className="checks">
+                {areas.length === 0 ? (
+                  <span className="muted">Loading areas…</span>
+                ) : (
+                  areas.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={areaIds.includes(a.id) ? "chk on" : "chk"}
+                      onClick={() => setAreaIds((l) => toggle(l, a.id))}
+                      title={(a.postcode_prefixes ?? []).join(", ")}
+                    >
+                      {a.name}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="form-actions">
+                <button className="back" type="button" onClick={() => setAccountStep(1)} disabled={busy}>
+                  Back
+                </button>
+                <button className="go" type="button" onClick={submit} disabled={busy || !ready}>
+                  {busy ? step || "Working…" : "Create professional account"}
+                </button>
+              </div>
+              <p className="small">
+                There is no joining charge. Jobs unlock after your application is approved.
+              </p>
+            </div>
+          )}
 
           {err && <p className="err">{err}</p>}
         </section>
@@ -336,10 +455,11 @@ export default function ProviderJoinPage() {
         }
         .form {
           background: #fff;
-          border: 1px solid #EDEFF1;
-          border-radius: 20px;
-          padding: 32px 30px;
-          box-shadow: 0 16px 44px rgba(22,32,42, 0.09);
+          border: 1px solid #E7DCFA;
+          border-top: 5px solid #6D28D9;
+          border-radius: 24px;
+          padding: 34px 32px;
+          box-shadow: 0 20px 54px rgba(76,29,149, 0.12);
         }
         label {
           display: block;
@@ -350,18 +470,126 @@ export default function ProviderJoinPage() {
         input {
           width: 100%;
           box-sizing: border-box;
-          padding: 12px 14px;
-          border: 1.5px solid #E5E7EA;
-          border-radius: 12px;
+          min-height: 56px;
+          padding: 15px 16px;
+          border: 1.5px solid #D9DDE3;
+          border-radius: 13px;
           font: inherit;
           font-size: 15.5px;
           background: #fff;
           color: #16202A;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
         input:focus-visible {
           outline: none;
-          border-color: #16202A;
+          border-color: #6D28D9;
+          box-shadow: 0 0 0 3px rgba(109,40,217, 0.09);
+        }
+        .account-fields,
+        .work-fields {
+          display: grid;
+        }
+        .title-options {
+          display: flex;
+          gap: 28px;
+          margin: 0 0 16px;
+          padding: 0;
+          border: 0;
+        }
+        .title-option {
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          margin: 0;
+          color: #16202A;
+          font-size: 15px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .title-option input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          min-height: 0;
+          margin: 0;
+          opacity: 0;
+        }
+        .title-option span {
+          width: 22px;
+          height: 22px;
+          box-sizing: border-box;
+          border: 1.5px solid #8E96A1;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: inset 0 0 0 5px #fff;
+        }
+        .title-option input:checked + span {
+          border-color: #6D28D9;
+          background: #6D28D9;
+        }
+        .title-option input:focus-visible + span {
+          outline: 3px solid rgba(109,40,217, 0.18);
+          outline-offset: 2px;
+        }
+        .password-field,
+        .phone-field {
+          position: relative;
+        }
+        .password-field input {
+          padding-right: 54px;
+        }
+        .password-field button {
+          position: absolute;
+          top: 9px;
+          right: 9px;
+          display: grid;
+          width: 38px;
+          height: 38px;
+          place-items: center;
+          border: 0;
+          background: transparent;
+          color: #16202A;
+          cursor: pointer;
+        }
+        .phone-field {
+          display: grid;
+          grid-template-columns: auto auto minmax(0, 1fr);
+          align-items: center;
+          min-height: 56px;
+          margin-bottom: 14px;
+          padding-left: 15px;
+          border: 1.5px solid #D9DDE3;
+          border-radius: 13px;
+          background: #fff;
+        }
+        .phone-field:focus-within {
+          border-color: #6D28D9;
+          box-shadow: 0 0 0 3px rgba(109,40,217, 0.09);
+        }
+        .phone-code {
+          margin: 0 7px;
+          color: #5F6874;
+          font-size: 14px;
+          font-weight: 800;
+        }
+        .phone-field input {
+          min-height: 53px;
+          margin: 0;
+          padding-left: 4px;
+          border: 0;
+          box-shadow: none;
+        }
+        .phone-field input:focus-visible {
+          box-shadow: none;
+        }
+        input[type="date"] {
+          color: #7A828C;
+        }
+        .section-intro {
+          margin: -5px 0 22px;
+          color: #68717D;
+          font-size: 14px;
+          line-height: 1.5;
         }
         .checks {
           display: flex;
@@ -404,6 +632,12 @@ export default function ProviderJoinPage() {
         .go:hover:not(:disabled) {
           background: #4C1D95;
         }
+        .go.next {
+          width: auto;
+          min-width: 128px;
+          justify-self: center;
+          padding-inline: 30px;
+        }
         .go:disabled {
           opacity: 0.55;
           cursor: not-allowed;
@@ -413,6 +647,34 @@ export default function ProviderJoinPage() {
           color: #7A828C;
           text-align: center;
           margin: 12px 0 0;
+        }
+        .form-actions {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: 10px;
+          align-items: end;
+        }
+        .back {
+          min-height: 50px;
+          padding: 0 20px;
+          border: 1.5px solid #DCCBFA;
+          border-radius: 999px;
+          background: #FAF7FF;
+          color: #6D28D9;
+          font: inherit;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
         }
         .err {
           background: #FFE6EA;
@@ -430,6 +692,20 @@ export default function ProviderJoinPage() {
           .grid {
             grid-template-columns: 1fr;
             gap: 34px;
+          }
+        }
+        @media (max-width: 520px) {
+          .wrap {
+            padding-inline: 14px;
+          }
+          .grid {
+            padding-top: 26px;
+          }
+          .form {
+            padding: 28px 20px;
+          }
+          .form-actions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

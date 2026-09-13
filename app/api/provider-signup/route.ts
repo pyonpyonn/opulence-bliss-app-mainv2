@@ -12,12 +12,33 @@ const admin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email, password, phone, skills, areaIds } =
-      await req.json();
+    const {
+      fullName,
+      salutation,
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      address,
+      dateOfBirth,
+      skills,
+      areaIds,
+    } = await req.json();
 
-    if (!email || !password || !fullName) {
+    if (
+      !email ||
+      !password ||
+      !fullName ||
+      !salutation ||
+      !firstName ||
+      !lastName ||
+      !phone ||
+      !address ||
+      !dateOfBirth
+    ) {
       return NextResponse.json(
-        { error: "Name, email and password are required." },
+        { error: "Complete every account field before continuing." },
         { status: 400 }
       );
     }
@@ -50,6 +71,13 @@ export async function POST(req: NextRequest) {
         email,
         password,
         email_confirm: true,
+        user_metadata: {
+          salutation,
+          first_name: firstName,
+          last_name: lastName,
+          address,
+          date_of_birth: dateOfBirth,
+        },
       });
 
     if (createErr || !created.user) {
@@ -74,7 +102,8 @@ export async function POST(req: NextRequest) {
         email,
         role: "provider",
         full_name: fullName,
-        phone: phone ?? null,
+        phone,
+        address,
       },
       { onConflict: "id" }
     );
