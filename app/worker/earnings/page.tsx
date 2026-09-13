@@ -44,7 +44,7 @@ export default async function EarningsPage() {
 
   const { data: prov } = await supabase
     .from("providers")
-    .select("id, rating_avg, rating_count, joining_fee_paid, payout_schedule")
+    .select("id, rating_avg, rating_count, payout_schedule")
     .eq("profile_id", user.id)
     .maybeSingle();
 

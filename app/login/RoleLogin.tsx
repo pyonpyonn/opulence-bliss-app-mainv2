@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -12,7 +13,7 @@ const COPY = {
   client: {
     eyebrow: "Client account",
     title: "Welcome back",
-    body: "Manage your bookings, messages, payments and membership.",
+    body: "Manage your bookings, messages and payments.",
     button: "Log in to my account",
     demoEmail: "client@test.com",
     demoLabel: "Use client demo account",
@@ -95,9 +96,9 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
         <div className="role-mark" aria-hidden="true">
           {content.icon}
         </div>
-        <a className="brand" href="/">
+        <Link className="brand" href="/">
           opulence<span>bliss</span>
-        </a>
+        </Link>
 
         <p className="eyebrow">{content.eyebrow}</p>
         <h1>{content.title}</h1>
@@ -150,9 +151,9 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
           </p>
         )}
 
-        <a className="home" href="/">
+        <Link className="home" href="/">
           ← Back to website
-        </a>
+        </Link>
       </section>
 
       <style jsx>{`

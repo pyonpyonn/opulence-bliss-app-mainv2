@@ -163,20 +163,6 @@ export async function wipeAvailability() {
   revalidatePath("/admin");
 }
 
-export async function resetJoiningFees() {
-  const s = await requireAdmin();
-  assertTestMode("Reset joining fees");
-  await s
-    .from("providers")
-    .update({
-      joining_fee_paid: false,
-      joining_fee_ref: null,
-      joining_fee_at: null,
-    })
-    .neq("id", ALL);
-  revalidatePath("/admin");
-}
-
 export async function resetPrototypeData() {
   const s = await requireAdmin();
   assertTestMode("Reset all prototype activity");

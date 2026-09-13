@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 
 const CLIENT = [
   { href: "/account", label: "My bookings" },
-  { href: "/account/membership", label: "Membership" },
   { href: "/book", label: "Book a service" },
   { href: "/account/profile", label: "My details" },
   { href: "/notifications", label: "Updates" },

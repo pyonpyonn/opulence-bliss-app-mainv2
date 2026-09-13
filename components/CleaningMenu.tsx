@@ -32,6 +32,7 @@ export default function CleaningMenu() {
       .from("packages")
       .select("id, name, billing_type")
       .eq("active", true)
+      .eq("billing_type", "per_visit")
       .then(({ data, error }) => {
         if (!active) return;
         if (error) return;
@@ -80,12 +81,9 @@ export default function CleaningMenu() {
     return {
       key: name,
       label: name,
-      href:
-        pkg?.billing_type === "per_visit"
-          ? `/book?type=clean&service=${encodeURIComponent(pkg.id)}`
-          : pkg
-            ? "/subscribe"
-            : "/services/cleaning#services",
+      href: pkg
+        ? `/book?type=clean&service=${encodeURIComponent(pkg.id)}`
+        : "/services/cleaning#services",
     };
   });
 

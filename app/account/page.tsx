@@ -4,7 +4,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import CurrentVisit, { type Visit } from "./CurrentVisit";
-import MembershipCard, { type Membership } from "./MembershipCard";
 import {
   RateBooking,
   TipBooking,
@@ -112,12 +111,7 @@ function firstName(name: string | null, email: string) {
   return n.charAt(0).toUpperCase() + n.slice(1);
 }
 
-export default async function AccountPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ subscribed?: string }>;
-}) {
-  const { subscribed } = await searchParams;
+export default async function AccountPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -157,15 +151,6 @@ export default async function AccountPage({
       serviceType: item.service_type,
     }),
   );
-
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select(
-      "id, status, start_date, contract_length_months, cycles_billed, current_period_end, preferred_weekday, preferred_hour, postcode, paused_until, packages(name, price, visits_per_month)",
-    )
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
   const { data: reviewData } = await supabase
     .from("reviews")
@@ -240,31 +225,6 @@ export default async function AccountPage({
   );
   const featured = active ?? upcoming[0] ?? null;
   const rest = upcoming.filter((r) => r.id !== featured?.id);
-  let membership: Membership | null = null;
-  if (sub) {
-    const mp = one(sub.packages as never) as {
-      name: string;
-      price: number;
-      visits_per_month: number | null;
-    } | null;
-    membership = {
-      id: sub.id,
-      planName: mp?.name ?? "Membership",
-      price: Number(mp?.price ?? 0),
-      status: sub.paused_until ? "paused" : sub.status,
-      startDate: sub.start_date,
-      contractMonths: sub.contract_length_months ?? 3,
-      cyclesBilled: sub.cycles_billed ?? 0,
-      nextBill: sub.current_period_end,
-      weekday: sub.preferred_weekday,
-      hour: sub.preferred_hour,
-      postcode: sub.postcode,
-      visitsThisCycle: upcoming.length,
-      visitsPerMonth: mp?.visits_per_month ?? null,
-      pausedUntil: sub.paused_until,
-    };
-  }
-
   const toVisit = (r: Row): Visit => {
     const pkg = one(r.packages);
     const prv = one(r.providers);
@@ -331,16 +291,6 @@ export default async function AccountPage({
             : "Nothing booked — fancy sorting that?"}
         </p>
 
-        {subscribed && (
-          <div style={banner}>
-            <strong>Membership active 🎉</strong>
-            <span>
-              First payment done and this month&apos;s visits are being matched
-              now.
-            </span>
-          </div>
-        )}
-
         {/* ---- rate prompt ---- */}
         {unrated.length > 0 && (
           <div style={rateBox}>
@@ -352,25 +302,6 @@ export default async function AccountPage({
               A quick rating helps other customers and rewards good pros.
             </p>
             <RateBooking id={unrated[0].id} existing={null} />
-          </div>
-        )}
-
-        {/* ---- membership ---- */}
-        {membership ? (
-          <MembershipCard m={membership} compact />
-        ) : (
-          <div style={upsell}>
-            <div>
-              <strong style={{ fontSize: 16.5, fontWeight: 900 }}>
-                Want it handled automatically?
-              </strong>
-              <p style={{ margin: "3px 0 0", fontSize: 14.5, opacity: 0.85 }}>
-                A membership books your visits for you and keeps the same team.
-              </p>
-            </div>
-            <a href="/subscribe" style={btnWhite}>
-              See plans
-            </a>
           </div>
         )}
 
@@ -698,17 +629,6 @@ const btn: React.CSSProperties = {
   fontWeight: 900,
   fontSize: 15.5,
 };
-const btnWhite: React.CSSProperties = {
-  display: "inline-block",
-  background: "#fff",
-  color: "#6D28D9",
-  padding: "12px 24px",
-  borderRadius: 999,
-  textDecoration: "none",
-  fontWeight: 900,
-  fontSize: 15,
-  whiteSpace: "nowrap",
-};
 const invoiceButton: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -724,18 +644,6 @@ const invoiceButton: React.CSSProperties = {
   fontWeight: 900,
   cursor: "pointer",
 };
-const banner: React.CSSProperties = {
-  background: "#DFF5E8",
-  border: "2px solid #A9E3C4",
-  borderRadius: 18,
-  padding: "16px 20px",
-  marginBottom: 20,
-  display: "grid",
-  gap: 3,
-  color: "#137B4E",
-  fontSize: 14.5,
-  fontWeight: 700,
-};
 const rateBox: React.CSSProperties = {
   background: "#FFF3D6",
   border: "2px solid #FFDF9E",
@@ -743,18 +651,6 @@ const rateBox: React.CSSProperties = {
   padding: "20px 22px",
   marginBottom: 20,
   color: "#8A5A00",
-};
-const upsell: React.CSSProperties = {
-  background: "linear-gradient(100deg,#F5C542,#C86FC9 55%,#7B2FF7)",
-  color: "#fff",
-  borderRadius: 20,
-  padding: "20px 22px",
-  marginBottom: 22,
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 16,
-  flexWrap: "wrap",
 };
 const emptyBig: React.CSSProperties = {
   display: "grid",

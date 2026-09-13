@@ -16,7 +16,7 @@ export default async function AccountLayout({
       <Gate
         emoji="🔑"
         title="Your account"
-        body="Log in to see your visits, membership and details."
+        body="Log in to see your visits, messages and details."
         href="/login"
         cta="Log in"
         altHref="/book"

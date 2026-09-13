@@ -14,13 +14,12 @@ export default async function CurrentJobPage() {
 
   const { data: provider } = await supabase
     .from("providers")
-    .select("id, joining_fee_paid, vetting_status, is_suspended")
+    .select("id, vetting_status, is_suspended")
     .eq("profile_id", user.id)
     .maybeSingle();
 
   const inactive =
     !provider ||
-    !provider.joining_fee_paid ||
     provider.vetting_status !== "approved";
   const suspended = provider?.is_suspended === true;
 

@@ -16,7 +16,7 @@ export default async function AdminCleanersPage() {
     supabase
       .from("providers")
       .select(
-        "id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, years_experience, is_suspended, profiles(email)",
+        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, profiles(email)",
       )
       .order("display_name", { ascending: true }),
     supabase
@@ -126,9 +126,6 @@ export default async function AdminCleanersPage() {
                       <strong>Hours:</strong>{" "}
                       {hours.length ? hours.join(" · ") : "Not available"}
                     </p>
-                    <span style={fee}>
-                      {provider.joining_fee_paid ? "Joining fee paid" : "Joining fee unpaid"}
-                    </span>
                     <div>
                       <Link href={`/admin/cleaners/${provider.id}`} style={viewLink}>
                         View full professional record →
@@ -161,7 +158,6 @@ const status: React.CSSProperties = { borderRadius: 999, padding: "4px 9px", fon
 const email: React.CSSProperties = { margin: "3px 0 7px", color: "#4b5563", fontSize: 12.5, overflowWrap: "anywhere" };
 const meta: React.CSSProperties = { margin: "3px 0", color: "#68717d", fontSize: 12.5 };
 const hoursText: React.CSSProperties = { margin: "8px 0", color: "#4b5563", fontSize: 11.5, lineHeight: 1.5 };
-const fee: React.CSSProperties = { display: "inline-block", borderRadius: 999, padding: "4px 8px", background: "#f1f2f4", color: "#59616d", fontSize: 10.5, fontWeight: 800 };
 const viewLink: React.CSSProperties = { display: "inline-block", marginTop: 10, color: "#6d28d9", fontSize: 12, fontWeight: 900, textDecoration: "none" };
 const empty: React.CSSProperties = { border: "1px dashed #d8dde3", borderRadius: 15, padding: 30, background: "#fff", color: "#7a828c", textAlign: "center" };
 const errorBox: React.CSSProperties = { ...empty, borderColor: "#f0c5cf", background: "#fff7f8", color: "#a52e47" };

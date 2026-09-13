@@ -999,7 +999,7 @@ export default function BookPage() {
             )}
 
             <p className="alt">
-              Booking often? <a href="/subscribe">Try a membership →</a>
+              Need another visit? You can book again whenever it suits you.
             </p>
           </aside>
         )}

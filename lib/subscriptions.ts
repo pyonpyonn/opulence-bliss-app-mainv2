@@ -110,7 +110,6 @@ export async function generateBookings(subId: string, cycleStart: Date) {
         .select("id, profile_id")
         .in("id", ids)
         .eq("vetting_status", "approved")
-        .eq("joining_fee_paid", true)
         .eq("is_suspended", false)
         .contains("services", ["cleaning"]);
       provs = data ?? [];
@@ -270,7 +269,7 @@ export async function upsertSubscription(
       body: `${pkg?.name ?? "Your plan"} — ${gen.created} visit${
         gen.created === 1 ? "" : "s"
       } scheduled. We're matching providers now.`,
-      href: "/account/membership",
+      href: "/account",
     });
   }
 

@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       { onConflict: "id" }
     );
 
-    // 3. Provider record — approved for the prototype, joining fee unpaid.
+    // 3. Provider record — work access begins after the admin approves it.
     const { data: prov, error: provErr } = await admin
       .from("providers")
       .insert({
@@ -87,7 +87,6 @@ export async function POST(req: NextRequest) {
         services: ["cleaning"],
         display_name: fullName,
         vetting_status: "pending",
-        joining_fee_paid: false,
       })
       .select("id")
       .single();

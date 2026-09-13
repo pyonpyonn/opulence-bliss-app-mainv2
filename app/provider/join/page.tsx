@@ -1,6 +1,6 @@
 "use client";
 
-// Become a provider — sign up, then pay the one-off £150 joining fee.
+// Become a provider — sign up, then complete the approval process.
 // Save at: app/provider/join/page.tsx  →  localhost:3000/provider/join
 
 import { useEffect, useState } from "react";
@@ -67,15 +67,8 @@ export default function ProviderJoinPage() {
       });
       if (signInErr) throw new Error(signInErr.message);
 
-      // 3. Straight to the £150 payment
-      setStep("Taking you to secure checkout…");
-      const pay = await fetch("/api/provider-join", { method: "POST" });
-      const payData = await pay.json();
-      if (payData.url) {
-        window.location.href = payData.url;
-        return;
-      }
-      // Paid already, or payment couldn't start — send them to their dashboard
+      // 3. No joining payment: continue directly to the provider portal.
+      setStep("Opening your provider portal…");
       window.location.href = "/worker";
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong");
@@ -108,12 +101,10 @@ export default function ProviderJoinPage() {
           </p>
 
           <div className="fee">
-            <p className="fee-amount">
-              £150 <span>one-off joining fee</span>
-            </p>
+            <p className="fee-amount">No joining fee</p>
             <p className="fee-note">
-              Paid once when you join. Not a subscription — there&apos;s nothing
-              monthly.
+              Create your account without an upfront payment. Our team reviews
+              every application before jobs are unlocked.
             </p>
             <ul>
               <li>Background check &amp; onboarding</li>
@@ -125,10 +116,10 @@ export default function ProviderJoinPage() {
 
           <ol className="steps">
             <li>
-              <span>1</span> Sign up and pay the £150 joining fee
+              <span>1</span> Create your professional account
             </li>
             <li>
-              <span>2</span> Set the days and hours you work
+              <span>2</span> Complete approval and set your hours
             </li>
             <li>
               <span>3</span> Accept jobs and get paid per visit
@@ -201,11 +192,11 @@ export default function ProviderJoinPage() {
           </div>
 
           <button className="go" onClick={submit} disabled={busy || !ready}>
-            {busy ? step || "Working…" : "Sign up & pay £150"}
+            {busy ? step || "Working…" : "Create professional account"}
           </button>
           <p className="small">
-            You&apos;ll be taken to Stripe to pay securely. Your account is
-            active as soon as the fee clears.
+            There is no joining charge. Jobs unlock after your application is
+            approved.
           </p>
 
           {err && <p className="err">{err}</p>}

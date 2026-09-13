@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   ),
   title: "Opulence Bliss — trusted home cleaning in London",
   description:
-    "Vetted home cleaners across London. Book a single visit or a monthly membership and pay securely after the visit.",
+    "Vetted home cleaners across London. Book flexible home-cleaning visits and pay securely after the visit.",
 };
 
 export const viewport: Viewport = {

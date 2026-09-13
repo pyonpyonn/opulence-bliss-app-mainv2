@@ -10,7 +10,6 @@ const columns: Array<{
     title: "Services",
     links: [
       ["Home cleaning", "/services/cleaning"],
-      ["Memberships", "/subscribe"],
       ["Book a service", "/book"],
     ],
   },

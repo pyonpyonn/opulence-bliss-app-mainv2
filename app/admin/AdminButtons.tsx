@@ -8,7 +8,6 @@ import {
   bringBookingToNow,
   wipeAvailability,
   wipeReviews,
-  resetJoiningFees,
   resetPrototypeData,
 } from "./actions";
 
@@ -48,14 +47,8 @@ export default function AdminButtons() {
       run: wipeReviews,
     },
     {
-      label: "Reset joining fees",
-      hint: "Marks every provider as unpaid, so you can re-test the £150 paywall.",
-      confirm: "Reset all providers to unpaid?",
-      run: resetJoiningFees,
-    },
-    {
       label: "Reset all prototype activity",
-      hint: "Clears test bookings, payments, payouts, subscriptions, reviews, messages, notifications and their workflow history. Accounts, providers, services, availability and configuration stay in place.",
+      hint: "Clears test bookings, payments, payouts, reviews, messages, notifications and their workflow history. Accounts, providers, services, availability and configuration stay in place.",
       confirm:
         "Delete ALL prototype activity? Accounts, providers, services and availability will be kept. This cannot be undone.",
       run: resetPrototypeData,

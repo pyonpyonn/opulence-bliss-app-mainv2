@@ -44,27 +44,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "What Opulence Bliss is",
     content:
-      "Opulence Bliss is a premium home-cleaning marketplace in London. Every cleaner is vetted and insured before they can take work. There are two ways to pay: book a single visit and pay for just that visit, or take a monthly cleaning membership where visits are scheduled automatically.",
-  },
-  {
-    title: "Memberships — the monthly plans",
-    content:
-      "A cleaning membership is a monthly plan with a three-month minimum term, billed monthly. Your visits are scheduled automatically at your preferred day and time, so you don't have to book each one. Current plans and live prices are shown at /subscribe.",
-  },
-  {
-    title: "How membership billing works",
-    content:
-      "Your first payment is taken when you join, and that month's visits are scheduled straight away. You're then billed on the same date each month for a minimum of three months. Each time a payment goes through, the next set of visits is created and offered to providers. You can see your plan, how far through the term you are, your next payment date and every payment taken at /account/membership.",
-  },
-  {
-    title: "Membership vs paying per visit",
-    content:
-      "Paying per visit suits people who want occasional help with no commitment — you pay only for what you book. A membership suits people who want regular care handled for them: visits scheduled automatically, the same trusted team, and no need to rebook. Memberships have a three-month minimum term; per-visit bookings have no commitment at all.",
-  },
-  {
-    title: "Changing or pausing a membership",
-    content:
-      "You can modify or cancel an individual visit from /account before it starts. A replacement time must still meet the minimum booking notice and the permitted appointment window. For a paid visit, cancelling 48 hours or more before the start gives a full refund, cancelling from 24 hours up to 48 hours before gives a 50% refund, and cancelling less than 24 hours before gives no refund. When the card is only authorised, the refundable part of the hold is released and only the applicable cancellation amount is captured. To pause your membership or cancel it after the three-month minimum term, contact the Opulence Bliss team and they'll arrange it.",
+      "Opulence Bliss is a premium pay-per-visit home-cleaning marketplace in London. Every cleaner is vetted and insured before they can take work. Customers choose a cleaning session, frequency preference, duration, date and time, then pay securely for that visit.",
   },
   {
     title: "How booking works",
@@ -114,7 +94,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "Becoming a provider",
     content:
-      "Home cleaners can join at the Work with us page. You sign up with your name, contact details and the areas you cover, then pay a one-off £150 joining fee. That fee is paid once and is not a subscription. Your account is then reviewed by our team, and once approved you start receiving job offers matched to your area and availability.",
+      "Home cleaners can join at the Work with us page without paying a joining fee. Sign up with your name, contact details and the areas you cover. The team reviews the application, and once approved you start receiving job offers matched to your area and availability.",
   },
   {
     title: "How providers get paid",
@@ -134,7 +114,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "What the assistant can do",
     content:
-      "The Opulence Bliss assistant answers service, price, membership, coverage, payment, provider and visit questions from the platform knowledge base. For signed-in customers it can read their own booking and payment status, find live availability, prepare a secure booking link, prepare a cancellation, prepare a reschedule and prepare a booking-help request. Cancellation, rescheduling and help requests always require a visible confirmation button. New bookings always finish on the secure Stripe review-and-pay page; the assistant never takes card details or charges invisibly. Providers can ask about their jobs, offers, earnings and availability, but check-in, check-out, accepting, declining and withdrawing stay in the dedicated worker screens.",
+      "The Opulence Bliss assistant answers service, price, coverage, payment, provider and visit questions from the platform knowledge base. For signed-in customers it can read their own booking and payment status, find live availability, prepare a secure booking link, prepare a cancellation, prepare a reschedule and prepare a booking-help request. Cancellation, rescheduling and help requests always require a visible confirmation button. New bookings always finish on the secure Stripe review-and-pay page; the assistant never takes card details or charges invisibly. Providers can ask about their jobs, offers, earnings and availability, but check-in, check-out, accepting, declining and withdrawing stay in the dedicated worker screens.",
   },
   {
     title: "Booking messages and live updates",
@@ -164,8 +144,6 @@ export async function GET(req: NextRequest) {
       .order("price");
 
     const perVisit = (pkgs ?? []).filter((p) => p.billing_type !== "monthly");
-    const monthly = (pkgs ?? []).filter((p) => p.billing_type === "monthly");
-
     const priceDoc = {
       title: "Services and current prices",
       content:
@@ -184,16 +162,7 @@ export async function GET(req: NextRequest) {
             }
           )
           .join(" ") +
-        " Book a single visit at /book. Monthly memberships, billed monthly on a three-month minimum term: " +
-        monthly
-          .map(
-            (p) =>
-              `${p.name} — £${Number(p.price).toFixed(0)} a month${
-                p.visits_per_month ? `, ${p.visits_per_month} visits a month` : ""
-              }. ${p.description ?? ""}`
-          )
-          .join(" ") +
-        " See memberships at /subscribe.",
+        " Book and pay per visit at /book. Memberships are not offered.",
     };
 
     const all = [priceDoc, ...DOCS];

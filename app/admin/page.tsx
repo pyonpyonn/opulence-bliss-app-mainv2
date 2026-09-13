@@ -67,7 +67,7 @@ export default async function AdminPage() {
   const { data: provRows } = await supabase
     .from("providers")
     .select(
-      "id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, profiles(email)"
+      "id, display_name, services, vetting_status, rating_avg, rating_count, profiles(email)"
     );
 
   const pending = (provRows ?? []).filter(
@@ -208,8 +208,7 @@ export default async function AdminPage() {
                       {p.display_name || email}
                     </strong>
                     <div style={{ color: "#7A828C", fontSize: 13 }}>
-                      {email} · {(p.services ?? []).join(", ") || "no skills"} ·{" "}
-                      {p.joining_fee_paid ? "fee paid" : "fee unpaid"}
+                      {email} · {(p.services ?? []).join(", ") || "no skills"}
                     </div>
                   </div>
                   <VettingButtons id={p.id} />
@@ -255,18 +254,8 @@ export default async function AdminPage() {
                         : ""}
                     </div>
                   </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      padding: "5px 12px",
-                      borderRadius: 999,
-                      background: p.joining_fee_paid ? "#F4ECFE" : "#FFE6EA",
-                      color: p.joining_fee_paid ? "#16202A" : "#B0384F",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {p.joining_fee_paid ? "Fee paid · active" : "Fee unpaid"}
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#68717D" }}>
+                    {p.vetting_status === "approved" ? "Approved" : "Awaiting review"}
                   </span>
                 </div>
               );

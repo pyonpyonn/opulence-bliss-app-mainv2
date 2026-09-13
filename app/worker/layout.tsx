@@ -5,7 +5,6 @@
 import { createClient } from "@/lib/supabase/server";
 import PortalLiveSync from "@/components/PortalLiveSync";
 import PortalNav from "./PortalNav";
-import JoinButton from "./JoinButton";
 
 export default async function WorkerLayout({
   children,
@@ -70,7 +69,7 @@ export default async function WorkerLayout({
   const { data: prov } = await supabase
     .from("providers")
     .select(
-      "id, display_name, joining_fee_paid, vetting_status, rating_avg, rating_count",
+      "id, display_name, vetting_status, rating_avg, rating_count",
     )
     .eq("profile_id", user.id)
     .maybeSingle();
@@ -86,7 +85,6 @@ export default async function WorkerLayout({
   }
 
   const registered = !!prov;
-  const paid = prov?.joining_fee_paid === true;
   const approved = prov?.vetting_status === "approved";
   const suspensionResult = prov?.id
     ? await supabase
@@ -105,7 +103,6 @@ export default async function WorkerLayout({
         rating={prov?.rating_avg ? Number(prov.rating_avg) : null}
         ratingCount={prov?.rating_count ?? 0}
         registered={registered}
-        paid={paid}
         approved={approved && !suspended}
         hasCurrentJob={hasCurrentJob}
       />
@@ -116,20 +113,12 @@ export default async function WorkerLayout({
           <Banner
             tone="warn"
             title="You're not registered as a provider yet"
-            body="Register to start receiving jobs. It takes a couple of minutes and a one-off £150 joining fee."
+            body="Register to start receiving jobs. It only takes a couple of minutes, then our team will review your details."
             ctaHref="/provider/join"
             ctaText="Register now"
           />
         )}
-        {registered && !paid && (
-          <Banner
-            tone="warn"
-            title="Pay your joining fee to unlock the portal"
-            body="A one-off £150 fee activates your account. Paid once — not a subscription. Everything unlocks the moment it clears."
-            action={<JoinButton />}
-          />
-        )}
-        {registered && paid && !approved && (
+        {registered && !approved && (
           <Banner
             tone="info"
             title={
@@ -140,7 +129,7 @@ export default async function WorkerLayout({
             body={
               prov?.vetting_status === "rejected"
                 ? "Please get in touch if you think this is a mistake."
-                : "Your fee is paid and your details are with our team. Jobs arrive as soon as you're approved — meanwhile, set your hours and fill in your profile."
+                : "Your details are with our team. Jobs arrive as soon as you're approved — meanwhile, set your hours and complete your profile."
             }
           />
         )}

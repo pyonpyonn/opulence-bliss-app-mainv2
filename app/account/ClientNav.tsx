@@ -31,12 +31,6 @@ const ITEMS: Item[] = [
     icon: "◫",
     exact: true,
   },
-  {
-    href: "/account/membership",
-    label: "Membership",
-    short: "Plan",
-    icon: "★",
-  },
   { href: "/account/profile", label: "My details", short: "You", icon: "☺" },
   { href: "/account/updates", label: "Updates", short: "News", icon: "✦" },
 ];

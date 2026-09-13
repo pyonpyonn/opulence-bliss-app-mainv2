@@ -22,7 +22,7 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
   const [providerResult, bookingsResult, hoursResult, suspensionResult] = await Promise.all([
     supabase
       .from("providers")
-      .select("id, profile_id, display_name, services, vetting_status, joining_fee_paid, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, profiles(email, full_name, phone, address, postcode)")
+      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, profiles(email, full_name, phone, address, postcode)")
       .eq("id", id)
       .maybeSingle(),
     supabase

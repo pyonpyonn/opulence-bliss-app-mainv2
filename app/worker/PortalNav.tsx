@@ -38,7 +38,6 @@ export default function PortalNav({
   rating,
   ratingCount,
   registered,
-  paid,
   approved,
   hasCurrentJob,
 }: {
@@ -46,7 +45,6 @@ export default function PortalNav({
   rating: number | null;
   ratingCount: number;
   registered: boolean;
-  paid: boolean;
   approved: boolean;
   hasCurrentJob: boolean;
 }) {
@@ -77,7 +75,7 @@ export default function PortalNav({
     };
   }, []);
 
-  const locked = !registered || !paid;
+  const locked = !registered;
 
   // Only show the live-job shortcut after the provider has checked in.
   const items = hasCurrentJob
@@ -86,9 +84,7 @@ export default function PortalNav({
 
   const status = !registered
     ? { text: "Not registered", bg: "var(--ob-blush)", fg: "var(--ob-danger-text)" }
-    : !paid
-      ? { text: "Fee unpaid", bg: "var(--ob-butter)", fg: "var(--ob-warning-text)" }
-      : !approved
+    : !approved
         ? { text: "Awaiting approval", bg: "var(--ob-butter)", fg: "var(--ob-warning-text)" }
         : { text: "Active", bg: "var(--ob-mint)", fg: "var(--ob-success-text)" };
 
@@ -143,7 +139,7 @@ export default function PortalNav({
                 <div
                   key={i.href}
                   style={{ ...row, color: MUTED, cursor: "not-allowed", opacity: 0.62 }}
-                  title="Pay the £150 joining fee to unlock"
+                  title="Complete provider registration to unlock"
                 >
                   <span
                     style={{

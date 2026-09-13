@@ -91,7 +91,7 @@ export default async function WorkerPage() {
   const { data: prov } = await supabase
     .from("providers")
     .select(
-      "id, display_name, joining_fee_paid, vetting_status, rating_avg, rating_count",
+      "id, display_name, vetting_status, rating_avg, rating_count",
     )
     .eq("profile_id", user.id)
     .maybeSingle();
@@ -105,7 +105,6 @@ export default async function WorkerPage() {
     : { data: null };
   const suspended = suspensionResult.data?.is_suspended === true;
   const active =
-    prov?.joining_fee_paid === true &&
     prov?.vetting_status === "approved" &&
     !suspended;
 

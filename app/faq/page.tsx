@@ -41,9 +41,9 @@ const faqGroups: Array<{
     ],
   },
   {
-    title: "Memberships and professionals",
+    title: "Bookings and professionals",
     items: [
-      ["Do I need a membership to book?", "No. You can book a single visit whenever you need one. Memberships are available for customers who prefer regular scheduled care."],
+      ["Can I arrange regular cleaning?", "Yes. Choose a weekly or monthly preference while booking, and the team can help you arrange future visits."],
       ["How do I join as a professional?", "Apply through the professional registration page. You will be asked for your service details and the information needed for account review."],
     ],
   },

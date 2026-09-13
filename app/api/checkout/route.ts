@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
     // ---- PLACEHOLDER split — REPLACE with the client's SIGNED numbers ----
     // Per-visit model: the platform takes a margin, the provider keeps the rest.
-    // (No membership fee here — providers pay a one-off £150 joining fee.)
+    // Per-visit booking only. Professional onboarding has no joining fee.
     const PLATFORM_MARGIN_RATE = 0.2; // 20% platform margin
     // ---------------------------------------------------------------------
     const platformFeeFull = Math.round(gross * PLATFORM_MARGIN_RATE);

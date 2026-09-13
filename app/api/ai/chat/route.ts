@@ -98,7 +98,7 @@ const SHARED_TOOLS = [
   {
     name: "list_services",
     description:
-      "List current services and memberships with prices. Use for any question about what's offered or what things cost.",
+      "List current pay-per-visit cleaning services with prices. Use for any question about what's offered or what things cost.",
     parameters: { type: "OBJECT", properties: {} },
   },
 ];
@@ -149,12 +149,6 @@ const CLIENT_TOOLS = [
       },
       required: ["service_name", "postcode", "slot"],
     },
-  },
-  {
-    name: "my_membership",
-    description:
-      "Check whether the signed-in customer has a monthly membership, and if so which plan, its status, how far through the term they are and when the next payment is due. Use for 'do I have a subscription', 'when am I next billed', 'what plan am I on'.",
-    parameters: { type: "OBJECT", properties: {} },
   },
   {
     name: "my_bookings",
@@ -506,6 +500,7 @@ async function runTool(
         .from("packages")
         .select("name, price, duration_minutes, service_type, description")
         .eq("active", true)
+        .eq("billing_type", "per_visit")
         .order("price");
       return { services: data ?? [] };
     }
@@ -788,7 +783,6 @@ async function runTool(
     if (
       name === "my_bookings" ||
       name === "my_spend" ||
-      name === "my_membership" ||
       name === "my_jobs" ||
       name === "my_earnings" ||
       name === "my_availability"
@@ -801,61 +795,6 @@ async function runTool(
       } = await context.client.auth.getUser();
       if (!user) {
         return { signed_in: false, message: "Ask them to log in at /login." };
-      }
-
-      if (name === "my_membership") {
-        const { data: sub } = await context.client
-          .from("subscriptions")
-          .select(
-            "status, start_date, contract_length_months, cycles_billed, current_period_end, preferred_weekday, preferred_hour, paused_until, packages(name, price, visits_per_month)"
-          )
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!sub) {
-          return {
-            signed_in: true,
-            has_membership: false,
-            message:
-              "No membership. They pay per visit. Memberships are at /subscribe.",
-          };
-        }
-
-        const p = sub.packages as
-          | { name: string; price: number; visits_per_month: number | null }
-          | { name: string; price: number; visits_per_month: number | null }[]
-          | null;
-        const pk = Array.isArray(p) ? p[0] : p;
-        const days = [
-          "Sunday",
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-        ];
-
-        return {
-          signed_in: true,
-          has_membership: true,
-          plan: pk?.name ?? "Membership",
-          monthly_price_gbp: Number(pk?.price ?? 0),
-          visits_per_month: pk?.visits_per_month ?? null,
-          status: sub.paused_until ? "paused" : sub.status,
-          months_billed: sub.cycles_billed,
-          contract_months: sub.contract_length_months,
-          next_payment: sub.current_period_end,
-          schedule:
-            sub.preferred_weekday !== null
-              ? `${days[sub.preferred_weekday]}s at ${String(
-                  sub.preferred_hour ?? 10
-                ).padStart(2, "0")}:00`
-              : null,
-          started: sub.start_date,
-          manage_at: "/account/membership",
-        };
       }
 
       if (name === "my_bookings") {
@@ -939,7 +878,7 @@ async function runTool(
       if (name === "my_earnings") {
         const { data: prov } = await context.client
           .from("providers")
-          .select("rating_avg, rating_count, joining_fee_paid, vetting_status")
+          .select("rating_avg, rating_count, vetting_status, is_suspended")
           .eq("profile_id", user.id)
           .maybeSingle();
 
@@ -962,7 +901,8 @@ async function runTool(
 
         return {
           signed_in: true,
-          account_active: prov?.joining_fee_paid === true,
+          account_active:
+            prov?.vetting_status === "approved" && !prov?.is_suspended,
           approved: prov?.vetting_status === "approved",
           paid_gbp: Number(paid.reduce((s, p) => s + share(p), 0).toFixed(2)),
           pending_gbp: Number(
@@ -980,7 +920,7 @@ async function runTool(
       if (name === "my_availability") {
         const { data: prov } = await context.client
           .from("providers")
-          .select("id, joining_fee_paid, vetting_status, services")
+          .select("id, vetting_status, services, is_suspended")
           .eq("profile_id", user.id)
           .maybeSingle();
 
@@ -995,7 +935,8 @@ async function runTool(
         return {
           signed_in: true,
           is_provider: true,
-          account_active: prov.joining_fee_paid,
+          account_active:
+            prov.vetting_status === "approved" && !prov.is_suspended,
           approved: prov.vetting_status === "approved",
           skills: prov.services ?? [],
           hours: (avail ?? []).map(
@@ -1084,11 +1025,11 @@ function systemPrompt(context: string, role: string) {
   const now = new Date();
   const who =
     role === "provider"
-      ? `You are talking to a PROVIDER — a home cleaner who works through the platform. Answer from their side: their jobs, earnings, availability, how and when they get paid, the £150 joining fee, approval. Never try to sell them a customer booking or a membership. Their pages are /worker (jobs), /worker/current (live job), /worker/earnings, /worker/availability, /worker/profile.`
+      ? `You are talking to a PROVIDER — a home cleaner who works through the platform. Answer from their side: their jobs, earnings, availability, approval, and how and when they get paid. Professional registration has no joining fee. Their pages are /worker (jobs), /worker/current (live job), /worker/earnings, /worker/availability, /worker/profile.`
       : role === "admin"
       ? `You are talking to an ADMIN of the platform. Be brief and factual. Their tools are at /admin.`
       : role === "client"
-      ? `You are talking to a signed-in CUSTOMER. You can inspect their own bookings, status, money state, membership and spend. You can prepare booking, cancellation, reschedule and booking-help actions for their explicit confirmation.`
+      ? `You are talking to a signed-in CUSTOMER. You can inspect their own bookings, status, money state and spend. You can prepare booking, cancellation, reschedule and booking-help actions for their explicit confirmation.`
       : `You are talking to a VISITOR who isn't signed in. You can answer general questions, but for anything about their own account tell them to log in at /login. If they want to work for us, point them to /provider/join.`;
 
   return `You are the support assistant for Opulence Bliss, a premium home-cleaning marketplace in London.
@@ -1108,7 +1049,7 @@ Today is ${now.toLocaleDateString("en-GB", {
 
 Use tools rather than guessing. If someone asks about their account, status, price, coverage, availability or a booking action, call the relevant tool. Never infer a booking ID: call my_bookings and disambiguate if more than one booking could match.
 
-There are two ways customers pay: a single visit at /book, or a monthly membership at /subscribe with a three-month minimum term. Both exist — never say one of them isn't offered.
+Customers pay per visit through /book. Memberships and subscription plans are not offered. Professional registration has no joining fee.
 
 You are an action-capable concierge with a strict confirmation boundary:
 - For a new booking, gather service, postcode and time, list permitted appointment times, then call prepare_booking. Do not claim a worker is already free: matching starts after booking. The customer must review and pay on the secure page; never say the booking is complete before that.

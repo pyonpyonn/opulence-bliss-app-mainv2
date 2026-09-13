@@ -50,8 +50,8 @@ export default function Home() {
             we&apos;ll handle the rest
           </h1>
           <p className="lede">
-            Vetted home cleaners across London. Book a single visit or a
-            monthly membership — your call.
+            Vetted home cleaners across London. Book the cleaning you need,
+            whenever it suits you.
           </p>
 
           <div className="composer">
@@ -66,7 +66,7 @@ export default function Home() {
             </a>
           </div>
           <p className="micro">
-            Central, North &amp; West London · pay per visit or subscribe
+            Central, North &amp; West London · simple pay-per-visit booking
           </p>
         </div>
       </header>
@@ -82,14 +82,6 @@ export default function Home() {
           <span className="arrow">→</span>
         </a>
 
-        <a className="band member" href="/subscribe">
-          <div>
-            <h2>Memberships</h2>
-            <p>regular visits, handled for you</p>
-            <span className="from">from £189 / month</span>
-          </div>
-          <span className="arrow">→</span>
-        </a>
       </section>
 
       {/* ---------- TRUST ---------- */}
@@ -134,7 +126,7 @@ export default function Home() {
       {/* ---------- TESTIMONIALS ---------- */}
       <section className="quotes-wrap">
         <div className="inner">
-          <p className="eyebrow center">From our members</p>
+          <p className="eyebrow center">From our customers</p>
           <h2 className="center big">Quietly, reliably better</h2>
           <div className="quotes">
             {[
@@ -417,9 +409,6 @@ export default function Home() {
         }
         .band.clean {
           background: linear-gradient(100deg,#F6F1FF,#EDE4FB);
-        }
-        .band.member {
-          background: linear-gradient(100deg,#F7F8F9,#ECEEF1);
         }
 
         /* TRUST STRIP */

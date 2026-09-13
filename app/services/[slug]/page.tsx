@@ -51,7 +51,7 @@ const COPY: Record<
     proLink: "/provider/join",
     proText: "Become an Opulence cleaner",
     intro:
-      "Book a cleaner who learns your home — your products, your preferences, your rhythm. Choose a single visit, or set up regular ones and stop thinking about it.",
+      "Book a cleaner who learns your home — your products, your preferences, your rhythm. Choose the session and frequency that work for you.",
     alsoTitle: "Looking for something else in cleaning?",
     also: [
       { label: "Essential Clean", type: "clean" },
@@ -91,7 +91,7 @@ const COPY: Record<
       },
       {
         q: "Can I have the same cleaner each time?",
-        a: "Yes — after a visit you can ask for that cleaner again, and we'll prioritise them for your future bookings. A membership makes this the default.",
+        a: "Yes — after a visit you can request that cleaner again, and we'll prioritise them for future bookings when they are available.",
       },
     ],
   },
@@ -337,9 +337,6 @@ export default function ServicePage() {
                 {a.label}
               </a>
             ))}
-            <a href="/subscribe" className="chip alt">
-              Regular visits — memberships
-            </a>
           </div>
         </div>
       </section>
