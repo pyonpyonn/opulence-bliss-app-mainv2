@@ -501,7 +501,7 @@ export default function BookPage() {
           {handoffError && <p className="handoffError">{handoffError}</p>}
           {/* progress */}
           <p className="stepline">
-            Step {step + 1} of 4 · <strong>{STEPS[step]}</strong>
+            Step {step + 1} of {STEPS.length} · <strong>{STEPS[step]}</strong>
           </p>
           <div className="prog">
             <span style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
@@ -952,13 +952,13 @@ export default function BookPage() {
                 <span className="v">{frequencyLabel(frequency)}</span>
               </div>
             )}
-            {step >= 4 && selected && (
+            {step >= 3 && selected && (
               <>
                 <div className="brow">
                   <span className="k">Hours</span>
                   <span className="v">{duration(minutes) ?? "—"}</span>
                 </div>
-                {step >= 5 && (
+                {step >= 4 && (
                   <div className="brow">
                     <span className="k">When</span>
                     <span className="v">{slot ? fullLabel(slot) : "Not picked"}</span>
@@ -1019,6 +1019,8 @@ export default function BookPage() {
           font-family: "Nunito", system-ui, sans-serif;
         }
         .grid {
+          width: 100%;
+          box-sizing: border-box;
           max-width: 1040px;
           margin: 0 auto;
           padding: 30px 20px 96px;
@@ -1800,7 +1802,7 @@ export default function BookPage() {
             order: -1;
           }
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1020px) {
           .grid {
             grid-template-columns: 1fr;
             gap: 24px;
