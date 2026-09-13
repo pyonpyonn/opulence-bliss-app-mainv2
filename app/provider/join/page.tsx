@@ -239,7 +239,18 @@ export default function ProviderJoinPage() {
               </div>
 
               <div className="phone-field">
-                <span aria-hidden="true">🇬🇧</span>
+                <svg
+                  className="uk-flag"
+                  viewBox="0 0 60 30"
+                  role="img"
+                  aria-label="United Kingdom"
+                >
+                  <rect width="60" height="30" fill="#012169" />
+                  <path d="M0 0 60 30M60 0 0 30" stroke="#fff" strokeWidth="8" />
+                  <path d="M0 0 60 30M60 0 0 30" stroke="#C8102E" strokeWidth="4" />
+                  <path d="M30 0V30M0 15H60" stroke="#fff" strokeWidth="10" />
+                  <path d="M30 0V30M0 15H60" stroke="#C8102E" strokeWidth="6" />
+                </svg>
                 <span className="phone-code">+44</span>
                 <label className="sr-only" htmlFor="provider-phone">Phone</label>
                 <input
@@ -571,6 +582,14 @@ export default function ProviderJoinPage() {
           color: #5F6874;
           font-size: 14px;
           font-weight: 800;
+        }
+        .uk-flag {
+          display: block;
+          width: 24px;
+          height: 16px;
+          overflow: hidden;
+          border-radius: 2px;
+          box-shadow: 0 0 0 1px rgba(22,32,42, 0.15);
         }
         .phone-field input {
           min-height: 53px;
