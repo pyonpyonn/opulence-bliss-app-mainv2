@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isValidUkPhone } from "@/lib/ukPhone";
 
 const supabase = createClient();
 
@@ -48,8 +49,7 @@ export default function ProviderJoinPage() {
 
   const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
   const emailValid = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email.trim());
-  const phoneDigits = phone.replace(/\D/g, "");
-  const phoneValid = /^[\d\s()-]+$/.test(phone.trim()) && phoneDigits.length === 10;
+  const phoneValid = isValidUkPhone(phone);
   const accountFieldsPresent = Boolean(
     salutation &&
       firstName.trim() &&

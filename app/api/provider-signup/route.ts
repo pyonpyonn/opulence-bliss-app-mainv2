@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,8 +27,7 @@ export async function POST(req: NextRequest) {
       areaIds,
     } = await req.json();
     const normalizedEmail = String(email ?? "").trim().toLowerCase();
-    const phoneDigits = String(phone ?? "").replace(/\D/g, "");
-    const normalizedPhone = `+44${phoneDigits}`;
+    const normalizedPhone = normalizeUkPhone(phone);
 
     if (
       !email ||
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (!/^[\d\s()-]+$/.test(String(phone).trim()) || phoneDigits.length !== 10) {
+    if (!isValidUkPhone(phone)) {
       return NextResponse.json(
         { error: "Invalid phone number" },
         { status: 400 }
