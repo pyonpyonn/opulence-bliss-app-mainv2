@@ -1,12 +1,13 @@
 // SETUP: mkdir -p "app/api/client-signup" && code "app/api/client-signup/route.ts"
 //
-// Create a customer account AND their profile in one go, from inside the
-// booking flow. No confirmation email — they're mid-purchase.
+// Create a customer account and profile. Standalone registration sends a
+// confirmation email; booking-flow accounts are confirmed immediately.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type User } from "@supabase/supabase-js";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
+import { sendEmail } from "@/lib/email";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,12 +55,32 @@ export async function POST(req: NextRequest) {
         : {}),
     };
     const credentials = { email: normalizedEmail, password: String(password) };
-    const { data: created, error } = requireEmailConfirmation === true
-      ? await admin.auth.signUp({ ...credentials, options: { data: userMetadata } })
-      : await admin.auth.admin.createUser({ ...credentials, email_confirm: true, user_metadata: userMetadata });
+    const confirmationRequired = requireEmailConfirmation === true;
+    let createdUser: User | null = null;
+    let confirmationTokenHash: string | null = null;
+    let creationError: string | null = null;
 
-    if (error || !created.user) {
-      const msg = error?.message ?? "Could not create your account.";
+    if (confirmationRequired) {
+      const { data, error } = await admin.auth.admin.generateLink({
+          type: "signup",
+          ...credentials,
+          options: { data: userMetadata },
+        });
+      createdUser = data.user;
+      confirmationTokenHash = data.properties?.hashed_token ?? null;
+      creationError = error?.message ?? null;
+    } else {
+      const { data, error } = await admin.auth.admin.createUser({
+          ...credentials,
+          email_confirm: true,
+          user_metadata: userMetadata,
+        });
+      createdUser = data.user;
+      creationError = error?.message ?? null;
+    }
+
+    if (creationError || !createdUser) {
+      const msg = creationError ?? "Could not create your account.";
       const exists = /already|exists|registered/i.test(msg);
       return NextResponse.json(
         {
@@ -75,7 +96,7 @@ export async function POST(req: NextRequest) {
     // Profile, filled in properly from the start.
     const { error: profileError } = await admin.from("profiles").upsert(
       {
-        id: created.user.id,
+        id: createdUser.id,
         email: normalizedEmail,
         role: "customer",
         full_name: String(fullName).trim(),
@@ -86,8 +107,40 @@ export async function POST(req: NextRequest) {
       { onConflict: "id" }
     );
 
-    if (profileError) throw profileError;
-    return NextResponse.json({ ok: true });
+    if (profileError) {
+      await admin.auth.admin.deleteUser(createdUser.id);
+      throw profileError;
+    }
+
+    if (confirmationRequired) {
+      if (!confirmationTokenHash) {
+        await admin.auth.admin.deleteUser(createdUser.id);
+        return NextResponse.json(
+          { error: "Could not create your confirmation link. Please try again." },
+          { status: 503 },
+        );
+      }
+
+      const origin = new URL(req.url).origin;
+      const confirmationUrl = `${origin}/auth/confirm?token_hash=${encodeURIComponent(confirmationTokenHash)}&type=signup&next=${encodeURIComponent("/login")}`;
+      const delivery = await sendEmail({
+        to: normalizedEmail,
+        subject: "Confirm your Opulence Bliss account",
+        title: "Confirm your email address",
+        body: "Thanks for joining Opulence Bliss. Confirm your email address to activate your client account.",
+        cta: { text: "Confirm my email", url: confirmationUrl },
+      });
+
+      if (!("ok" in delivery) || delivery.ok !== true) {
+        await admin.auth.admin.deleteUser(createdUser.id);
+        return NextResponse.json(
+          { error: "We could not send the confirmation email. Please try again in a moment." },
+          { status: 503 },
+        );
+      }
+    }
+
+    return NextResponse.json({ ok: true, confirmationEmailSent: confirmationRequired });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sign-up failed";
     return NextResponse.json({ error: msg }, { status: 500 });

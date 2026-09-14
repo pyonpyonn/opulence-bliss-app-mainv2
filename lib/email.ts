@@ -8,7 +8,9 @@
 // keeps working, you just don't get email.
 
 const FROM =
-  process.env.EMAIL_FROM ?? "Opulence Bliss <onboarding@resend.dev>";
+  process.env.EMAIL_FROM ??
+  process.env.BOOKING_EMAIL_FROM ??
+  "Opulence Bliss <onboarding@resend.dev>";
 
 /** Where this app lives. Set NEXT_PUBLIC_SITE_URL in production. */
 export const SITE = (
