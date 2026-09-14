@@ -7,10 +7,22 @@
 // If RESEND_API_KEY isn't set, these calls quietly do nothing — the app
 // keeps working, you just don't get email.
 
-const FROM =
-  process.env.EMAIL_FROM ??
-  process.env.BOOKING_EMAIL_FROM ??
-  "Opulence Bliss <onboarding@resend.dev>";
+const DEFAULT_FROM = "Opulence Bliss <onboarding@resend.dev>";
+const CONFIGURED_SENDERS = [
+  process.env.BOOKING_EMAIL_FROM,
+  process.env.EMAIL_FROM,
+  DEFAULT_FROM,
+].filter((sender, index, senders): sender is string =>
+  Boolean(sender) && senders.indexOf(sender) === index
+);
+
+type EmailFailureReason =
+  | "not_configured"
+  | "sender_not_verified"
+  | "invalid_api_key"
+  | "delivery_failed";
+
+let discoveredSender: string | null | undefined;
 
 /** Where this app lives. Set NEXT_PUBLIC_SITE_URL in production. */
 export const SITE = (
@@ -50,6 +62,94 @@ function wrap(title: string, body: string, cta?: { text: string; url: string }) 
 </div>`.trim();
 }
 
+function deliveryFailure(status: number, responseBody: string): EmailFailureReason {
+  const normalized = responseBody.toLowerCase();
+  if (
+    normalized.includes("domain") &&
+    (normalized.includes("verif") || normalized.includes("testing emails"))
+  ) {
+    return "sender_not_verified";
+  }
+  if (status === 401 || normalized.includes("api key")) return "invalid_api_key";
+  return "delivery_failed";
+}
+
+async function findVerifiedSender(key: string) {
+  if (discoveredSender !== undefined) return discoveredSender;
+
+  try {
+    const response = await fetch("https://api.resend.com/domains?limit=100", {
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "User-Agent": "opulence-bliss/1.0",
+      },
+    });
+    if (!response.ok) {
+      discoveredSender = null;
+      return null;
+    }
+
+    const result = (await response.json()) as {
+      data?: Array<{
+        name?: string;
+        status?: string;
+        capabilities?: { sending?: string };
+      }>;
+    };
+    const domain = result.data?.find(
+      (item) =>
+        item.name &&
+        item.capabilities?.sending === "enabled" &&
+        ["verified", "partially_verified", "partially_failed"].includes(
+          item.status ?? ""
+        )
+    );
+    discoveredSender = domain?.name
+      ? `Opulence Bliss <no-reply@${domain.name}>`
+      : null;
+    return discoveredSender;
+  } catch (error) {
+    console.error("Could not inspect Resend domains:", error);
+    discoveredSender = null;
+    return null;
+  }
+}
+
+async function deliverWithSender(
+  key: string,
+  sender: string,
+  opts: {
+    to: string;
+    subject: string;
+    title: string;
+    body: string;
+    cta?: { text: string; url: string };
+  }
+) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "User-Agent": "opulence-bliss/1.0",
+    },
+    body: JSON.stringify({
+      from: sender,
+      to: [opts.to],
+      subject: opts.subject,
+      html: wrap(opts.title, opts.body, opts.cta),
+    }),
+  });
+  if (response.ok) return { ok: true as const };
+
+  const responseBody = await response.text();
+  console.error("Resend error:", response.status, responseBody);
+  return {
+    ok: false as const,
+    reason: deliveryFailure(response.status, responseBody),
+  };
+}
+
 export async function sendEmail(opts: {
   to: string | null | undefined;
   subject: string;
@@ -64,34 +164,25 @@ export async function sendEmail(opts: {
   }
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "User-Agent": "opulence-bliss/1.0",
-      },
-      body: JSON.stringify({
-        from: FROM,
-        to: [opts.to],
-        subject: opts.subject,
-        html: wrap(opts.title, opts.body, opts.cta),
-      }),
-    });
-    if (!res.ok) {
-      const responseBody = await res.text();
-      console.error("Resend error:", res.status, responseBody);
-      const normalized = responseBody.toLowerCase();
-      const reason =
-        normalized.includes("domain") &&
-        (normalized.includes("verif") || normalized.includes("testing emails"))
-          ? "sender_not_verified"
-          : res.status === 401 || normalized.includes("api key")
-            ? "invalid_api_key"
-            : "delivery_failed";
-      return { ok: false as const, reason };
+    let lastFailure: { ok: false; reason: EmailFailureReason } | null = null;
+    for (const sender of CONFIGURED_SENDERS) {
+      const delivery = await deliverWithSender(key, sender, {
+        ...opts,
+        to: opts.to,
+      });
+      if (delivery.ok) return delivery;
+      lastFailure = delivery;
+      if (delivery.reason !== "sender_not_verified") return delivery;
     }
-    return { ok: true as const };
+
+    const verifiedSender = await findVerifiedSender(key);
+    if (verifiedSender && !CONFIGURED_SENDERS.includes(verifiedSender)) {
+      return await deliverWithSender(key, verifiedSender, {
+        ...opts,
+        to: opts.to,
+      });
+    }
+    return lastFailure ?? { ok: false as const, reason: "delivery_failed" as const };
   } catch (e) {
     console.error("Email failed:", e);
     return { ok: false as const, reason: "delivery_failed" as const };
