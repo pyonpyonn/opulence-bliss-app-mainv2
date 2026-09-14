@@ -311,6 +311,27 @@ export default function WorkerJobWorkspace({
           )}
         </div>
 
+        {job.status === "offered" && (
+          <section className="offered-times" aria-label="Customer time choices">
+            <div>
+              <span>Preferred time · first choice</span>
+              <strong>
+                {fullDate(job.preferredScheduledAt ?? job.scheduledAt)} · {clock(job.preferredScheduledAt ?? job.scheduledAt)}
+              </strong>
+            </div>
+            {job.optionalScheduledAt.length > 0 && (
+              <div>
+                <span>Optional times</span>
+                <strong>
+                  {job.optionalScheduledAt
+                    .map((time) => `${relativeDate(time)} · ${clock(time)}`)
+                    .join("  ·  ")}
+                </strong>
+              </div>
+            )}
+          </section>
+        )}
+
       <SessionCountdown bookingId={job.id} status={job.status} startedAt={job.checkIn.arrivedAt} durationMinutes={job.durationMinutes} />
         <BookingProgress
           status={job.status}
@@ -416,6 +437,8 @@ export default function WorkerJobWorkspace({
                 id={job.id}
                 status={job.status}
                 scheduledAt={job.scheduledAt}
+                preferredScheduledAt={job.preferredScheduledAt}
+                optionalScheduledAt={job.optionalScheduledAt}
                 existingRating={job.existingClientRating}
                 hasSubmittedRating={job.hasRatedClient}
                 showExceptions={false}
@@ -716,6 +739,32 @@ export default function WorkerJobWorkspace({
           display: inline-flex;
           align-items: center;
           gap: 7px;
+          font-size: 14px;
+          font-weight: 900;
+        }
+        .offered-times {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 12px;
+        }
+        .offered-times > div {
+          display: grid;
+          gap: 4px;
+          padding: 12px 14px;
+          border: 1px solid #ddccf2;
+          border-radius: 13px;
+          background: #f8f2ff;
+        }
+        .offered-times span {
+          color: #6d28d9;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+        .offered-times strong {
+          color: var(--ob-text);
           font-size: 14px;
           font-weight: 900;
         }
@@ -1034,6 +1083,7 @@ export default function WorkerJobWorkspace({
             display: flex;
             gap: 8px 16px;
           }
+          .offered-times { grid-template-columns: 1fr; }
           .summary-grid {
             grid-template-columns: 1fr;
             padding: 8px;

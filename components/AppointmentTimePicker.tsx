@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { londonDateKey } from "@/lib/appointmentWindow";
 import styles from "./AppointmentTimePicker.module.css";
+import { MAX_OPTIONAL_BOOKING_TIMES } from "@/lib/bookingTimeChoices";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -60,14 +61,23 @@ export default function AppointmentTimePicker({
   onChange,
   durationMinutes = 120,
   showDate = true,
+  optionalValues,
+  onOptionalValuesChange,
 }: {
   slots: string[];
   value: string | null;
   onChange: (iso: string) => void;
   durationMinutes?: number | null;
   showDate?: boolean;
+  optionalValues?: string[];
+  onOptionalValuesChange?: (values: string[]) => void;
 }) {
   const minutes = durationMinutes ?? 120;
+  const supportsOptionalTimes = Boolean(onOptionalValuesChange);
+  const alternatives = optionalValues ?? [];
+  const [choiceMode, setChoiceMode] = useState<"preferred" | "optional">(
+    "preferred",
+  );
   const dates = useMemo(
     () => [...new Set(slots.map(londonDateKey))].sort(),
     [slots],
@@ -144,6 +154,30 @@ export default function AppointmentTimePicker({
         <span className={styles.horizon}>Book up to 1 year ahead</span>
       </header>
 
+      {supportsOptionalTimes && (
+        <div className={styles.choiceTabs} aria-label="Time choice type">
+          <button
+            type="button"
+            className={choiceMode === "preferred" ? styles.choiceTabActive : ""}
+            aria-pressed={choiceMode === "preferred"}
+            onClick={() => setChoiceMode("preferred")}
+          >
+            <b>1 Preferred Time</b>
+            <span>Your first choice</span>
+          </button>
+          <button
+            type="button"
+            className={choiceMode === "optional" ? styles.choiceTabActive : ""}
+            aria-pressed={choiceMode === "optional"}
+            disabled={!value}
+            onClick={() => setChoiceMode("optional")}
+          >
+            <b>Optional Times</b>
+            <span>{alternatives.length}/{MAX_OPTIONAL_BOOKING_TIMES} added</span>
+          </button>
+        </div>
+      )}
+
       <div className={styles.body}>
         <div className={styles.calendarCard}>
           <div className={styles.monthBar}>
@@ -173,7 +207,12 @@ export default function AppointmentTimePicker({
                   className={`${styles.day} ${available ? styles.available : ""} ${selected ? styles.daySelected : ""}`}
                   onClick={() => {
                     setDraftDate(key);
-                    if (!value || londonDateKey(value) !== key) onChange("");
+                    if (
+                      choiceMode === "preferred" &&
+                      (!value || londonDateKey(value) !== key)
+                    ) {
+                      onChange("");
+                    }
                   }}>
                   <span>{Number(key.slice(-2))}</span>
                   {available && <i aria-hidden="true" />}
@@ -187,20 +226,78 @@ export default function AppointmentTimePicker({
         <div className={styles.timesCard}>
           <div className={styles.timesHeading}>
             <Clock3 aria-hidden="true" />
-            <div><strong>Choose a time</strong><span>{times.length} start times available</span></div>
+            <div>
+              <strong>
+                {choiceMode === "preferred"
+                  ? "Choose your preferred time"
+                  : "Add optional times"}
+              </strong>
+              <span>
+                {choiceMode === "preferred"
+                  ? `${times.length} start times available`
+                  : `Choose up to ${MAX_OPTIONAL_BOOKING_TIMES} other times`}
+              </span>
+            </div>
           </div>
           <div className={styles.times} role="group" aria-label={`Start time for ${dateLabel(selectedDate)}`}>
-            {times.map((iso) => (
-              <button type="button" key={iso} aria-pressed={value === iso}
-                className={`${styles.timeButton} ${value === iso ? styles.timeSelected : ""}`}
-                onClick={() => onChange(iso)}>
+            {times.map((iso) => {
+              const selected =
+                choiceMode === "preferred"
+                  ? value === iso
+                  : alternatives.includes(iso);
+              return (
+              <button type="button" key={iso} aria-pressed={selected}
+                disabled={choiceMode === "optional" && value === iso}
+                className={`${styles.timeButton} ${selected ? styles.timeSelected : ""}`}
+                onClick={() => {
+                  if (choiceMode === "preferred") {
+                    onChange(iso);
+                    onOptionalValuesChange?.(
+                      alternatives.filter((candidate) => candidate !== iso),
+                    );
+                    return;
+                  }
+                  if (alternatives.includes(iso)) {
+                    onOptionalValuesChange?.(
+                      alternatives.filter((candidate) => candidate !== iso),
+                    );
+                  } else if (alternatives.length < MAX_OPTIONAL_BOOKING_TIMES) {
+                    onOptionalValuesChange?.([...alternatives, iso]);
+                  }
+                }}>
                 <span>{clock(iso)}</span>
-                <small>until {clock(new Date(new Date(iso).getTime() + minutes * 60_000).toISOString())}</small>
+                <small>
+                  {value === iso && choiceMode === "optional"
+                    ? "Preferred time"
+                    : `until ${clock(new Date(new Date(iso).getTime() + minutes * 60_000).toISOString())}`}
+                </small>
               </button>
-            ))}
+            )})}
           </div>
         </div>
       </div>
+
+      {supportsOptionalTimes && value && (
+        <div className={styles.choiceSummary}>
+          <div>
+            <b>Preferred · first choice</b>
+            <span>{dateLabel(londonDateKey(value))} at {clock(value)}</span>
+          </div>
+          <div>
+            <b>Optional availability</b>
+            <span>
+              {alternatives.length
+                ? alternatives
+                    .map(
+                      (iso) =>
+                        `${dateLabel(londonDateKey(iso))} at ${clock(iso)}`,
+                    )
+                    .join(" · ")
+                : "None added — add other times to give cleaners more flexibility."}
+            </span>
+          </div>
+        </div>
+      )}
 
       <footer className={styles.note}>
         <span aria-hidden="true">✓</span>

@@ -14,6 +14,7 @@ import {
   appointmentWithinBookingHorizon,
   BOOKING_HORIZON_MESSAGE,
 } from "@/lib/appointmentWindow";
+import { normaliseOptionalBookingTimes } from "@/lib/bookingTimeChoices";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -25,7 +26,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { packageId, postcode, address, frequency, request, slot, promoCode, durationMinutes, preferredProviderId } = await req.json();
+    const { packageId, postcode, address, frequency, request, slot, optionalSlots, promoCode, durationMinutes, preferredProviderId } = await req.json();
     if (!packageId) {
       return NextResponse.json({ error: "Missing packageId" }, { status: 400 });
     }
@@ -78,6 +79,35 @@ export async function POST(req: NextRequest) {
       );
     }
     if (!appointmentWithinBookingHorizon(slot) || new Date(slot).getTime() < Date.now() + 2 * 60 * 60 * 1000) {
+      return NextResponse.json(
+        { error: BOOKING_HORIZON_MESSAGE },
+        { status: 400 },
+      );
+    }
+    let alternativeTimes: string[];
+    try {
+      alternativeTimes = normaliseOptionalBookingTimes(
+        optionalSlots,
+        slot,
+        minutes,
+      );
+    } catch (optionalTimeError) {
+      return NextResponse.json(
+        {
+          error:
+            optionalTimeError instanceof Error
+              ? optionalTimeError.message
+              : "Choose valid optional times.",
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      alternativeTimes.some(
+        (alternative) =>
+          new Date(alternative).getTime() < Date.now() + 2 * 60 * 60 * 1000,
+      )
+    ) {
       return NextResponse.json(
         { error: BOOKING_HORIZON_MESSAGE },
         { status: 400 },
@@ -206,6 +236,7 @@ export async function POST(req: NextRequest) {
           postcode: postcode ?? "",
           request: (request ?? "").slice(0, 480),
           slot: slot ?? "",
+          optional_slots: JSON.stringify(alternativeTimes),
           provider_amount: String(providerAmount),
           platform_margin: String(platformFee),
           promo_code: appliedCode ?? "",

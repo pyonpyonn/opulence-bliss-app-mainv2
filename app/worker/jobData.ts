@@ -11,6 +11,8 @@ export type WorkerJobWorkspaceData = {
   durationMinutes: number | null;
   propertySizeSqm?: number | null;
   scheduledAt: string;
+  preferredScheduledAt: string | null;
+  optionalScheduledAt: string[];
   createdAt: string | null;
   confirmedAt: string | null;
   delayMinutes: number | null;
@@ -118,7 +120,7 @@ export async function loadWorkerJob(
   const { data: row } = await supabase
     .from("bookings")
     .select(
-      "id, created_at, scheduled_at, status, address, household_notes, customer_id, customer_email, provider_id, provider_payout, subscription_id, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), providers(display_name), check_ins(arrived_at, left_at, geofence_pass, gps_lat, gps_lng)",
+      "id, created_at, scheduled_at, preferred_scheduled_at, optional_scheduled_at, status, address, household_notes, customer_id, customer_email, provider_id, provider_payout, subscription_id, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), providers(display_name), check_ins(arrived_at, left_at, geofence_pass, gps_lat, gps_lng)",
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -218,6 +220,8 @@ export async function loadWorkerJob(
     propertySizeSqm: row.property_size_sqm ?? null,
     durationMinutes: row.duration_minutes ?? packageRow?.duration_minutes ?? null,
     scheduledAt: row.scheduled_at,
+    preferredScheduledAt: row.preferred_scheduled_at ?? row.scheduled_at,
+    optionalScheduledAt: row.optional_scheduled_at ?? [],
     createdAt:
       row.created_at ?? jobPayment?.created_at ?? events[0]?.created_at ?? null,
     confirmedAt:

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { isCleaning, validCleaningDuration } from "@/lib/cleaningBooking";
 import { appointmentFitsWindow, APPOINTMENT_WINDOW_MESSAGE } from "@/lib/appointmentWindow";
 import { rotateBookingOffer } from "@/lib/offerRotation";
+import { normaliseOptionalBookingTimes } from "@/lib/bookingTimeChoices";
 
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -37,6 +38,17 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   }
   if (!slot || !appointmentFitsWindow(slot, minutes)) {
     throw new Error(APPOINTMENT_WINDOW_MESSAGE);
+  }
+  let optionalSlots: string[];
+  try {
+    optionalSlots = normaliseOptionalBookingTimes(
+      JSON.parse(m.optional_slots || "[]"),
+      slot,
+      minutes,
+      null,
+    );
+  } catch {
+    throw new Error("Invalid optional booking times.");
   }
   const compact = (postcode ?? "").toUpperCase().replace(/\s+/g, "");
   const district = compact.length > 4 ? compact.slice(0, compact.length - 3) : compact;
@@ -82,6 +94,7 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
     p_address: serviceAddress,
     p_request: request,
     p_slot: slot,
+    p_optional_slots: optionalSlots,
     p_duration_minutes: minutes,
     p_property_size_sqm: null,
     p_frequency: frequency,

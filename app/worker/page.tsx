@@ -14,6 +14,8 @@ type Row = {
   id: string;
   customer_id: string | null;
   scheduled_at: string;
+  preferred_scheduled_at?: string | null;
+  optional_scheduled_at?: string[] | null;
   status: string;
   address: string | null;
   household_notes: string | null;
@@ -111,7 +113,7 @@ export default async function WorkerPage() {
   const { data: rowsData } = await supabase
     .from("bookings")
     .select(
-      "id, customer_id, scheduled_at, status, address, household_notes, customer_email, provider_payout, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass)",
+      "id, customer_id, scheduled_at, preferred_scheduled_at, optional_scheduled_at, status, address, household_notes, customer_email, provider_payout, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass)",
     )
     .order("scheduled_at", { ascending: true });
 
@@ -123,7 +125,7 @@ export default async function WorkerPage() {
     const { data: offerRows } = await supabase
       .from("booking_offers")
       .select(
-        "booking_id, bookings(id, customer_id, scheduled_at, status, address, household_notes, customer_email, offer_expires_at, provider_payout, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass))",
+        "booking_id, bookings(id, customer_id, scheduled_at, preferred_scheduled_at, optional_scheduled_at, status, address, household_notes, customer_email, offer_expires_at, provider_payout, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes), check_ins(arrived_at, left_at, geofence_pass))",
       )
       .eq("provider_id", prov.id)
       .eq("status", "open");
@@ -172,7 +174,12 @@ export default async function WorkerPage() {
 
   const offerDetailMap = new Map<
     string,
-    { customer_name?: string; payout_amount?: number | string }
+    {
+      customer_name?: string;
+      payout_amount?: number | string;
+      preferred_scheduled_at?: string | null;
+      optional_scheduled_at?: string[];
+    }
   >();
   await Promise.all(
     offers.map(async (offer) => {
@@ -182,6 +189,8 @@ export default async function WorkerPage() {
       const details = data as {
         customer_name?: string;
         payout_amount?: number | string;
+        preferred_scheduled_at?: string | null;
+        optional_scheduled_at?: string[];
       } | null;
       if (!details) return;
       offerDetailMap.set(offer.id, details);
@@ -251,6 +260,14 @@ export default async function WorkerPage() {
       id: booking.id,
       status: booking.status,
       scheduled_at: booking.scheduled_at,
+      preferredScheduledAt:
+        offerDetailMap.get(booking.id)?.preferred_scheduled_at ??
+        booking.preferred_scheduled_at ??
+        booking.scheduled_at,
+      optionalScheduledAt:
+        offerDetailMap.get(booking.id)?.optional_scheduled_at ??
+        booking.optional_scheduled_at ??
+        [],
       address: booking.address,
       notes: booking.household_notes,
       client:

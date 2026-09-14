@@ -54,6 +54,8 @@ export default function JobActions({
   hasSubmittedRating = false,
   showExceptions = true,
   compact = false,
+  preferredScheduledAt,
+  optionalScheduledAt = [],
 }: {
   id: string;
   status: string;
@@ -62,10 +64,18 @@ export default function JobActions({
   hasSubmittedRating?: boolean;
   showExceptions?: boolean;
   compact?: boolean;
+  preferredScheduledAt?: string | null;
+  optionalScheduledAt?: string[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [note, setNote] = useState<string | null>(null);
+  const preferredTime = preferredScheduledAt ?? scheduledAt;
+  const availableTimes = [
+    preferredTime,
+    ...optionalScheduledAt.filter((value) => value !== preferredTime),
+  ];
+  const [selectedSlot, setSelectedSlot] = useState(preferredTime);
   const dim = (s: React.CSSProperties) => ({
     ...s,
     opacity: pending ? 0.6 : 1,
@@ -75,6 +85,67 @@ export default function JobActions({
   if (status === "offered") {
     return (
       <div style={{ marginTop: compact ? 0 : 16 }}>
+        {availableTimes.length > 1 && (
+          <fieldset
+            style={{
+              display: "grid",
+              gap: 7,
+              margin: "0 0 12px",
+              padding: 0,
+              border: 0,
+              minWidth: 0,
+            }}
+          >
+            <legend
+              style={{
+                marginBottom: 7,
+                color: "#4B3B5B",
+                fontSize: 12,
+                fontWeight: 900,
+              }}
+            >
+              Choose the time you can accept
+            </legend>
+            {availableTimes.map((time, index) => (
+              <label
+                key={time}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  border: `1px solid ${selectedSlot === time ? "#6D28D9" : "#E3D9EC"}`,
+                  borderRadius: 10,
+                  background: selectedSlot === time ? "#F5EFFF" : "#FFFFFF",
+                  color: "#24172F",
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="radio"
+                  name={`booking-time-${id}`}
+                  value={time}
+                  checked={selectedSlot === time}
+                  onChange={() => setSelectedSlot(time)}
+                />
+                <span>
+                  {new Date(time).toLocaleString("en-GB", {
+                    timeZone: "Europe/London",
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                  {index === 0 ? " · Preferred" : " · Optional"}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <div
           style={{
             display: "flex",
@@ -97,7 +168,7 @@ export default function JobActions({
           <button
             onClick={() =>
               start(async () => {
-                const r = await acceptJob(id);
+                const r = await acceptJob(id, selectedSlot);
                 if (r?.taken) {
                   setNote("Someone else took this job first.");
                 } else if (r?.error) {

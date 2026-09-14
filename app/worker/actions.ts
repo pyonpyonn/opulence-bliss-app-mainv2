@@ -136,7 +136,7 @@ function metresBetween(
   return Math.round(2 * R * Math.asin(Math.sqrt(h)));
 }
 
-export async function acceptJob(id: string) {
+export async function acceptJob(id: string, selectedSlot: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -153,11 +153,23 @@ export async function acceptJob(id: string) {
     return { error: "Your provider account is suspended, so you cannot accept new jobs." };
   }
 
-  try {
-    await transitionBooking(supabase, id, "scheduled");
-  } catch {
+  const { error: acceptanceError } = await supabase.rpc(
+    "provider_accept_booking_time",
+    {
+      p_booking_id: id,
+      p_selected_slot: selectedSlot,
+    },
+  );
+  if (acceptanceError) {
     revalidatePath("/worker");
-    return { taken: true };
+    if (
+      /already|available|open offer|another provider/i.test(
+        acceptanceError.message,
+      )
+    ) {
+      return { taken: true };
+    }
+    return { error: acceptanceError.message };
   }
 
   // Booking acceptance queues confirmation and reminders in the database.

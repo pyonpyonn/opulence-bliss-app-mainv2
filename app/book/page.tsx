@@ -106,6 +106,7 @@ export default function BookPage() {
 
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
+  const [optionalSlots, setOptionalSlots] = useState<string[]>([]);
 
   const [request, setRequest] = useState("");
   const [promo, setPromo] = useState("");
@@ -298,6 +299,7 @@ export default function BookPage() {
   ) {
     setSlots(null);
     setSlot(null);
+    setOptionalSlots([]);
     try {
       const res = await fetch(
         `/api/slots?postcode=${encodeURIComponent(pc)}&service=${encodeURIComponent(
@@ -318,6 +320,7 @@ export default function BookPage() {
     setPreferredCleaner("");
     setCleaningMinutes(Math.max(120, p.duration_minutes ?? 120));
     setSlot(null);
+    setOptionalSlots([]);
   }
 
   function goToFrequency() {
@@ -417,6 +420,7 @@ export default function BookPage() {
           postcode,
           request,
           slot,
+          optionalSlots,
           promoCode: promoInfo?.ok ? promo.trim().toUpperCase() : null,
         }),
       });
@@ -715,6 +719,7 @@ export default function BookPage() {
                     setCleaningMinutes(Number(event.target.value));
                     setPromoInfo(null);
                     setSlot(null);
+                    setOptionalSlots([]);
                   }}
                   aria-label="Cleaning duration"
                 />
@@ -764,6 +769,8 @@ export default function BookPage() {
                   slots={slots}
                   value={slot}
                   onChange={setSlot}
+                  optionalValues={optionalSlots}
+                  onOptionalValuesChange={setOptionalSlots}
                   durationMinutes={minutes}
                 />
               )}
@@ -799,7 +806,7 @@ export default function BookPage() {
                   <small>{duration(minutes) ?? "Visit"}</small>
                 </div>
                 <div>
-                  <span>Date and time</span>
+                  <span>Preferred time · first choice</span>
                   <strong>{slot ? fullLabel(slot) : "Choose a time"}</strong>
                   <small>{address}, {postcode.toUpperCase()}</small>
                 </div>
@@ -808,6 +815,20 @@ export default function BookPage() {
                   <strong>{money(total)}</strong>
                   <small>Held now, charged after completion</small>
                 </div>
+              </div>
+
+              <div className="timeChoicesReview">
+                <strong>Optional times</strong>
+                {optionalSlots.length ? (
+                  <ul>
+                    {optionalSlots.map((optionalSlot) => (
+                      <li key={optionalSlot}>{fullLabel(optionalSlot)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span>No optional times added.</span>
+                )}
+                <small>Cleaners can choose one of these if your preferred time is unavailable.</small>
               </div>
 
               <p>{frequencyLabel(frequency)} · {duration(minutes)}{preferredCleaner ? ` · Requested cleaner: ${previousCleaners.find((p) => p.provider_id === preferredCleaner)?.display_name ?? "Previous cleaner"}` : ""}</p>
@@ -959,10 +980,18 @@ export default function BookPage() {
                   <span className="v">{duration(minutes) ?? "—"}</span>
                 </div>
                 {step >= 4 && (
-                  <div className="brow">
-                    <span className="k">When</span>
-                    <span className="v">{slot ? fullLabel(slot) : "Not picked"}</span>
-                  </div>
+                  <>
+                    <div className="brow">
+                      <span className="k">Preferred time</span>
+                      <span className="v">{slot ? fullLabel(slot) : "Not picked"}</span>
+                    </div>
+                    {optionalSlots.length > 0 && (
+                      <div className="brow">
+                        <span className="k">Optional times</span>
+                        <span className="v">{optionalSlots.map(fullLabel).join(" · ")}</span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {promoInfo?.ok && promoInfo.discount !== undefined && (
@@ -1582,6 +1611,37 @@ export default function BookPage() {
           font-size: 12.5px;
           font-weight: 700;
           line-height: 1.35;
+        }
+        .timeChoicesReview {
+          display: grid;
+          gap: 5px;
+          margin: -12px 0 24px;
+          padding: 13px 15px;
+          border: 1px solid #e8dff1;
+          border-radius: 14px;
+          background: #fffaf6;
+        }
+        .timeChoicesReview > strong {
+          color: var(--purple);
+          font-size: 13px;
+          font-weight: 900;
+        }
+        .timeChoicesReview > span,
+        .timeChoicesReview li {
+          color: var(--ink);
+          font-size: 13px;
+          font-weight: 800;
+        }
+        .timeChoicesReview ul {
+          display: grid;
+          gap: 3px;
+          margin: 0;
+          padding-left: 19px;
+        }
+        .timeChoicesReview small {
+          color: var(--muted);
+          font-size: 11.5px;
+          font-weight: 700;
         }
         .acct {
           background: #fbfaff;

@@ -25,6 +25,8 @@ export type ActiveJobData = {
   id: string;
   status: string;
   scheduled_at: string;
+  preferredScheduledAt?: string | null;
+  optionalScheduledAt?: string[];
   address: string | null;
   notes: string | null;
   client: string | null;
@@ -275,20 +277,38 @@ export default function ActiveJob({
       </div>
 
       {job.status === "offered" && (
-        <div className="offer-facts" aria-label="Details to review before responding">
-          <div>
-            <span>Property size</span>
-            <strong>
-              {job.propertySizeSqm !== null && job.propertySizeSqm !== undefined
-                ? `${Number(job.propertySizeSqm).toFixed(1)} m²`
-                : "Not provided"}
-            </strong>
+        <>
+          <div className="offer-times" aria-label="Customer time choices">
+            <div>
+              <span>Preferred time · first choice</span>
+              <strong>{fullDate(job.preferredScheduledAt ?? job.scheduled_at)} · {clock(job.preferredScheduledAt ?? job.scheduled_at)}</strong>
+            </div>
+            {(job.optionalScheduledAt ?? []).length > 0 && (
+              <div>
+                <span>Optional times</span>
+                <strong>
+                  {(job.optionalScheduledAt ?? [])
+                    .map((time) => `${relativeDate(time)} · ${clock(time)}`)
+                    .join("  ·  ")}
+                </strong>
+              </div>
+            )}
           </div>
-          <div>
-            <span>Special instructions</span>
-            <strong>{job.notes?.trim() || "No special instructions"}</strong>
+          <div className="offer-facts" aria-label="Details to review before responding">
+            <div>
+              <span>Property size</span>
+              <strong>
+                {job.propertySizeSqm !== null && job.propertySizeSqm !== undefined
+                  ? `${Number(job.propertySizeSqm).toFixed(1)} m²`
+                  : "Not provided"}
+              </strong>
+            </div>
+            <div>
+              <span>Special instructions</span>
+              <strong>{job.notes?.trim() || "No special instructions"}</strong>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {job.status === "scheduled" && (
@@ -313,6 +333,8 @@ export default function ActiveJob({
                 id={job.id}
                 status={job.status}
                 scheduledAt={job.scheduled_at}
+                preferredScheduledAt={job.preferredScheduledAt}
+                optionalScheduledAt={job.optionalScheduledAt}
                 showExceptions={false}
                 compact
               />
@@ -441,6 +463,33 @@ export default function ActiveJob({
           grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
           gap: 10px;
           margin: 0 20px 12px;
+        }
+        .offer-times {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin: 0 20px 10px;
+        }
+        .offer-times > div {
+          display: grid;
+          gap: 3px;
+          border: 1px solid #dccbf2;
+          border-radius: 12px;
+          background: #f8f2ff;
+          padding: 10px 12px;
+        }
+        .offer-times span {
+          color: #6d28d9;
+          font-size: 10.5px;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .offer-times strong {
+          color: var(--ob-text);
+          font-size: 13px;
+          font-weight: 900;
+          overflow-wrap: anywhere;
         }
         .offer-facts > div {
           display: grid;
