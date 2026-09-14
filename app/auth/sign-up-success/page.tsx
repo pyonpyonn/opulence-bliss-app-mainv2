@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function Page() {
   return (
@@ -14,15 +15,20 @@ export default function Page() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Thank you for signing up!
+                Your account is ready
               </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardDescription>You can sign in now</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+                You&apos;ve successfully signed up. No email confirmation is required.
               </p>
+              <Link
+                href="/login"
+                className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-violet-700 px-5 py-3 text-sm font-bold text-white"
+              >
+                Log in
+              </Link>
             </CardContent>
           </Card>
         </div>

@@ -51,7 +51,6 @@ export function SignUpForm() {
           email: email.trim(),
           address: address.trim(),
           password,
-          requireEmailConfirmation: true,
         }),
       });
       const result = await response.json();
