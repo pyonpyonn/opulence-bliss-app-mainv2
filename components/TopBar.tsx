@@ -96,6 +96,12 @@ export default function TopBar() {
         button:hover {
           color: var(--ob-purple);
         }
+
+        @media (max-width: 700px) {
+          .strip {
+            display: none;
+          }
+        }
       `}</style>
     </div>
   );
