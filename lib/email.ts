@@ -58,7 +58,10 @@ export async function sendEmail(opts: {
   cta?: { text: string; url: string };
 }) {
   const key = process.env.RESEND_API_KEY;
-  if (!key || !opts.to) return { skipped: true };
+  if (!key || !opts.to) {
+    console.error("Email delivery skipped: RESEND_API_KEY or recipient is missing.");
+    return { ok: false as const, reason: "not_configured" as const };
+  }
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -66,6 +69,7 @@ export async function sendEmail(opts: {
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
+        "User-Agent": "opulence-bliss/1.0",
       },
       body: JSON.stringify({
         from: FROM,
@@ -75,12 +79,21 @@ export async function sendEmail(opts: {
       }),
     });
     if (!res.ok) {
-      console.error("Resend error:", await res.text());
-      return { ok: false };
+      const responseBody = await res.text();
+      console.error("Resend error:", res.status, responseBody);
+      const normalized = responseBody.toLowerCase();
+      const reason =
+        normalized.includes("domain") &&
+        (normalized.includes("verif") || normalized.includes("testing emails"))
+          ? "sender_not_verified"
+          : res.status === 401 || normalized.includes("api key")
+            ? "invalid_api_key"
+            : "delivery_failed";
+      return { ok: false as const, reason };
     }
-    return { ok: true };
+    return { ok: true as const };
   } catch (e) {
     console.error("Email failed:", e);
-    return { ok: false };
+    return { ok: false as const, reason: "delivery_failed" as const };
   }
 }

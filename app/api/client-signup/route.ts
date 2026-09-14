@@ -131,10 +131,16 @@ export async function POST(req: NextRequest) {
         cta: { text: "Confirm my email", url: confirmationUrl },
       });
 
-      if (!("ok" in delivery) || delivery.ok !== true) {
+      if (delivery.ok !== true) {
         await admin.auth.admin.deleteUser(createdUser.id);
+        const error =
+          delivery.reason === "not_configured"
+            ? "Confirmation email is not configured yet. Please contact support."
+            : delivery.reason === "sender_not_verified"
+              ? "The confirmation email sender is not verified yet. Please contact support."
+              : "We could not send the confirmation email. Please try again in a moment.";
         return NextResponse.json(
-          { error: "We could not send the confirmation email. Please try again in a moment." },
+          { error },
           { status: 503 },
         );
       }
