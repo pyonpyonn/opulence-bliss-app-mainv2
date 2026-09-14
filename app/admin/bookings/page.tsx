@@ -87,7 +87,7 @@ export default async function AdminBookingsPage() {
               );
 
               return (
-                <article key={booking.id} style={card}>
+                <article className="admin-booking-card" key={booking.id} style={card}>
                   <div style={{ minWidth: 0 }}>
                     <div style={cardTop}>
                       <strong style={service}>

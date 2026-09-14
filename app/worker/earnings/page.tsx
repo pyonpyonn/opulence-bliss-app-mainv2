@@ -153,7 +153,7 @@ export default async function EarningsPage() {
           Where you stand — earnings, ratings and what&apos;s still to come.
         </p>
 
-        <div style={statGrid}>
+        <div className="worker-status-grid" style={statGrid}>
           <Stat label="Paid to you" value={gbp(earned + tipTotal)} big />
           <Stat label="Awaiting completion" value={gbp(pendingTotal)} />
           <Stat label="Tips received" value={gbp(tipTotal)} />
@@ -174,9 +174,9 @@ export default async function EarningsPage() {
         {(invoiceData ?? []).length === 0 ? (
           <div style={{ ...empty, marginBottom: 30 }}>Invoices appear automatically after completed jobs.</div>
         ) : (
-          <div style={{ ...card, padding: "6px 22px", marginBottom: 30 }}>
+          <div className="worker-payment-list" style={{ ...card, padding: "6px 22px", marginBottom: 30 }}>
             {(invoiceData ?? []).map((invoice) => (
-              <div key={invoice.id} style={row}>
+              <div className="worker-payment-row" key={invoice.id} style={row}>
                 <div>
                   <strong style={{ fontSize: 15 }}>{invoice.invoice_number}</strong>
                   <div style={{ color: "#7A828C", fontSize: 13 }}>
@@ -198,9 +198,9 @@ export default async function EarningsPage() {
             No earnings yet. Once you complete a visit it&apos;ll appear here.
           </div>
         ) : (
-          <div style={{ ...card, padding: "6px 22px" }}>
+          <div className="worker-payment-list" style={{ ...card, padding: "6px 22px" }}>
             {rows.map((r) => (
-              <div key={r.key} style={row}>
+              <div className="worker-payment-row" key={r.key} style={row}>
                 <div>
                   <strong style={{ fontSize: 15, color: "#16202A" }}>
                     {r.service}
@@ -238,7 +238,7 @@ export default async function EarningsPage() {
           </div>
         )}
 
-        <p style={{ marginTop: 28, display: "flex", gap: 18 }}>
+        <p className="worker-status-links" style={{ marginTop: 28, display: "flex", gap: 18 }}>
           <a href="/worker" style={link}>
             ← My jobs
           </a>
@@ -264,8 +264,9 @@ function Stat({
   big?: boolean;
 }) {
   return (
-    <div style={{ ...card, padding: "20px 22px" }}>
+    <div className="worker-status-card" style={{ ...card, padding: "20px 22px" }}>
       <p
+        className="worker-status-value"
         style={{
           fontFamily: "'Nunito', system-ui, sans-serif",
           fontSize: big ? 30 : 22,

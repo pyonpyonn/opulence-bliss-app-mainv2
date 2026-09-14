@@ -103,8 +103,8 @@ export default async function ChatFlagsPage() {
               const pkg = one(booking?.packages as { name: string } | { name: string }[] | null);
               const senderName = provider?.display_name ?? profile?.full_name ?? profile?.email ?? "Unknown user";
               return (
-                <article key={flag.id} style={{ ...card, ...(flag.status === "pending" ? pendingCard : {}) }}>
-                  <div style={cardTop}>
+                <article className="admin-chat-flag-card" key={flag.id} style={{ ...card, ...(flag.status === "pending" ? pendingCard : {}) }}>
+                  <div className="admin-chat-flag-top" style={cardTop}>
                     <div>
                       <div style={badges}>
                         <span style={flag.severity === "critical" ? criticalBadge : highBadge}>{flag.severity}</span>

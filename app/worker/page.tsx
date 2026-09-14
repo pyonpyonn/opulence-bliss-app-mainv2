@@ -513,7 +513,7 @@ export default async function WorkerPage() {
 
 function EmptyNextJob() {
   return (
-    <section style={emptyJob}>
+    <section className="worker-empty-job" style={emptyJob}>
       <div style={emptyIcon} aria-hidden="true">
         ◫
       </div>

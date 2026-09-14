@@ -41,6 +41,7 @@ export default function VisitHistoryCard({
 
   return (
     <details
+      className="visit-history-card"
       style={{
         background: "#fff",
         border: "2px solid #F1F1F2",
@@ -49,6 +50,7 @@ export default function VisitHistoryCard({
       }}
     >
       <summary
+        className="visit-history-summary"
         style={{
           display: "flex",
           alignItems: "center",
@@ -59,7 +61,7 @@ export default function VisitHistoryCard({
           listStyle: "none",
         }}
       >
-        <span style={{ minWidth: 0, flex: 1 }}>
+        <span className="visit-history-copy" style={{ minWidth: 0, flex: 1 }}>
           <strong
             style={{
               display: "block",
@@ -84,6 +86,7 @@ export default function VisitHistoryCard({
         </span>
 
         <span
+          className="visit-history-badges"
           style={{
             display: "flex",
             alignItems: "center",
@@ -139,6 +142,7 @@ export default function VisitHistoryCard({
         {secondaryRating && <RatingLine rating={secondaryRating} />}
 
         <dl
+          className="visit-history-facts"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",

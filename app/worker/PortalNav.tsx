@@ -297,7 +297,7 @@ export default function PortalNav({
           z-index: 60;
           background: var(--ob-surface-glass);
           border-top: 1px solid var(--ob-border);
-          padding: 6px 4px 8px;
+          padding: 6px 4px calc(8px + env(safe-area-inset-bottom));
           box-shadow: 0 -8px 26px var(--ob-shadow-soft);
           backdrop-filter: blur(18px) saturate(140%);
         }
@@ -511,6 +511,8 @@ const tab: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 800,
   textDecoration: "none",
+  minHeight: 44,
+  justifyContent: "center",
   padding: "4px 0",
   fontFamily: "'Nunito', system-ui, sans-serif",
 };

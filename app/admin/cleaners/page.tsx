@@ -90,7 +90,7 @@ export default async function AdminCleanersPage() {
               const pending = provider.vetting_status === "pending";
 
               return (
-                <article key={provider.id} style={card}>
+                <article className="admin-cleaner-card" key={provider.id} style={card}>
                   <div style={avatar}>
                     {(provider.display_name ?? profile?.email ?? "P")
                       .charAt(0)
@@ -155,7 +155,7 @@ export default async function AdminCleanersPage() {
                     </div>
                   </div>
                   {pending && !provider.is_suspended ? (
-                    <div>
+                    <div className="admin-cleaner-actions">
                       <VettingButtons id={provider.id} />
                     </div>
                   ) : null}

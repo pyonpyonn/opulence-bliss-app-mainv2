@@ -886,6 +886,12 @@ select {
   color: var(--ob-purple) !important;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 * {
   -webkit-text-size-adjust: 100%;
 }
@@ -914,10 +920,6 @@ dd,
 }
 
 @media (max-width: 640px) {
-  main {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-  }
   h1 {
     font-size: 28px !important;
     line-height: 1.15 !important;
@@ -928,12 +930,6 @@ dd,
   h3 {
     font-size: 18px !important;
   }
-  section,
-  article {
-    padding-left: 18px !important;
-    padding-right: 18px !important;
-  }
-
   .appearance-control {
     left: 12px;
     bottom: 12px;
@@ -972,6 +968,115 @@ dd,
   }
   .star {
     font-size: 32px !important;
+  }
+
+  .visit-history-summary {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    padding: 15px 16px !important;
+  }
+
+  .visit-history-copy,
+  .visit-history-badges {
+    width: 100%;
+  }
+
+  .visit-history-badges {
+    justify-content: flex-start !important;
+    gap: 7px !important;
+  }
+
+  .visit-history-badges > :last-child {
+    margin-left: auto;
+  }
+
+  .visit-history-facts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .worker-empty-job {
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 24px 18px !important;
+    text-align: center;
+  }
+
+  .worker-empty-job > div:last-child {
+    min-width: 0;
+  }
+
+  .worker-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .worker-status-card {
+    min-width: 0;
+    padding: 17px 16px !important;
+  }
+
+  .worker-status-value {
+    max-width: 100%;
+    font-size: clamp(18px, 6.4vw, 24px) !important;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .worker-payment-list {
+    padding-inline: 16px !important;
+  }
+
+  .worker-payment-row > div {
+    min-width: 0;
+  }
+
+  .worker-status-links {
+    flex-wrap: wrap;
+  }
+
+  .admin-booking-card {
+    grid-template-columns: 1fr !important;
+    gap: 13px !important;
+    padding: 15px !important;
+  }
+
+  .admin-booking-card > :last-child {
+    justify-self: stretch;
+  }
+
+  .admin-cleaner-card {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 15px !important;
+  }
+
+  .admin-cleaner-actions {
+    grid-column: 1 / -1;
+  }
+
+  .admin-cleaner-actions > * {
+    flex-wrap: wrap;
+  }
+
+  .admin-chat-flag-card {
+    padding: 16px !important;
+  }
+
+  .admin-chat-flag-top {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .worker-payment-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .worker-payment-row > div:last-child {
+    text-align: left !important;
   }
 }
 

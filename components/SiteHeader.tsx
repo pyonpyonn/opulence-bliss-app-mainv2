@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Menu, X } from "lucide-react";
 
 const supabase = createClient();
 
@@ -32,6 +33,20 @@ export default function SiteHeader() {
   const [role, setRole] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [path]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [mobileOpen]);
 
   useEffect(() => {
     let alive = true;
@@ -107,7 +122,7 @@ export default function SiteHeader() {
           opulence<span style={{ color: CORAL }}>bliss</span>
         </Link>
 
-        <div className="site-header-actions">
+        <div className="site-header-actions desktop-actions">
           <Link href="/blog" style={blogBtn}>
             Blog
           </Link>
@@ -148,10 +163,26 @@ export default function SiteHeader() {
             Book now
           </Link>
         </div>
+
+        <div className="mobile-primary">
+          <Link href="/book" className="mobile-book">
+            Book
+          </Link>
+          <button
+            type="button"
+            className="mobile-menu-button"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-site-menu"
+            onClick={() => setMobileOpen((open) => !open)}
+          >
+            {mobileOpen ? <X size={21} /> : <Menu size={21} />}
+          </button>
+        </div>
       </div>
 
       {/* ---------- row 2 ---------- */}
-      <nav style={navRow} aria-label="Main">
+      <nav className="desktop-navigation" style={navRow} aria-label="Main">
         <div className="site-header-nav-inner" style={navInner}>
           {NAV.map((l) => {
             if (l.href === "/services/cleaning")
@@ -188,6 +219,22 @@ export default function SiteHeader() {
         </div>
       </nav>
 
+      {mobileOpen && (
+        <div id="mobile-site-menu" className="mobile-menu">
+          <nav aria-label="Mobile main navigation" className="mobile-links">
+            <Link href="/services/cleaning">Cleaning</Link>
+            <ComingSoonMenu />
+            <Link href="/providers">Our pros</Link>
+            <Link href="/provider/join">Jobs</Link>
+            <Link href="/blog">Blog</Link>
+          </nav>
+          <div className="mobile-account-actions">
+            {!role && <Link href="/provider/login">Sign in as a pro</Link>}
+            <Link href={accountHref}>{role ? "My account" : "Client log in"}</Link>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .site-header-actions {
           display: flex;
@@ -205,22 +252,118 @@ export default function SiteHeader() {
           display: none;
         }
 
+        .mobile-primary,
+        .mobile-menu {
+          display: none;
+        }
+
         @media (max-width: 700px) {
           .site-header-bar {
-            flex-wrap: wrap;
-            padding: 14px 16px 12px !important;
+            min-height: 64px;
+            gap: 8px !important;
+            padding: 12px 14px !important;
           }
 
-          .site-header-actions {
-            width: 100%;
-            justify-content: flex-start;
-            overflow-x: auto;
-            padding-bottom: 2px;
-            scrollbar-width: none;
+          .desktop-actions,
+          .desktop-navigation {
+            display: none !important;
           }
 
-          .site-header-actions::-webkit-scrollbar {
-            display: none;
+          .mobile-primary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .mobile-book {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            padding: 8px 15px;
+            border-radius: 999px;
+            background: ${GRAD};
+            color: #fff;
+            box-shadow: 0 5px 14px rgba(109, 40, 217, 0.2);
+            font-size: 13.5px;
+            font-weight: 900;
+            text-decoration: none;
+            white-space: nowrap;
+          }
+
+          .mobile-menu-button {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border: 1px solid #e5e0eb;
+            border-radius: 13px;
+            background: #fff;
+            color: ${INK};
+            cursor: pointer;
+          }
+
+          .mobile-menu {
+            display: grid;
+            gap: 14px;
+            padding: 10px 14px 16px;
+            border-top: 1px solid #eee8f5;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 18px 34px rgba(22, 32, 42, 0.13);
+          }
+
+          .mobile-links {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .mobile-links :global(a),
+          .mobile-links :global(button) {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            min-height: 44px;
+            padding: 10px 12px !important;
+            border: 1px solid #ece7f2 !important;
+            border-radius: 12px !important;
+            background: #faf8fd !important;
+            color: ${INK} !important;
+            font-family: inherit !important;
+            font-size: 14px !important;
+            font-weight: 850 !important;
+            text-decoration: none;
+          }
+
+          .mobile-account-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid #eee8f5;
+          }
+
+          .mobile-account-actions a {
+            display: grid;
+            place-items: center;
+            min-height: 44px;
+            padding: 9px 12px;
+            border: 1.5px solid #dccbfa;
+            border-radius: 12px;
+            color: ${CORAL};
+            font-size: 13.5px;
+            font-weight: 900;
+            text-align: center;
+            text-decoration: none;
+          }
+        }
+
+        @media (max-width: 370px) {
+          .mobile-book {
+            padding-inline: 12px;
+          }
+          .mobile-account-actions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

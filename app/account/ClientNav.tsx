@@ -215,9 +215,22 @@ export default function ClientNav({
         <Link href="/" style={{ ...brand, fontSize: 20 }}>
           opulence<span style={{ color: PURPLE }}>bliss</span>
         </Link>
-        <Link href="/book" style={mBook}>
-          Book
-        </Link>
+        <div className="mobile-nav-actions">
+          <Link href="/book" style={mBook}>
+            Book
+          </Link>
+          <button
+            type="button"
+            className="mobile-signout"
+            aria-label="Sign out"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/";
+            }}
+          >
+            <LogOut size={17} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {/* ---------------- mobile bottom tabs ---------------- */}
@@ -263,6 +276,27 @@ export default function ClientNav({
           top: 0;
           z-index: 30;
         }
+        .mobile-nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .mobile-signout {
+          display: grid;
+          place-items: center;
+          width: 40px;
+          height: 40px;
+          padding: 0;
+          border: 1px solid var(--ob-border);
+          border-radius: 12px;
+          background: var(--ob-surface);
+          color: var(--ob-muted);
+          cursor: pointer;
+        }
+        .mobile-signout:hover {
+          border-color: ${PURPLE};
+          color: ${PURPLE};
+        }
         .tabs {
           display: flex;
           position: fixed;
@@ -272,7 +306,7 @@ export default function ClientNav({
           z-index: 60;
           background: var(--ob-surface-glass);
           border-top: 1px solid var(--ob-border);
-          padding: 6px 4px 8px;
+          padding: 6px 4px calc(8px + env(safe-area-inset-bottom));
           box-shadow: 0 -8px 26px var(--ob-shadow-soft);
           backdrop-filter: blur(18px) saturate(140%);
         }
@@ -544,6 +578,8 @@ const tab: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 800,
   textDecoration: "none",
+  minHeight: 44,
+  justifyContent: "center",
   padding: "4px 0",
   fontFamily: "'Nunito', system-ui, sans-serif",
 };
