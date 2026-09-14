@@ -8,6 +8,21 @@ function profileOf(value: unknown) {
   return value as { email?: string } | null;
 }
 
+function applicationOf(value: unknown) {
+  if (Array.isArray(value)) {
+    return value[0] as {
+      preferred_weekly_hours?: number;
+      resident_status?: string;
+      self_employed_confirmed?: boolean;
+    } | undefined;
+  }
+  return value as {
+    preferred_weekly_hours?: number;
+    resident_status?: string;
+    self_employed_confirmed?: boolean;
+  } | null;
+}
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function AdminCleanersPage() {
@@ -16,7 +31,7 @@ export default async function AdminCleanersPage() {
     supabase
       .from("providers")
       .select(
-        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, profiles(email)",
+        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed)",
       )
       .order("display_name", { ascending: true }),
     supabase
@@ -65,7 +80,8 @@ export default async function AdminCleanersPage() {
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {providers.map((provider) => {
-              const profile = profileOf(provider.profiles);
+              const profile = profileOf(provider.profile);
+              const application = applicationOf(provider.application);
               const hours = hoursByProvider.get(provider.id) ?? [];
               const jobs = jobsByProvider.get(provider.id) ?? {
                 completed: 0,
@@ -115,6 +131,12 @@ export default async function AdminCleanersPage() {
                       {provider.years_experience
                         ? ` · ${provider.years_experience}+ years experience`
                         : ""}
+                    </p>
+                    <p style={meta}>
+                      <strong>Application:</strong>{" "}
+                      {application
+                        ? `${application.resident_status ?? "Residency not supplied"} · ${application.preferred_weekly_hours ?? 0} hr/week · ${application.self_employed_confirmed ? "self-employed confirmed" : "self-employed status missing"}`
+                        : "Legacy account — no onboarding details submitted"}
                     </p>
                     <p style={meta}>
                       {provider.rating_avg

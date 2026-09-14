@@ -67,7 +67,7 @@ export default async function AdminPage() {
   const { data: provRows } = await supabase
     .from("providers")
     .select(
-      "id, display_name, services, vetting_status, rating_avg, rating_count, profiles(email)"
+      "id, display_name, services, vetting_status, rating_avg, rating_count, profile:profiles!providers_profile_id_fkey(email)"
     );
 
   const pending = (provRows ?? []).filter(
@@ -187,9 +187,9 @@ export default async function AdminPage() {
           ) : (
             pending.map((p) => {
               const email =
-                (Array.isArray(p.profiles)
-                  ? (p.profiles as { email: string }[])[0]?.email
-                  : (p.profiles as { email: string } | null)?.email) ?? "—";
+                (Array.isArray(p.profile)
+                  ? (p.profile as { email: string }[])[0]?.email
+                  : (p.profile as { email: string } | null)?.email) ?? "—";
               return (
                 <div
                   key={p.id}
@@ -228,9 +228,9 @@ export default async function AdminPage() {
           ) : (
             (provRows ?? []).map((p) => {
               const email =
-                (Array.isArray(p.profiles)
-                  ? (p.profiles as { email: string }[])[0]?.email
-                  : (p.profiles as { email: string } | null)?.email) ?? "—";
+                (Array.isArray(p.profile)
+                  ? (p.profile as { email: string }[])[0]?.email
+                  : (p.profile as { email: string } | null)?.email) ?? "—";
               return (
                 <div
                   key={p.id}

@@ -22,7 +22,7 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
   const [providerResult, bookingsResult, hoursResult, suspensionResult] = await Promise.all([
     supabase
       .from("providers")
-      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, profiles(email, full_name, phone, address, postcode)")
+      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, created_at)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -45,10 +45,17 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
 
   const provider = providerResult.data;
   if (!provider) {
-    return <main style={page}><AdminNav email={user.email ?? "Admin"} /><div style={inner}><Link href="/admin/cleaners" style={back}>← Professionals</Link><div style={empty}>Professional record not found.</div></div></main>;
+    return <main style={page}><AdminNav email={user.email ?? "Admin"} /><div style={inner}><Link href="/admin/cleaners" style={back}>← Professionals</Link><div style={empty}>{providerResult.error?.message ?? "Professional record not found."}</div></div></main>;
   }
 
-  const profile = one(provider.profiles as never) as { email: string | null; full_name: string | null; phone: string | null; address: string | null; postcode: string | null } | null;
+  const profile = one(provider.profile as never) as { email: string | null; full_name: string | null; phone: string | null; address: string | null; postcode: string | null } | null;
+  const application = one(provider.application as never) as {
+    preferred_weekly_hours: number;
+    resident_status: string;
+    utr_number: string | null;
+    self_employed_confirmed: boolean;
+    created_at: string;
+  } | null;
   const bookings = bookingsResult.data ?? [];
   const bookingIds = bookings.map((booking) => booking.id);
   const [paymentsResult, payoutsResult, eventsResult] = await Promise.all([
@@ -83,6 +90,22 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
           <Stat label="Released payouts" value={money(released)} />
           <Stat label="Professional rating" value={provider.rating_avg ? `${Number(provider.rating_avg).toFixed(1)} ★ (${provider.rating_count ?? 0})` : "Not rated"} />
         </div>
+
+        <section style={applicationCard}>
+          <div>
+            <p style={eyebrow}>Application review</p>
+            <h2 style={{ ...sectionTitle, marginBottom: 5 }}>Professional onboarding details</h2>
+            <p style={muted}>
+              {application ? `Submitted ${when(application.created_at)}` : "This account predates the current onboarding form."}
+            </p>
+          </div>
+          <div style={applicationGrid}>
+            <ApplicationField label="UK resident status" value={application?.resident_status ?? "Not supplied"} />
+            <ApplicationField label="Preferred availability" value={application ? `${application.preferred_weekly_hours} hours per week` : "Not supplied"} />
+            <ApplicationField label="Self-employed partnership" value={application?.self_employed_confirmed ? "Agreed" : "Not recorded"} />
+            <ApplicationField label="UTR number" value={application?.utr_number ?? "Not supplied (optional)"} />
+          </div>
+        </section>
 
         <section style={{ ...availability, borderColor: provider.is_suspended ? "#efb5c1" : "#d8e8dd", background: provider.is_suspended ? "#fff1f3" : "#f1fbf4" }}>
           <strong>{provider.is_suspended ? "Account suspended" : "Account active"}</strong>
@@ -157,6 +180,7 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
 }
 
 function Stat({ label, value }: { label: string; value: string }) { return <div style={stat}><strong>{value}</strong><span>{label}</span></div>; }
+function ApplicationField({ label, value }: { label: string; value: string }) { return <div style={applicationField}><span>{label}</span><strong>{value}</strong></div>; }
 
 const page: React.CSSProperties = { minHeight: "100vh", paddingBottom: 80, background: "#f7f8fa", color: "#16202a", fontFamily: "'Nunito', system-ui, sans-serif" };
 const inner: React.CSSProperties = { maxWidth: 1050, margin: "0 auto", padding: "0 20px" };
@@ -169,6 +193,9 @@ const muted: React.CSSProperties = { margin: "3px 0", color: "#68717d", fontSize
 const stats: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(155px,1fr))", gap: 10, margin: "18px 0" };
 const stat: React.CSSProperties = { display: "grid", gap: 3, padding: "15px 17px", border: "1px solid #e5e7eb", borderRadius: 13, background: "#fff" };
 const availability: React.CSSProperties = { display: "grid", gap: 5, marginBottom: 28, padding: "15px 17px", border: "1px solid #e4d8f7", borderRadius: 13, background: "#faf7ff", color: "#5f6874", fontSize: 12.5 };
+const applicationCard: React.CSSProperties = { display: "grid", gap: 18, marginBottom: 18, padding: 20, border: "1px solid #dfd1f8", borderRadius: 16, background: "linear-gradient(145deg, #fffaf0, #f7f1ff)" };
+const applicationGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 };
+const applicationField: React.CSSProperties = { display: "grid", gap: 4, padding: "12px 13px", border: "1px solid #e6ddf5", borderRadius: 11, background: "rgba(255,255,255,0.82)", color: "#68717d", fontSize: 11.5, overflowWrap: "anywhere" };
 const sectionTitle: React.CSSProperties = { margin: "0 0 13px", fontSize: 20, fontWeight: 900 };
 const list: React.CSSProperties = { display: "grid", gap: 11 };
 const recordCard: React.CSSProperties = { padding: "17px 18px", border: "1px solid #e5e7eb", borderRadius: 15, background: "#fff" };

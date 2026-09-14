@@ -19,13 +19,13 @@ export default async function ProviderInvoicePage({ params }: { params: Promise<
 
   const { data: invoice } = await supabase
     .from("provider_job_invoices")
-    .select("*, providers(display_name, profiles(full_name, email))")
+    .select("*, providers(display_name, profile:profiles!providers_profile_id_fkey(full_name, email))")
     .eq("id", id)
     .maybeSingle();
 
   if (!invoice) return <main style={page}><h1>Invoice not found</h1><a href="/worker/earnings">← Earnings</a></main>;
   const provider = Array.isArray(invoice.providers) ? invoice.providers[0] : invoice.providers;
-  const profileValue = provider?.profiles;
+  const profileValue = provider?.profile;
   const profile = Array.isArray(profileValue) ? profileValue[0] : profileValue;
   const providerName = provider?.display_name ?? profile?.full_name ?? profile?.email ?? "Professional";
   const { data: booking } = await supabase
