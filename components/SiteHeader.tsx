@@ -10,7 +10,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, UserRound, X } from "lucide-react";
 
 const supabase = createClient();
 
@@ -34,18 +34,32 @@ export default function SiteHeader() {
   const [hover, setHover] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
+    setProfileOpen(false);
   }, [path]);
 
   useEffect(() => {
-    if (!mobileOpen) return;
+    if (!mobileOpen && !profileOpen) return;
     const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        setProfileOpen(false);
+      }
     };
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
+  }, [mobileOpen, profileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
   }, [mobileOpen]);
 
   useEffect(() => {
@@ -118,7 +132,7 @@ export default function SiteHeader() {
     <header style={wrap}>
       {/* ---------- row 1 ---------- */}
       <div className="site-header-bar" style={bar}>
-        <Link href="/" style={logo}>
+        <Link href="/" className="site-logo" style={logo}>
           opulence<span style={{ color: CORAL }}>bliss</span>
         </Link>
 
@@ -165,18 +179,77 @@ export default function SiteHeader() {
         </div>
 
         <div className="mobile-primary">
-          <Link href="/book" className="mobile-book">
-            Book
+          <Link href="/services/cleaning" className="mobile-quick-link">
+            Cleaning
           </Link>
+          <Link href="/provider/join" className="mobile-quick-link">
+            Jobs
+          </Link>
+          <div className="mobile-profile-wrap">
+            <button
+              type="button"
+              className="mobile-profile-button"
+              aria-label={role ? "Open account menu" : "Open login and sign-up menu"}
+              aria-expanded={profileOpen}
+              aria-controls="mobile-profile-menu"
+              onClick={() => {
+                setProfileOpen((open) => !open);
+                setMobileOpen(false);
+              }}
+            >
+              <UserRound size={20} strokeWidth={2.25} />
+              {unread > 0 && (
+                <span className="mobile-unread-badge">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </button>
+
+            {profileOpen && (
+              <div id="mobile-profile-menu" className="mobile-profile-menu">
+                {role ? (
+                  <>
+                    <p>Your account</p>
+                    <Link href={accountHref}>Open my account</Link>
+                    <button
+                      type="button"
+                      className="mobile-signout"
+                      onClick={async () => {
+                        await supabase.auth.signOut();
+                        setRole(null);
+                        setUnread(0);
+                        setProfileOpen(false);
+                        window.location.href = "/";
+                      }}
+                    >
+                      <LogOut size={17} />
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>Continue as</p>
+                    <Link href="/login">Client log in</Link>
+                    <Link href="/auth/sign-up">Create client account</Link>
+                    <Link href="/provider/login">Professional log in</Link>
+                    <Link href="/provider/join">Become a professional</Link>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             className="mobile-menu-button"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             aria-controls="mobile-site-menu"
-            onClick={() => setMobileOpen((open) => !open)}
+            onClick={() => {
+              setMobileOpen((open) => !open);
+              setProfileOpen(false);
+            }}
           >
-            {mobileOpen ? <X size={21} /> : <Menu size={21} />}
+            <Menu size={21} />
           </button>
         </div>
       </div>
@@ -220,22 +293,50 @@ export default function SiteHeader() {
       </nav>
 
       {mobileOpen && (
-        <div id="mobile-site-menu" className="mobile-menu">
-          <nav aria-label="Mobile main navigation" className="mobile-links">
-            <Link href="/services/cleaning">Cleaning</Link>
-            <ComingSoonMenu />
-            <Link href="/providers">Our pros</Link>
-            <Link href="/provider/join">Jobs</Link>
-            <Link href="/blog">Blog</Link>
-          </nav>
-          <div className="mobile-account-actions">
-            {!role && <Link href="/provider/login">Sign in as a pro</Link>}
-            <Link href={accountHref}>{role ? "My account" : "Client log in"}</Link>
-          </div>
+        <div className="mobile-drawer-layer">
+          <button
+            type="button"
+            className="mobile-drawer-backdrop"
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside id="mobile-site-menu" className="mobile-drawer" aria-label="Site menu">
+            <div className="mobile-drawer-head">
+              <strong>
+                opulence<span>bliss</span>
+              </strong>
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setMobileOpen(false)}
+              >
+                <X size={21} />
+              </button>
+            </div>
+
+            <Link href="/book" className="mobile-drawer-cta">
+              Book a cleaning
+            </Link>
+
+            <nav aria-label="Mobile main navigation" className="mobile-links">
+              <Link href="/services/cleaning">Cleaning services</Link>
+              <Link href="/providers">Our professionals</Link>
+              <Link href="/blog">Blog</Link>
+              <Link href="/faq">Frequently asked questions</Link>
+              <Link href="/reviews">Customer reviews</Link>
+              <Link href="/provider/join">Jobs &amp; become a pro</Link>
+              <ComingSoonMenu />
+            </nav>
+
+            <div className="mobile-account-actions">
+              <Link href={accountHref}>{role ? "Open my account" : "Client log in"}</Link>
+              {!role && <Link href="/provider/login">Professional log in</Link>}
+            </div>
+          </aside>
         </div>
       )}
 
-      <style jsx>{`
+      <style jsx global>{`
         .site-header-actions {
           display: flex;
           align-items: center;
@@ -253,15 +354,15 @@ export default function SiteHeader() {
         }
 
         .mobile-primary,
-        .mobile-menu {
+        .mobile-drawer-layer {
           display: none;
         }
 
         @media (max-width: 700px) {
           .site-header-bar {
             min-height: 64px;
-            gap: 8px !important;
-            padding: 12px 14px !important;
+            gap: 5px !important;
+            padding: 10px 12px !important;
           }
 
           .desktop-actions,
@@ -269,76 +370,227 @@ export default function SiteHeader() {
             display: none !important;
           }
 
+          .site-logo {
+            min-width: 0;
+            font-size: 19px !important;
+            flex: 0 1 auto;
+          }
+
           .mobile-primary {
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: flex-end;
+            gap: 5px;
+            min-width: 0;
           }
 
-          .mobile-book {
+          .mobile-quick-link {
             display: inline-flex;
             align-items: center;
-            min-height: 40px;
-            padding: 8px 15px;
-            border-radius: 999px;
-            background: ${GRAD};
-            color: #fff;
-            box-shadow: 0 5px 14px rgba(109, 40, 217, 0.2);
-            font-size: 13.5px;
+            justify-content: center;
+            min-height: 36px;
+            padding: 6px 8px;
+            border: 1px solid #e6dcf5;
+            border-radius: 10px;
+            background: #faf7ff;
+            color: ${CORAL};
+            font-size: 11.5px;
             font-weight: 900;
             text-decoration: none;
             white-space: nowrap;
           }
 
+          .mobile-profile-wrap {
+            position: relative;
+          }
+
+          .mobile-profile-button,
           .mobile-menu-button {
             display: grid;
             place-items: center;
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             padding: 0;
             border: 1px solid #e5e0eb;
-            border-radius: 13px;
+            border-radius: 11px;
             background: #fff;
             color: ${INK};
             cursor: pointer;
           }
 
-          .mobile-menu {
+          .mobile-profile-button {
+            position: relative;
+          }
+
+          .mobile-unread-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
             display: grid;
-            gap: 14px;
-            padding: 10px 14px 16px;
-            border-top: 1px solid #eee8f5;
-            background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 18px 34px rgba(22, 32, 42, 0.13);
+            place-items: center;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border: 2px solid #fff;
+            border-radius: 999px;
+            background: ${GRAD};
+            color: #fff;
+            font-size: 9px;
+            font-weight: 900;
+            line-height: 1;
+          }
+
+          .mobile-profile-menu {
+            position: fixed;
+            top: 60px;
+            right: 12px;
+            z-index: 95;
+            display: grid;
+            gap: 7px;
+            width: min(270px, calc(100vw - 24px));
+            padding: 12px;
+            border: 1px solid #e7e0ee;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 18px 45px rgba(22, 32, 42, 0.18);
+          }
+
+          .mobile-profile-menu p {
+            margin: 0 2px 3px;
+            color: #737986;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+
+          .mobile-profile-menu a,
+          .mobile-signout {
+            display: flex;
+            align-items: center;
+            min-height: 42px;
+            padding: 9px 11px;
+            border: 1px solid #ece7f2;
+            border-radius: 11px;
+            background: #faf8fd;
+            color: ${INK};
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 850;
+            text-align: left;
+            text-decoration: none;
+          }
+
+          .mobile-signout {
+            gap: 8px;
+            width: 100%;
+            cursor: pointer;
+          }
+
+          .mobile-drawer-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: block;
+          }
+
+          .mobile-drawer-backdrop {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: rgba(22, 32, 42, 0.42);
+            backdrop-filter: blur(2px);
+          }
+
+          .mobile-drawer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            width: min(86vw, 340px);
+            padding: 18px 16px max(22px, env(safe-area-inset-bottom));
+            overflow-y: auto;
+            border-left: 1px solid #e6dff0;
+            background: #fff;
+            box-shadow: -18px 0 45px rgba(22, 32, 42, 0.18);
+            animation: drawer-in 180ms ease-out;
+          }
+
+          .mobile-drawer-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+          }
+
+          .mobile-drawer-head strong {
+            color: ${INK};
+            font-size: 23px;
+            font-weight: 950;
+            letter-spacing: -0.04em;
+          }
+
+          .mobile-drawer-head strong span {
+            color: ${CORAL};
+          }
+
+          .mobile-drawer-head button {
+            display: grid;
+            place-items: center;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: 1px solid #e7e0ee;
+            border-radius: 12px;
+            background: #fff;
+            color: ${INK};
+          }
+
+          .mobile-drawer-cta {
+            display: grid;
+            place-items: center;
+            min-height: 48px;
+            border-radius: 13px;
+            background: ${GRAD};
+            box-shadow: 0 8px 22px rgba(109, 40, 217, 0.22);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 950;
+            text-decoration: none;
           }
 
           .mobile-links {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
+            gap: 7px;
           }
 
-          .mobile-links :global(a),
-          .mobile-links :global(button) {
+          .mobile-links a,
+          .mobile-links button {
             display: flex;
             align-items: center;
             min-width: 0;
-            min-height: 44px;
-            padding: 10px 12px !important;
-            border: 1px solid #ece7f2 !important;
-            border-radius: 12px !important;
-            background: #faf8fd !important;
+            min-height: 46px;
+            padding: 10px 11px !important;
+            border: 0 !important;
+            border-bottom: 1px solid #eee9f3 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
             color: ${INK} !important;
             font-family: inherit !important;
-            font-size: 14px !important;
+            font-size: 14.5px !important;
             font-weight: 850 !important;
             text-decoration: none;
           }
 
           .mobile-account-actions {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 8px;
+            margin-top: auto;
             padding-top: 12px;
             border-top: 1px solid #eee8f5;
           }
@@ -356,14 +608,42 @@ export default function SiteHeader() {
             text-align: center;
             text-decoration: none;
           }
+
+          @keyframes drawer-in {
+            from {
+              transform: translateX(100%);
+            }
+            to {
+              transform: translateX(0);
+            }
+          }
         }
 
         @media (max-width: 370px) {
-          .mobile-book {
-            padding-inline: 12px;
+          .site-header-bar {
+            padding-inline: 9px !important;
           }
-          .mobile-account-actions {
-            grid-template-columns: 1fr;
+
+          .mobile-quick-link {
+            padding-inline: 6px;
+            font-size: 10.5px;
+          }
+
+          .mobile-profile-button,
+          .mobile-menu-button {
+            width: 36px;
+            height: 36px;
+          }
+
+          .site-logo {
+            font-size: 14.5px !important;
+            letter-spacing: -0.045em !important;
+          }
+        }
+
+        @media (min-width: 701px) {
+          .site-logo {
+            font-size: clamp(26px, 4vw, 34px) !important;
           }
         }
       `}</style>
