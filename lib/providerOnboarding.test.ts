@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canFinalizeProviderPartnership,
   estimateProviderMonthlyEarnings,
   isOptionalUtrNumber,
   isProviderResidentStatus,
@@ -32,4 +33,10 @@ test("UTR is optional but must contain ten digits when supplied", () => {
   assert.equal(isOptionalUtrNumber(""), true);
   assert.equal(isOptionalUtrNumber("1234567890"), true);
   assert.equal(isOptionalUtrNumber("12345"), false);
+});
+
+test("only self-employed professionals can finalize the partnership", () => {
+  assert.equal(canFinalizeProviderPartnership(true), true);
+  assert.equal(canFinalizeProviderPartnership(false), false);
+  assert.equal(canFinalizeProviderPartnership("agree"), false);
 });

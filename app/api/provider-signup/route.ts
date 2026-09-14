@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
 import {
+  canFinalizeProviderPartnership,
   isOptionalUtrNumber,
   isProviderResidentStatus,
   isProviderWeeklyHours,
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (selfEmployed !== true) {
+    if (!canFinalizeProviderPartnership(selfEmployed)) {
       return NextResponse.json(
         { error: "Opulence Bliss can only partner with self-employed professionals." },
         { status: 400 }

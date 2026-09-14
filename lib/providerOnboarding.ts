@@ -36,3 +36,7 @@ export function isProviderResidentStatus(value: unknown) {
 export function isOptionalUtrNumber(value: unknown) {
   return value == null || value === "" || /^\d{10}$/.test(String(value));
 }
+
+export function canFinalizeProviderPartnership(selfEmployed: unknown) {
+  return selfEmployed === true;
+}
