@@ -1018,8 +1018,11 @@ dd,
 
   .worker-status-value {
     max-width: 100%;
-    font-size: clamp(18px, 6.4vw, 24px) !important;
+    font-size: clamp(16px, 4.8vw, 19px) !important;
     line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     overflow-wrap: anywhere;
   }
 
@@ -1077,6 +1080,16 @@ dd,
 
   .worker-payment-row > div:last-child {
     text-align: left !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .worker-status-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .worker-status-value {
+    font-size: 22px !important;
   }
 }
 
