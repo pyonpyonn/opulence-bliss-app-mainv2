@@ -11,7 +11,7 @@ type Mode = "client" | "provider";
 
 const COPY = {
   client: {
-    title: "CLIENT LOGIN",
+    title: "LOGIN",
     body: "Manage your bookings, messages and payments.",
     button: "Log in to my account",
     demoEmail: "client@test.com",
@@ -20,6 +20,9 @@ const COPY = {
     switchText: "Are you an Opulence Bliss professional?",
     switchLabel: "Sign in as a pro",
     switchHref: "/provider/login",
+    signupText: "New client?",
+    signupLabel: "Sign up",
+    signupHref: "/auth/sign-up",
   },
   provider: {
     title: "PROFESSIONAL LOGIN",
@@ -31,6 +34,9 @@ const COPY = {
     switchText: "Looking for your bookings?",
     switchLabel: "Client login",
     switchHref: "/login",
+    signupText: "New professional?",
+    signupLabel: "Sign up",
+    signupHref: "/provider/join",
   },
 } as const;
 
@@ -133,11 +139,9 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
           <a href={content.switchHref}>{content.switchLabel} →</a>
         </div>
 
-        {mode === "provider" && (
-          <p className="join">
-            New professional? <a href="/provider/join">Apply to join us</a>
-          </p>
-        )}
+        <p className="join">
+          {content.signupText} <a href={content.signupHref}>{content.signupLabel}</a>
+        </p>
 
         <Link className="home" href="/">
           ← Back to website

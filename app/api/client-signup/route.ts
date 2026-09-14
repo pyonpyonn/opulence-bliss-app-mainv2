@@ -3,9 +3,10 @@
 // Create a customer account AND their profile in one go, from inside the
 // booking flow. No confirmation email — they're mid-purchase.
 
-import { LEGAL_VERSION, legalLinksReady } from "@/lib/legal";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { LEGAL_VERSION } from "@/lib/legal";
+import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,21 +15,23 @@ const admin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email, password, phone, address, postcode, consentAccepted, requireEmailConfirmation } =
+    const { fullName, salutation, firstName, lastName, email, password, phone, address, postcode, consentAccepted, requireEmailConfirmation } =
       await req.json();
 
-    if (!legalLinksReady) {
-      return NextResponse.json({ error: "Registration is unavailable until the Terms & Conditions and Privacy Policy are published." }, { status: 503 });
-    }
-    if (consentAccepted !== true) {
-      return NextResponse.json({ error: "Accept the Terms & Conditions and Privacy Policy before signing up." }, { status: 400 });
-    }
+    const normalizedEmail = String(email ?? "").trim().toLowerCase();
+    const normalizedPhone = normalizeUkPhone(phone);
 
     if (!fullName || !email || !password) {
       return NextResponse.json(
         { error: "Please fill in your name, email and a password." },
         { status: 400 }
       );
+    }
+    if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(normalizedEmail)) {
+      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    }
+    if (phone && !isValidUkPhone(phone)) {
+      return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
     }
     if (String(password).length < 6) {
       return NextResponse.json(
@@ -37,11 +40,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const consent = { legal_accepted: true, legal_version: LEGAL_VERSION, legal_accepted_at: new Date().toISOString() };
-    const credentials = { email: String(email).trim(), password: String(password) };
+    const userMetadata = {
+      salutation: salutation || null,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      address: address || null,
+      ...(consentAccepted === true
+        ? {
+            legal_accepted: true,
+            legal_version: LEGAL_VERSION,
+            legal_accepted_at: new Date().toISOString(),
+          }
+        : {}),
+    };
+    const credentials = { email: normalizedEmail, password: String(password) };
     const { data: created, error } = requireEmailConfirmation === true
-      ? await admin.auth.signUp({ ...credentials, options: { data: consent } })
-      : await admin.auth.admin.createUser({ ...credentials, email_confirm: true, user_metadata: consent });
+      ? await admin.auth.signUp({ ...credentials, options: { data: userMetadata } })
+      : await admin.auth.admin.createUser({ ...credentials, email_confirm: true, user_metadata: userMetadata });
 
     if (error || !created.user) {
       const msg = error?.message ?? "Could not create your account.";
@@ -61,10 +76,10 @@ export async function POST(req: NextRequest) {
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: created.user.id,
-        email: String(email).trim(),
+        email: normalizedEmail,
         role: "customer",
         full_name: String(fullName).trim(),
-        phone: phone ? String(phone).trim() : null,
+        phone: phone ? normalizedPhone : null,
         address: address ? String(address).trim() : null,
         postcode: postcode ? String(postcode).trim().toUpperCase() : null,
       },
