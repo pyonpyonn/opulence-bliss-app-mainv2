@@ -154,9 +154,11 @@ export default async function AdminCleanersPage() {
                       </Link>
                     </div>
                   </div>
-                  <div>
-                    <VettingButtons id={provider.id} />
-                  </div>
+                  {pending && !provider.is_suspended ? (
+                    <div>
+                      <VettingButtons id={provider.id} />
+                    </div>
+                  ) : null}
                 </article>
               );
             })}

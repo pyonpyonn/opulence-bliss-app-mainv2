@@ -52,14 +52,17 @@ function assertTestMode(tool: string) {
 
 export async function approveProvider(id: string) {
   const s = await requireAdmin();
-  await s.from("providers").update({ vetting_status: "approved" }).eq("id", id);
-
-  // Let them know
-  const { data: p } = await s
+  const { data: p, error } = await s
     .from("providers")
-    .select("profile_id")
+    .update({ vetting_status: "approved" })
     .eq("id", id)
+    .eq("vetting_status", "pending")
+    .select("profile_id")
     .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!p) return;
+
+  // Let them know only when a pending application was actually approved.
   if (p?.profile_id) {
     await s.from("notifications").insert({
       user_id: p.profile_id,
@@ -69,13 +72,25 @@ export async function approveProvider(id: string) {
     });
   }
   revalidatePath("/admin");
+  revalidatePath("/admin/cleaners");
+  revalidatePath(`/admin/cleaners/${id}`);
   revalidatePath("/worker");
 }
 
 export async function rejectProvider(id: string) {
   const s = await requireAdmin();
-  await s.from("providers").update({ vetting_status: "rejected" }).eq("id", id);
+  const { data, error } = await s
+    .from("providers")
+    .update({ vetting_status: "rejected" })
+    .eq("id", id)
+    .eq("vetting_status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return;
   revalidatePath("/admin");
+  revalidatePath("/admin/cleaners");
+  revalidatePath(`/admin/cleaners/${id}`);
   revalidatePath("/worker");
 }
 
