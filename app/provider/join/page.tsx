@@ -8,14 +8,24 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isValidUkPhone } from "@/lib/ukPhone";
+import {
+  estimateProviderMonthlyEarnings,
+  isOptionalUtrNumber,
+  PROVIDER_ESTIMATED_HOURLY_EARNINGS,
+  PROVIDER_MAX_WEEKLY_HOURS,
+  PROVIDER_RESIDENT_STATUSES,
+} from "@/lib/providerOnboarding";
 
 const supabase = createClient();
 
 type Area = { id: string; name: string; postcode_prefixes: string[] };
 
+type JoinStep = "estimate" | "account" | "status" | "work";
+
 export default function ProviderJoinPage() {
   const [areas, setAreas] = useState<Area[]>([]);
-  const [accountStep, setAccountStep] = useState<1 | 2>(1);
+  const [joinStep, setJoinStep] = useState<JoinStep>("estimate");
+  const [weeklyHours, setWeeklyHours] = useState(20);
   const [salutation, setSalutation] = useState<"ms_mrs" | "mr" | "">("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -27,6 +37,9 @@ export default function ProviderJoinPage() {
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [residentStatus, setResidentStatus] = useState("");
+  const [utrNumber, setUtrNumber] = useState("");
+  const [selfEmployed, setSelfEmployed] = useState<"agree" | "disagree" | "">("");
   const skills = ["cleaning"];
   const [areaIds, setAreaIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -76,7 +89,24 @@ export default function ProviderJoinPage() {
       return;
     }
     setErr(null);
-    setAccountStep(2);
+    setJoinStep("status");
+  }
+
+  function continueToWorkAreas() {
+    if (!residentStatus) {
+      setErr("Select your resident status in the UK.");
+      return;
+    }
+    if (selfEmployed !== "agree") {
+      setErr("You must agree to work as self-employed to continue.");
+      return;
+    }
+    if (!isOptionalUtrNumber(utrNumber)) {
+      setErr("Enter all 10 digits of your UTR number, or leave it blank.");
+      return;
+    }
+    setErr(null);
+    setJoinStep("work");
   }
 
   async function submit() {
@@ -99,6 +129,10 @@ export default function ProviderJoinPage() {
           phone: phone.trim(),
           address: address.trim(),
           dateOfBirth,
+          weeklyHours,
+          residentStatus,
+          utrNumber: utrNumber.trim() || null,
+          selfEmployed: selfEmployed === "agree",
           skills,
           areaIds,
         }),
@@ -124,15 +158,11 @@ export default function ProviderJoinPage() {
     }
   }
 
-  const ready = accountReady && skills.length && areaIds.length;
+  const ready = accountReady && residentStatus && selfEmployed === "agree" && skills.length && areaIds.length;
+  const monthlyEstimate = estimateProviderMonthlyEarnings(weeklyHours);
 
   return (
     <main className="wrap">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-      />
-
       <div className="grid">
         {/* ---- The pitch ---- */}
         <section className="pitch">
@@ -177,12 +207,60 @@ export default function ProviderJoinPage() {
           </p>
         </section>
 
-        {/* ---- The form ---- */}
+        {/* ---- In-page application ---- */}
         <section className="form">
-          <h2>Create your provider account</h2>
+          {joinStep === "estimate" && (
+            <div className="estimate-step">
+              <p className="form-kicker">See what your schedule could look like</p>
+              <h2>Choose your weekly availability</h2>
+              <p className="section-intro">
+                Move the slider to estimate your earnings. You can change these hours whenever you need to.
+              </p>
 
-          {accountStep === 1 ? (
+              <div className="availability-card">
+                <div className="availability-heading">
+                  <b>Your availability</b>
+                  <strong>{weeklyHours}hr per week</strong>
+                </div>
+                <input
+                  className="hours-slider"
+                  type="range"
+                  min="0"
+                  max={PROVIDER_MAX_WEEKLY_HOURS}
+                  step="1"
+                  value={weeklyHours}
+                  onChange={(event) => setWeeklyHours(Number(event.target.value))}
+                  aria-label="Weekly availability in hours"
+                />
+                <div className="range-labels" aria-hidden="true">
+                  <span>0hr</span>
+                  <span>40hr</span>
+                </div>
+
+                <div className="simulation">
+                  <p>Your simulation</p>
+                  <div>
+                    <span>On average<strong>£{PROVIDER_ESTIMATED_HOURLY_EARNINGS}/hr</strong></span>
+                    <span>That&apos;s about<strong>£{monthlyEstimate.toLocaleString("en-GB")}/month</strong></span>
+                  </div>
+                </div>
+                <p className="estimate-note">Estimate before tax, based on the hours you choose.</p>
+              </div>
+
+              <button className="go" type="button" onClick={() => setJoinStep("account")}>
+                Join for free
+              </button>
+              <p className="small">No joining fee. Your application stays on this page.</p>
+            </div>
+          )}
+
+          {joinStep === "account" && (
             <div className="account-fields">
+              <button className="step-back" type="button" onClick={() => setJoinStep("estimate")}>
+                ← Back
+              </button>
+              <p className="form-kicker">Professional application</p>
+              <h2>Create your provider account</h2>
               <fieldset className="title-options">
                 <legend className="sr-only">Title</legend>
                 <label className="title-option">
@@ -313,8 +391,86 @@ export default function ProviderJoinPage() {
                 Next
               </button>
             </div>
-          ) : (
+          )}
+
+          {joinStep === "status" && selfEmployed !== "disagree" && (
+            <div className="status-fields">
+              <button className="step-back" type="button" onClick={() => setJoinStep("account")}>
+                ← Back
+              </button>
+              <p className="form-kicker">Professional application</p>
+              <h2>What&apos;s your professional status?</h2>
+
+              <label htmlFor="provider-resident-status">Resident status in the UK</label>
+              <select
+                id="provider-resident-status"
+                value={residentStatus}
+                onChange={(event) => setResidentStatus(event.target.value)}
+              >
+                <option value="" disabled>Select your resident status</option>
+                {PROVIDER_RESIDENT_STATUSES.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+
+              <label htmlFor="provider-utr">UTR number <span>(optional)</span></label>
+              <input
+                id="provider-utr"
+                value={utrNumber}
+                onChange={(event) => setUtrNumber(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="Enter your 10-digit UTR if you have one"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+              <p className="help-copy">You can continue if you do not have a UTR number yet.</p>
+
+              <div className="employment-card">
+                <h3>Partnership with Opulence Bliss</h3>
+                <p>Professionals using Opulence Bliss work on a self-employed basis.</p>
+                <fieldset className="employment-options">
+                  <legend>Do you agree to work as self-employed?</legend>
+                  <label>
+                    <input type="radio" name="self-employed" checked={selfEmployed === "agree"} onChange={() => setSelfEmployed("agree")} />
+                    <span aria-hidden="true" /> Agree
+                  </label>
+                  <label>
+                    <input type="radio" name="self-employed" checked={false} onChange={() => setSelfEmployed("disagree")} />
+                    <span aria-hidden="true" /> Disagree
+                  </label>
+                </fieldset>
+              </div>
+
+              <button className="go next" type="button" onClick={continueToWorkAreas}>
+                Next
+              </button>
+            </div>
+          )}
+
+          {joinStep === "status" && selfEmployed === "disagree" && (
+            <div className="unable-panel" role="status">
+              <button className="step-back" type="button" onClick={() => setSelfEmployed("")}>
+                ← Change answer
+              </button>
+              <div className="unable-heading">
+                <span aria-hidden="true">😥</span>
+                <h2>Unable to finalize partnership</h2>
+              </div>
+              <div className="unable-copy">
+                <p>Opulence Bliss only works with self-employed professionals.</p>
+                <p>To become an Opulence Bliss partner, you must want to be self-employed.</p>
+                <p>If you change your mind, choose “Change answer” and select Agree.</p>
+                <p>We look forward to hearing from you.</p>
+              </div>
+            </div>
+          )}
+
+          {joinStep === "work" && (
             <div className="work-fields">
+              <button className="step-back" type="button" onClick={() => setJoinStep("status")} disabled={busy}>
+                ← Back
+              </button>
+              <p className="form-kicker">Final step</p>
+              <h2>Where would you like to work?</h2>
               <p className="section-intro">
                 Choose where you would like to work. You can change your hours later in the professional portal.
               </p>
@@ -344,9 +500,6 @@ export default function ProviderJoinPage() {
               </div>
 
               <div className="form-actions">
-                <button className="back" type="button" onClick={() => setAccountStep(1)} disabled={busy}>
-                  Back
-                </button>
                 <button className="go" type="button" onClick={submit} disabled={busy || !ready}>
                   {busy ? step || "Working…" : "Create professional account"}
                 </button>
@@ -409,6 +562,12 @@ export default function ProviderJoinPage() {
           font-size: 24px;
           color: #16202A;
           margin: 0 0 20px;
+        }
+        h3 {
+          margin: 0 0 8px;
+          color: #16202A;
+          font-size: 17px;
+          font-weight: 900;
         }
         .lede {
           color: #7A828C;
@@ -500,6 +659,109 @@ export default function ProviderJoinPage() {
           padding: 34px 32px;
           box-shadow: 0 20px 54px rgba(76,29,149, 0.12);
         }
+        .form-kicker {
+          margin: 0 0 7px;
+          color: #6D28D9;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+        .step-back {
+          width: max-content;
+          margin: 0 0 24px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: #6D28D9;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+        .availability-card {
+          padding: 22px;
+          border: 1px solid #E2D5F8;
+          border-radius: 18px;
+          background: linear-gradient(145deg, #FFF8E7 0%, #F4ECFE 100%);
+        }
+        .availability-heading {
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          align-items: center;
+          margin-bottom: 15px;
+          color: #16202A;
+          font-size: 15px;
+        }
+        .availability-heading strong {
+          white-space: nowrap;
+          font-weight: 900;
+        }
+        input.hours-slider {
+          width: 100%;
+          min-height: 0;
+          height: 22px;
+          margin: 0;
+          padding: 0;
+          border: 0;
+          border-radius: 999px;
+          background: transparent;
+          box-shadow: none;
+          accent-color: #7B2FF7;
+          cursor: pointer;
+        }
+        input.hours-slider:focus-visible {
+          box-shadow: none;
+          outline: 3px solid rgba(109,40,217,0.2);
+          outline-offset: 5px;
+        }
+        .range-labels {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 1px;
+          color: #7A828C;
+          font-size: 11px;
+          font-weight: 800;
+        }
+        .simulation {
+          margin-top: 18px;
+          padding: 18px;
+          border: 1.5px solid #16202A;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.58);
+        }
+        .simulation > p {
+          margin: 0 0 14px;
+          color: #6D28D9;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+        .simulation > div {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+        .simulation span {
+          display: grid;
+          gap: 3px;
+          color: #535D69;
+          font-size: 12px;
+        }
+        .simulation strong {
+          color: #16202A;
+          font-size: 24px;
+          font-weight: 900;
+          line-height: 1.05;
+        }
+        .estimate-note {
+          margin: 12px 0 0;
+          color: #7A828C;
+          font-size: 11px;
+          text-align: center;
+        }
         label {
           display: block;
           font-size: 13.5px;
@@ -524,14 +786,139 @@ export default function ProviderJoinPage() {
           border-color: #6D28D9;
           box-shadow: 0 0 0 3px rgba(109,40,217, 0.09);
         }
+        select {
+          width: 100%;
+          min-height: 56px;
+          box-sizing: border-box;
+          margin: 0 0 18px;
+          padding: 14px 44px 14px 16px;
+          border: 1.5px solid #D9DDE3;
+          border-radius: 13px;
+          background: #fff;
+          color: #16202A;
+          font: inherit;
+          font-size: 15px;
+        }
+        select:focus-visible {
+          border-color: #6D28D9;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(109,40,217,0.09);
+        }
         input.invalid,
         input.invalid:focus-visible {
           border-color: #E5394F;
           box-shadow: 0 0 0 3px rgba(229,57,79, 0.08);
         }
         .account-fields,
+        .status-fields,
         .work-fields {
           display: grid;
+        }
+        .help-copy {
+          margin: -8px 2px 20px;
+          color: #7A828C;
+          font-size: 12px;
+        }
+        .status-fields label > span {
+          color: #8C95A0;
+          font-weight: 600;
+        }
+        .employment-card {
+          margin: 2px 0 18px;
+          padding: 19px;
+          border: 1px solid #E2D5F8;
+          border-radius: 15px;
+          background: #FAF7FF;
+        }
+        .employment-card > p {
+          margin: 0 0 16px;
+          color: #68717D;
+          font-size: 13.5px;
+          line-height: 1.5;
+        }
+        .employment-options {
+          display: grid;
+          gap: 12px;
+          margin: 0;
+          padding: 0;
+          border: 0;
+        }
+        .employment-options legend {
+          margin-bottom: 12px;
+          color: #16202A;
+          font-size: 13.5px;
+          font-weight: 900;
+        }
+        .employment-options label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 0;
+          color: #16202A;
+          font-size: 14px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .employment-options input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          min-height: 0;
+          margin: 0;
+          opacity: 0;
+        }
+        .employment-options label > span {
+          width: 22px;
+          height: 22px;
+          box-sizing: border-box;
+          border: 1.5px solid #8E96A1;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: inset 0 0 0 5px #fff;
+        }
+        .employment-options input:checked + span {
+          border-color: #6D28D9;
+          background: #6D28D9;
+        }
+        .employment-options input:focus-visible + span {
+          outline: 3px solid rgba(109,40,217,0.18);
+          outline-offset: 2px;
+        }
+        .unable-panel {
+          display: grid;
+          min-height: 440px;
+          align-content: center;
+          padding: 4px;
+        }
+        .unable-heading {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          margin-bottom: 20px;
+        }
+        .unable-heading > span {
+          order: 2;
+          font-size: 36px;
+        }
+        .unable-heading h2 {
+          margin-bottom: 8px;
+          font-size: clamp(29px, 4vw, 38px);
+          line-height: 1.02;
+        }
+        .unable-copy {
+          padding: 20px;
+          border: 1px solid #DDD1F5;
+          border-radius: 16px;
+          background: linear-gradient(145deg, #FFF8E7, #F4ECFE);
+        }
+        .unable-copy p {
+          margin: 0 0 14px;
+          color: #343D48;
+          font-size: 14px;
+          line-height: 1.55;
+        }
+        .unable-copy p:last-child {
+          margin-bottom: 0;
         }
         .title-options {
           display: flex;

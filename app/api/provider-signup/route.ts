@@ -5,6 +5,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
+import {
+  isOptionalUtrNumber,
+  isProviderResidentStatus,
+  isProviderWeeklyHours,
+} from "@/lib/providerOnboarding";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,6 +28,10 @@ export async function POST(req: NextRequest) {
       phone,
       address,
       dateOfBirth,
+      weeklyHours,
+      residentStatus,
+      utrNumber,
+      selfEmployed,
       skills,
       areaIds,
     } = await req.json();
@@ -38,7 +47,8 @@ export async function POST(req: NextRequest) {
       !lastName ||
       !phone ||
       !address ||
-      !dateOfBirth
+      !dateOfBirth ||
+      !residentStatus
     ) {
       return NextResponse.json(
         { error: "Complete every account field before continuing." },
@@ -54,6 +64,30 @@ export async function POST(req: NextRequest) {
     if (!isValidUkPhone(phone)) {
       return NextResponse.json(
         { error: "Invalid phone number" },
+        { status: 400 }
+      );
+    }
+    if (!isProviderWeeklyHours(weeklyHours)) {
+      return NextResponse.json(
+        { error: "Weekly availability must be between 0 and 40 hours." },
+        { status: 400 }
+      );
+    }
+    if (!isProviderResidentStatus(residentStatus)) {
+      return NextResponse.json(
+        { error: "Select a valid resident status in the UK." },
+        { status: 400 }
+      );
+    }
+    if (!isOptionalUtrNumber(utrNumber)) {
+      return NextResponse.json(
+        { error: "The UTR number must contain 10 digits, or be left blank." },
+        { status: 400 }
+      );
+    }
+    if (selfEmployed !== true) {
+      return NextResponse.json(
+        { error: "Opulence Bliss can only partner with self-employed professionals." },
         { status: 400 }
       );
     }
@@ -142,7 +176,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Coverage areas.
+    // 4. Private onboarding details for application review.
+    const { error: onboardingErr } = await admin
+      .from("provider_onboarding_details")
+      .insert({
+        provider_id: prov.id,
+        preferred_weekly_hours: weeklyHours,
+        resident_status: residentStatus,
+        utr_number: utrNumber ? String(utrNumber) : null,
+        self_employed_confirmed: true,
+      });
+
+    if (onboardingErr) {
+      return NextResponse.json(
+        { error: onboardingErr.message || "Could not save the professional onboarding details." },
+        { status: 500 }
+      );
+    }
+
+    // 5. Coverage areas.
     await admin.from("provider_service_areas").insert(
       (areaIds as string[]).map((id) => ({
         provider_id: prov.id,
@@ -150,7 +202,7 @@ export async function POST(req: NextRequest) {
       }))
     );
 
-    // 5. Default hours: Mon–Fri, 09:00–17:00 (they can change these later).
+    // 6. Default hours: Mon–Fri, 09:00–17:00 (they can change these later).
     await admin.from("provider_availability").insert(
       [1, 2, 3, 4, 5].map((weekday) => ({
         provider_id: prov.id,
