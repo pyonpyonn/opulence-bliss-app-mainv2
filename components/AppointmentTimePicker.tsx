@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { londonDateKey } from "@/lib/appointmentWindow";
 import styles from "./AppointmentTimePicker.module.css";
-import { MAX_OPTIONAL_BOOKING_TIMES } from "@/lib/bookingTimeChoices";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -173,7 +172,7 @@ export default function AppointmentTimePicker({
             onClick={() => setChoiceMode("optional")}
           >
             <b>Optional Times</b>
-            <span>{alternatives.length}/{MAX_OPTIONAL_BOOKING_TIMES} added</span>
+            <span>{alternatives.length} added</span>
           </button>
         </div>
       )}
@@ -235,7 +234,7 @@ export default function AppointmentTimePicker({
               <span>
                 {choiceMode === "preferred"
                   ? `${times.length} start times available`
-                  : `Choose up to ${MAX_OPTIONAL_BOOKING_TIMES} other times`}
+                  : "Choose every other time that works for you"}
               </span>
             </div>
           </div>
@@ -261,7 +260,7 @@ export default function AppointmentTimePicker({
                     onOptionalValuesChange?.(
                       alternatives.filter((candidate) => candidate !== iso),
                     );
-                  } else if (alternatives.length < MAX_OPTIONAL_BOOKING_TIMES) {
+                  } else {
                     onOptionalValuesChange?.([...alternatives, iso]);
                   }
                 }}>

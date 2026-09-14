@@ -3,8 +3,6 @@ import {
   appointmentWithinBookingHorizon,
 } from "./appointmentWindow";
 
-export const MAX_OPTIONAL_BOOKING_TIMES = 5;
-
 export function normaliseOptionalBookingTimes(
   input: unknown,
   preferredTime: string,
@@ -13,10 +11,6 @@ export function normaliseOptionalBookingTimes(
 ) {
   if (input === undefined || input === null) return [];
   if (!Array.isArray(input)) throw new Error("Optional times must be a list.");
-  if (input.length > MAX_OPTIONAL_BOOKING_TIMES) {
-    throw new Error(`Choose up to ${MAX_OPTIONAL_BOOKING_TIMES} optional times.`);
-  }
-
   const preferred = new Date(preferredTime).getTime();
   const seen = new Set<number>();
   const result: string[] = [];

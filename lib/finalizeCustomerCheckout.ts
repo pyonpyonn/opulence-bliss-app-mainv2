@@ -19,7 +19,13 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   const packageId = m.package_id || null;
   const postcode = m.postcode || null;
   const request = m.request || null;
-  const slot = m.slot || null;
+  const { data: stagedChoices } = await admin
+    .from("booking_checkout_time_choices")
+    .select("preferred_scheduled_at, optional_scheduled_at")
+    .eq("checkout_session_id", session.id)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+  const slot = stagedChoices?.preferred_scheduled_at || m.slot || null;
   const serviceAddress = m.service_address?.trim() || null;
   const frequency = m.booking_frequency || "one_time";
 
@@ -42,7 +48,7 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   let optionalSlots: string[];
   try {
     optionalSlots = normaliseOptionalBookingTimes(
-      JSON.parse(m.optional_slots || "[]"),
+      stagedChoices?.optional_scheduled_at ?? JSON.parse(m.optional_slots || "[]"),
       slot,
       minutes,
       null,
@@ -105,6 +111,11 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
     p_payment_status: pi.status === "succeeded" ? "succeeded" : "authorised",
   });
   if (bookingError || !bookingId) throw bookingError ?? new Error("Booking insert failed");
+
+  await admin
+    .from("booking_checkout_time_choices")
+    .delete()
+    .eq("checkout_session_id", session.id);
 
   // A paid booking is confirmed as soon as the transaction above commits.
   // Provider matching is follow-up work and must never turn a saved booking into

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { londonDate } from "./appointmentWindow";
 import {
-  MAX_OPTIONAL_BOOKING_TIMES,
   normaliseOptionalBookingTimes,
 } from "./bookingTimeChoices";
 
@@ -36,7 +35,7 @@ test("optional booking times must be distinct from the preferred time", () => {
   );
 });
 
-test("optional booking times use the same booking window and limit", () => {
+test("optional booking times use the same booking window", () => {
   assert.throws(
     () =>
       normaliseOptionalBookingTimes(
@@ -47,17 +46,14 @@ test("optional booking times use the same booking window and limit", () => {
       ),
     /valid/,
   );
-  assert.throws(
-    () =>
-      normaliseOptionalBookingTimes(
-        Array.from({ length: MAX_OPTIONAL_BOOKING_TIMES + 1 }, (_, index) =>
-          londonDate(2026, 9, 21 + index, 9).toISOString(),
-        ),
-        preferred,
-        120,
-        now,
-      ),
-    /up to 5/,
-  );
 });
 
+test("customers can add every valid optional time without an arbitrary cap", () => {
+  const alternatives = Array.from({ length: 40 }, (_, index) =>
+    londonDate(2026, 9, 21 + index, 9).toISOString(),
+  );
+  assert.equal(
+    normaliseOptionalBookingTimes(alternatives, preferred, 120, now).length,
+    40,
+  );
+});

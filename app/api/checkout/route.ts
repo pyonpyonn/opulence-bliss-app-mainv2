@@ -236,7 +236,6 @@ export async function POST(req: NextRequest) {
           postcode: postcode ?? "",
           request: (request ?? "").slice(0, 480),
           slot: slot ?? "",
-          optional_slots: JSON.stringify(alternativeTimes),
           provider_amount: String(providerAmount),
           platform_margin: String(platformFee),
           promo_code: appliedCode ?? "",
@@ -246,6 +245,26 @@ export async function POST(req: NextRequest) {
       success_url: `${req.nextUrl.origin}/api/book/finalize?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.nextUrl.origin}/book?canceled=1`,
     });
+
+    // Stripe metadata is intentionally small and cannot safely carry every
+    // time a customer may select. Stage the complete list by checkout ID and
+    // consume it only after Stripe confirms the payment authorisation.
+    const { error: timeChoicesError } = await supabaseAdmin
+      .from("booking_checkout_time_choices")
+      .upsert({
+        checkout_session_id: session.id,
+        customer_id: user.id,
+        preferred_scheduled_at: slot,
+        optional_scheduled_at: alternativeTimes,
+      });
+    if (timeChoicesError) {
+      await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+      console.error("Could not stage booking time choices:", timeChoicesError);
+      return NextResponse.json(
+        { error: "Could not save your time choices. No payment has been taken." },
+        { status: 503 },
+      );
+    }
 
     return NextResponse.json({ url: session.url });
   } catch (e) {
