@@ -55,10 +55,33 @@ export default function SiteHeader() {
 
   useEffect(() => {
     if (!mobileOpen) return;
-    const previous = document.body.style.overflow;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const root = document.documentElement;
+    const previous = {
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      rootOverflow: root.style.overflow,
+      rootOverscroll: root.style.overscrollBehavior,
+    };
+
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
     document.body.style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = previous;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.width = previous.bodyWidth;
+      root.style.overflow = previous.rootOverflow;
+      root.style.overscrollBehavior = previous.rootOverscroll;
+      window.scrollTo(0, scrollY);
     };
   }, [mobileOpen]);
 
@@ -229,8 +252,7 @@ export default function SiteHeader() {
                 ) : (
                   <>
                     <p>Continue as</p>
-                    <Link href="/login">Client log in</Link>
-                    <Link href="/auth/sign-up">Create client account</Link>
+                    <Link href="/login">Login</Link>
                     <Link href="/provider/login">Professional log in</Link>
                     <Link href="/provider/join">Become a professional</Link>
                   </>
@@ -329,7 +351,7 @@ export default function SiteHeader() {
             </nav>
 
             <div className="mobile-account-actions">
-              <Link href={accountHref}>{role ? "Open my account" : "Client log in"}</Link>
+              <Link href={accountHref}>{role ? "Open my account" : "Login"}</Link>
               {!role && <Link href="/provider/login">Professional log in</Link>}
             </div>
           </aside>
