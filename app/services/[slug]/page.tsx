@@ -4,7 +4,7 @@
 //
 // Public cleaning service category page.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 
@@ -118,6 +118,21 @@ export default function ServicePage() {
   const [postcode, setPostcode] = useState("");
   const [open, setOpen] = useState<number | null>(0);
 
+  // Which service the detail view is showing.
+  const [picked, setPicked] = useState<string | null>(null);
+  // Below this width the detail view behaves as a modal bottom sheet.
+  const [isNarrow, setIsNarrow] = useState(false);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const lastTileRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 899px)");
+    const sync = () => setIsNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -157,6 +172,42 @@ export default function ServicePage() {
   const bookLink = `/book?type=${copy.match}${
     postcode ? `&pc=${encodeURIComponent(postcode)}` : ""
   }`;
+
+  const POPULAR = "Essential Clean";
+  const selected = items.find((i) => i.id === picked) ?? null;
+
+  // Desktop always shows a panel, so pre-select rather than leave a gap.
+  // Mobile opens nothing until the user taps.
+  useEffect(() => {
+    if (!items.length) return;
+    if (isNarrow) return;
+    setPicked((prev) =>
+      prev && items.some((i) => i.id === prev)
+        ? prev
+        : (items.find((i) => i.name === POPULAR) ?? items[0]).id,
+    );
+  }, [items, isNarrow]);
+
+  const closeSheet = useCallback(() => {
+    setPicked(null);
+    lastTileRef.current?.focus();
+  }, []);
+
+  // Sheet is modal on mobile only: lock the page behind it and wire Escape.
+  useEffect(() => {
+    if (!isNarrow || !selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeSheet();
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    sheetRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [isNarrow, selected, closeSheet]);
 
   return (
     <div className="page">
@@ -298,30 +349,104 @@ export default function ServicePage() {
           {items.length === 0 ? (
             <p className="muted">Loading…</p>
           ) : (
-            <div className="grid">
-              {items.map((p) => (
-                <article key={p.id} className={p.name === "Essential Clean" ? "card pop" : "card"}>
-                  {p.name === "Essential Clean" && <span className="pill">Popular</span>}
-                  <h3>{p.name}</h3>
-                  <p className="price">
-                    £{(cleaningHourlyRatePence(p) / 100).toFixed(2)}
-                    <span>
-                      {" "}per hour · 2-hour minimum
-                    </span>
-                  </p>
-                  {p.description && <p className="desc">{p.description}</p>}
-                  {p.inclusions && (
-                    <ul>
-                      {p.inclusions.map((x) => (
-                        <li key={x}>{x}</li>
-                      ))}
-                    </ul>
+            <div className="svc-layout">
+              <ul className="tiles">
+                {items.map((pkg) => {
+                  const active = picked === pkg.id;
+                  return (
+                    <li key={pkg.id}>
+                      <button
+                        type="button"
+                        className={`tile${active ? " on" : ""}${
+                          pkg.name === POPULAR ? " pop" : ""
+                        }`}
+                        aria-expanded={active}
+                        aria-controls="svc-detail"
+                        onClick={(e) => {
+                          lastTileRef.current = e.currentTarget;
+                          setPicked((prev) =>
+                            prev === pkg.id && isNarrow ? null : pkg.id,
+                          );
+                        }}
+                      >
+                        {pkg.name === POPULAR && (
+                          <span className="tile-pill">Popular</span>
+                        )}
+                        <span className="tile-name">{pkg.name}</span>
+                        <span className="tile-price">
+                          £{(cleaningHourlyRatePence(pkg) / 100).toFixed(2)}
+                          <small>/hr</small>
+                        </span>
+                        <span className="tile-more" aria-hidden="true">
+                          Details
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {isNarrow && selected && (
+                <div
+                  className="sheet-backdrop"
+                  onClick={closeSheet}
+                  aria-hidden="true"
+                />
+              )}
+
+              {selected && (
+                <div
+                  id="svc-detail"
+                  ref={sheetRef}
+                  tabIndex={-1}
+                  className="detail"
+                  role={isNarrow ? "dialog" : undefined}
+                  aria-modal={isNarrow ? true : undefined}
+                  aria-label={isNarrow ? selected.name : undefined}
+                >
+                  {isNarrow && (
+                    <button
+                      type="button"
+                      className="sheet-close"
+                      onClick={closeSheet}
+                    >
+                      Close
+                    </button>
                   )}
-                  <a className="btn ghost" href={bookLink}>
+                  <span className="detail-grip" aria-hidden="true" />
+                  <h3>{selected.name}</h3>
+                  <p className="detail-price">
+                    £{(cleaningHourlyRatePence(selected) / 100).toFixed(2)}
+                    <span> per hour · 2-hour minimum</span>
+                  </p>
+                  {selected.description && (
+                    <p className="detail-desc">{selected.description}</p>
+                  )}
+                  {selected.inclusions && selected.inclusions.length > 0 && (
+                    <>
+                      <p className="detail-label">What&apos;s included</p>
+                      <ul className="detail-list">
+                        {selected.inclusions.map((x) => (
+                          <li key={x}>{x}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {selected.good_to_know && selected.good_to_know.length > 0 && (
+                    <>
+                      <p className="detail-label">Good to know</p>
+                      <ul className="detail-list subtle">
+                        {selected.good_to_know.map((x) => (
+                          <li key={x}>{x}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  <a className="btn" href={bookLink}>
                     Book this
                   </a>
-                </article>
-              ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -672,74 +797,180 @@ export default function ServicePage() {
           max-width: 62ch;
           margin: -8px 0 26px;
         }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
-          gap: 18px;
-        }
-        .card {
-          position: relative;
-          background: #fff;
-          border: 1.5px solid var(--line);
-          border-radius: 18px;
-          padding: 26px 24px;
-          display: flex;
-          flex-direction: column;
-        }
-        .card.pop {
-          border-color: var(--apricot);
-        }
-        .pill {
-          position: absolute;
-          top: -11px;
-          right: 20px;
-          background: var(--apricot-deep);
-          color: #fff;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          padding: 4px 12px;
-          border-radius: 999px;
-        }
         h3 {
           font-size: 21px;
           margin: 0 0 6px;
         }
-        .price {
-          font-family: "Nunito", system-ui, sans-serif;
-          font-size: 27px;
-          color: var(--ink);
-          margin: 0 0 12px;
+        /* Grid of compact tiles on the left, detail view on the right.
+           Below 900px the detail becomes a modal bottom sheet instead. */
+        .svc-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 340px;
+          gap: 24px;
+          align-items: start;
         }
-        .price span {
-          font-family: "Nunito", sans-serif;
-          font-size: 13px;
+        .tiles {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          grid-auto-rows: 1fr;
+          gap: 12px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+        .tiles > li {
+          display: grid;
+          min-width: 0;
+        }
+        .tile {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          width: 100%;
+          min-width: 0;
+          min-height: 122px;
+          padding: 16px 14px 14px;
+          border: 1.5px solid var(--line);
+          border-radius: 16px;
+          background: #fff;
+          color: var(--ink);
+          font: inherit;
+          text-align: left;
+          cursor: pointer;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease,
+            transform 0.15s ease;
+        }
+        .tile.pop {
+          border-color: var(--apricot);
+        }
+        .tile.on {
+          border-color: var(--apricot-deep);
+          box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.16);
+        }
+        .tile:focus-visible {
+          outline: 3px solid rgba(109, 40, 217, 0.35);
+          outline-offset: 2px;
+        }
+        /* Hover effects only where a real pointer exists, so phones never
+           get stuck in a half-applied hover state after a tap. */
+        @media (hover: hover) and (pointer: fine) {
+          .tile:hover {
+            border-color: var(--apricot-deep);
+            transform: translateY(-2px);
+          }
+        }
+        .tile-name {
+          font-size: 14.5px;
+          font-weight: 800;
+          line-height: 1.25;
+          overflow-wrap: anywhere;
+        }
+        .tile-price {
+          margin-top: auto;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1.1;
+        }
+        .tile-price small {
+          font-size: 12px;
+          font-weight: 700;
           color: var(--muted);
         }
-        .desc {
+        .tile-more {
+          color: var(--apricot-deep);
+          font-size: 11.5px;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        .tile-pill {
+          position: absolute;
+          top: -9px;
+          right: 10px;
+          padding: 3px 9px;
+          border-radius: 999px;
+          background: var(--apricot-deep);
+          color: #fff;
+          font-size: 9.5px;
+          font-weight: 800;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+        }
+        .detail {
+          position: sticky;
+          top: 24px;
+          min-width: 0;
+          padding: 22px 22px 24px;
+          border: 1.5px solid var(--line);
+          border-top: 4px solid var(--apricot-deep);
+          border-radius: 18px;
+          background: #fff;
+          box-shadow: 0 14px 38px rgba(22, 32, 42, 0.08);
+        }
+        .detail:focus {
+          outline: none;
+        }
+        .detail-grip {
+          display: none;
+        }
+        .detail-price {
+          margin: 0 0 14px;
+          font-size: 25px;
+          font-weight: 900;
+          line-height: 1.15;
+        }
+        .detail-price span {
+          /* Own line, so "2-hour minimum" never orphans a word in the
+             narrow desktop panel. */
+          display: block;
+          margin-top: 2px;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--muted);
+        }
+        .detail-desc {
+          margin: 0 0 16px;
           color: var(--muted);
           font-size: 14.5px;
-          margin: 0 0 14px;
+          line-height: 1.55;
         }
-        .card ul {
-          list-style: none;
-          padding: 0;
-          margin: 0 0 22px;
+        .detail-label {
+          margin: 0 0 8px;
+          color: var(--apricot-deep);
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+        .detail-list {
           display: grid;
-          gap: 8px;
+          gap: 7px;
+          margin: 0 0 18px;
+          padding: 0;
+          list-style: none;
         }
-        .card li {
-          font-size: 14px;
-          padding-left: 18px;
+        .detail-list li {
           position: relative;
+          padding-left: 18px;
+          font-size: 14px;
+          line-height: 1.45;
+          overflow-wrap: anywhere;
         }
-        .card li::before {
+        .detail-list li::before {
           content: "·";
           position: absolute;
           left: 5px;
           color: var(--apricot-deep);
           font-weight: 700;
+        }
+        .detail-list.subtle li {
+          color: var(--muted);
+          font-size: 13.5px;
+        }
+        .sheet-backdrop,
+        .sheet-close {
+          display: none;
         }
 
         /* also */
@@ -828,7 +1059,102 @@ export default function ServicePage() {
             grid-template-columns: 1fr;
           }
         }
+        /* Detail becomes a modal bottom sheet. Matches the 899px
+           matchMedia query that switches the ARIA role in the component. */
+        @media (max-width: 899px) {
+          .svc-layout {
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .tiles {
+            /* Tablets fit more than two; phones fall to two on their own. */
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+          }
+          .tile {
+            min-height: 116px;
+            padding: 15px 13px 13px;
+          }
+          .sheet-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: block;
+            background: rgba(22, 32, 42, 0.45);
+            animation: sheet-fade 0.18s ease-out;
+          }
+          .detail {
+            position: fixed;
+            inset: auto 0 0 0;
+            z-index: 81;
+            max-height: 84vh;
+            max-height: 84dvh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 18px calc(22px + env(safe-area-inset-bottom));
+            border: 0;
+            border-top: 4px solid var(--apricot-deep);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -12px 40px rgba(22, 32, 42, 0.22);
+            animation: sheet-up 0.22s ease-out;
+          }
+          .detail h3 {
+            /* Keep clear of the Close button. */
+            padding-right: 84px;
+          }
+          .detail-grip {
+            display: block;
+            width: 42px;
+            height: 4px;
+            margin: 0 auto 14px;
+            border-radius: 999px;
+            background: var(--line);
+          }
+          .sheet-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            display: block;
+            padding: 6px 12px;
+            border: 1.5px solid var(--line);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+          }
+        }
+        @keyframes sheet-up {
+          from {
+            transform: translateY(14px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes sheet-fade {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .tile,
+          .detail,
+          .sheet-backdrop {
+            transition: none;
+            animation: none;
+          }
+        }
         @media (max-width: 620px) {
+          .tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
           .inner,
           .topbar,
           .servicenav {
