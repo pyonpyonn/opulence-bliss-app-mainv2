@@ -394,59 +394,67 @@ export default function ServicePage() {
                 />
               )}
 
-              {selected && (
-                <div
-                  id="svc-detail"
-                  ref={sheetRef}
-                  tabIndex={-1}
-                  className="detail"
-                  role={isNarrow ? "dialog" : undefined}
-                  aria-modal={isNarrow ? true : undefined}
-                  aria-label={isNarrow ? selected.name : undefined}
-                >
-                  {isNarrow && (
-                    <button
-                      type="button"
-                      className="sheet-close"
-                      onClick={closeSheet}
-                    >
-                      Close
-                    </button>
-                  )}
-                  <span className="detail-grip" aria-hidden="true" />
-                  <h3>{selected.name}</h3>
-                  <p className="detail-price">
-                    £{(cleaningHourlyRatePence(selected) / 100).toFixed(2)}
-                    <span> per hour · 2-hour minimum</span>
-                  </p>
-                  {selected.description && (
-                    <p className="detail-desc">{selected.description}</p>
-                  )}
-                  {selected.inclusions && selected.inclusions.length > 0 && (
-                    <>
-                      <p className="detail-label">What&apos;s included</p>
-                      <ul className="detail-list">
-                        {selected.inclusions.map((x) => (
-                          <li key={x}>{x}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  {selected.good_to_know && selected.good_to_know.length > 0 && (
-                    <>
-                      <p className="detail-label">Good to know</p>
-                      <ul className="detail-list subtle">
-                        {selected.good_to_know.map((x) => (
-                          <li key={x}>{x}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  <a className="btn" href={bookLink}>
-                    Book this
-                  </a>
-                </div>
-              )}
+              {/* Fixed-height column. Panel content varies a lot between
+                  services, so without a reserve the whole page below
+                  shifts every time the selection changes. */}
+              <div className="detail-col">
+                {selected && (
+                  <div
+                    id="svc-detail"
+                    ref={sheetRef}
+                    tabIndex={-1}
+                    className="detail"
+                    role={isNarrow ? "dialog" : undefined}
+                    aria-modal={isNarrow ? true : undefined}
+                    aria-label={isNarrow ? selected.name : undefined}
+                  >
+                    {isNarrow && (
+                      <button
+                        type="button"
+                        className="sheet-close"
+                        onClick={closeSheet}
+                      >
+                        Close
+                      </button>
+                    )}
+                    <span className="detail-grip" aria-hidden="true" />
+                    <div className="detail-body">
+                      <h3>{selected.name}</h3>
+                      <p className="detail-price">
+                        £{(cleaningHourlyRatePence(selected) / 100).toFixed(2)}
+                        <span> per hour · 2-hour minimum</span>
+                      </p>
+                      {selected.description && (
+                        <p className="detail-desc">{selected.description}</p>
+                      )}
+                      {selected.inclusions && selected.inclusions.length > 0 && (
+                        <>
+                          <p className="detail-label">What&apos;s included</p>
+                          <ul className="detail-list">
+                            {selected.inclusions.map((x) => (
+                              <li key={x}>{x}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      {selected.good_to_know &&
+                        selected.good_to_know.length > 0 && (
+                          <>
+                            <p className="detail-label">Good to know</p>
+                            <ul className="detail-list subtle">
+                              {selected.good_to_know.map((x) => (
+                                <li key={x}>{x}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                    </div>
+                    <a className="btn detail-cta" href={bookLink}>
+                      Book this
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -807,9 +815,21 @@ export default function ServicePage() {
           display: grid;
           grid-template-columns: minmax(0, 1fr) 340px;
           gap: 24px;
-          align-items: start;
+          align-items: stretch;
+        }
+        /* The panel is absolutely positioned inside this column, so its
+           content height never feeds back into the row height. The row is
+           pinned by the reserve below, which keeps everything further down
+           the page still when the selection changes. */
+        .detail-col {
+          position: relative;
+          min-width: 0;
+          min-height: 660px;
         }
         .tiles {
+          /* The row stretches to the reserved panel height; the tiles must
+             not, or they inflate to fill it. */
+          align-self: start;
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
           grid-auto-rows: 1fr;
@@ -898,8 +918,10 @@ export default function ServicePage() {
           text-transform: uppercase;
         }
         .detail {
-          position: sticky;
-          top: 24px;
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
           min-width: 0;
           padding: 22px 22px 24px;
           border: 1.5px solid var(--line);
@@ -910,6 +932,18 @@ export default function ServicePage() {
         }
         .detail:focus {
           outline: none;
+        }
+        /* Only this scrolls, so the CTA below can never scroll out of reach. */
+        .detail-body {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+        }
+        .detail-cta {
+          flex: 0 0 auto;
+          align-self: flex-start;
+          margin-top: 16px;
         }
         .detail-grip {
           display: none;
@@ -1081,6 +1115,14 @@ export default function ServicePage() {
             display: block;
             background: rgba(22, 32, 42, 0.45);
             animation: sheet-fade 0.18s ease-out;
+          }
+          .detail-col {
+            position: static;
+            min-height: 0;
+          }
+          .detail-body {
+            flex: none;
+            overflow: visible;
           }
           .detail {
             position: fixed;
