@@ -517,6 +517,8 @@ export default function ProviderJoinPage() {
       <style jsx>{`
         .wrap {
           min-height: 100vh;
+          min-height: 100dvh;
+          overflow-x: clip;
           background: #fff;
           color: #16202A;
           font-family: "Nunito", system-ui, sans-serif;
@@ -527,9 +529,15 @@ export default function ProviderJoinPage() {
           margin: 0 auto;
           padding-top: 44px;
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
           gap: 48px;
           align-items: start;
+        }
+        /* Grid items default to min-width:auto, which lets a wide child
+           stretch the track and push the whole page sideways. */
+        .pitch,
+        .form {
+          min-width: 0;
         }
         .brand {
           font-family: "Nunito", system-ui, sans-serif;
@@ -584,7 +592,7 @@ export default function ProviderJoinPage() {
         }
         .fee-amount {
           font-family: "Nunito", system-ui, sans-serif;
-          font-size: 34px;
+          font-size: clamp(27px, 7vw, 34px);
           color: #16202A;
           margin: 0 0 4px;
         }
@@ -687,8 +695,9 @@ export default function ProviderJoinPage() {
         }
         .availability-heading {
           display: flex;
+          flex-wrap: wrap;
           justify-content: space-between;
-          gap: 16px;
+          gap: 6px 16px;
           align-items: center;
           margin-bottom: 15px;
           color: #16202A;
@@ -741,20 +750,22 @@ export default function ProviderJoinPage() {
         }
         .simulation > div {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 18px;
         }
         .simulation span {
           display: grid;
+          min-width: 0;
           gap: 3px;
           color: #535D69;
           font-size: 12px;
         }
         .simulation strong {
           color: #16202A;
-          font-size: 24px;
+          font-size: clamp(19px, 5.4vw, 24px);
           font-weight: 900;
           line-height: 1.05;
+          overflow-wrap: anywhere;
         }
         .estimate-note {
           margin: 12px 0 0;
@@ -837,6 +848,7 @@ export default function ProviderJoinPage() {
           line-height: 1.5;
         }
         .employment-options {
+          position: relative;
           display: grid;
           gap: 12px;
           margin: 0;
@@ -921,8 +933,10 @@ export default function ProviderJoinPage() {
           margin-bottom: 0;
         }
         .title-options {
+          position: relative;
           display: flex;
-          gap: 28px;
+          flex-wrap: wrap;
+          gap: 12px 28px;
           margin: 0 0 16px;
           padding: 0;
           border: 0;
@@ -1034,6 +1048,12 @@ export default function ProviderJoinPage() {
           line-height: 1.3;
         }
         input[type="date"] {
+          /* iOS Safari gives date inputs an intrinsic width that ignores
+             width:100%, which pushes them past the card edge. */
+          -webkit-appearance: none;
+          appearance: none;
+          min-width: 0;
+          max-width: 100%;
           color: #7A828C;
         }
         .section-intro {
@@ -1049,6 +1069,7 @@ export default function ProviderJoinPage() {
           margin-bottom: 18px;
         }
         .chk {
+          max-width: 100%;
           background: #FFFFFF;
           border: 1.5px solid #EDEFF1;
           border-radius: 999px;
@@ -1056,6 +1077,8 @@ export default function ProviderJoinPage() {
           font: inherit;
           font-size: 14px;
           color: #16202A;
+          text-align: left;
+          overflow-wrap: anywhere;
           cursor: pointer;
         }
         .chk:hover {
@@ -1141,7 +1164,7 @@ export default function ProviderJoinPage() {
         }
         @media (max-width: 880px) {
           .grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
             gap: 34px;
           }
         }
@@ -1155,8 +1178,38 @@ export default function ProviderJoinPage() {
           .form {
             padding: 28px 20px;
           }
+          .fee {
+            padding: 22px 18px;
+          }
           .form-actions {
             grid-template-columns: 1fr;
+          }
+          /* Drops to a single column on its own once two columns no longer
+             fit the currency figures, so there is no magic breakpoint. */
+          .simulation > div {
+            grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+            gap: 14px;
+          }
+        }
+        @media (max-width: 400px) {
+          .form {
+            padding: 24px 16px;
+            border-radius: 20px;
+          }
+          .availability-card {
+            padding: 16px;
+          }
+          .simulation {
+            padding: 14px;
+          }
+          .employment-card {
+            padding: 16px;
+          }
+          .unable-copy {
+            padding: 16px;
+          }
+          .title-options {
+            gap: 12px 20px;
           }
         }
       `}</style>
