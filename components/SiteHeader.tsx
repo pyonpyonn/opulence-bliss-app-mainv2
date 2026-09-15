@@ -253,6 +253,7 @@ export default function SiteHeader() {
                   <>
                     <p>Continue as</p>
                     <Link href="/login">Login</Link>
+                    <Link href="/auth/sign-up">Create Account</Link>
                     <Link href="/provider/login">Professional log in</Link>
                     <Link href="/provider/join">Become a professional</Link>
                   </>
