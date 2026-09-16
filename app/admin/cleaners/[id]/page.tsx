@@ -1,7 +1,10 @@
 import Link from "next/link";
 import AdminNav from "../../AdminNav";
 import { requireAdminPage } from "@/lib/adminSession";
-import { setProviderSuspension } from "../../actions";
+import {
+  setProviderDirectoryVisibility,
+  setProviderSuspension,
+} from "../../actions";
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -22,7 +25,7 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
   const [providerResult, bookingsResult, hoursResult, suspensionResult] = await Promise.all([
     supabase
       .from("providers")
-      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, created_at)")
+      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, created_at)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -105,6 +108,43 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
             <ApplicationField label="Self-employed partnership" value={application?.self_employed_confirmed ? "Agreed" : "Not recorded"} />
             <ApplicationField label="UTR number" value={application?.utr_number ?? "Not supplied (optional)"} />
           </div>
+        </section>
+
+        <section
+          style={{
+            ...availability,
+            borderColor: provider.show_on_our_pros ? "#b9dfc7" : "#ddd4ea",
+            background: provider.show_on_our_pros ? "#f1fbf4" : "#faf7ff",
+          }}
+        >
+          <strong>Our Pros directory</strong>
+          <span>
+            {provider.vetting_status !== "approved"
+              ? "This professional cannot appear publicly until their application is approved."
+              : provider.is_suspended
+                ? "This professional is hidden while their account is suspended. Their saved directory setting is kept."
+                : provider.show_on_our_pros
+                  ? "This professional is currently visible on the public Our Pros page."
+                  : "This professional is hidden from the public Our Pros page."}
+          </span>
+          {provider.vetting_status === "approved" ? (
+            <form
+              action={setProviderDirectoryVisibility.bind(
+                null,
+                id,
+                !provider.show_on_our_pros,
+              )}
+            >
+              <button
+                type="submit"
+                style={provider.show_on_our_pros ? hideDirectoryButton : showDirectoryButton}
+              >
+                {provider.show_on_our_pros
+                  ? "Hide from Our Pros"
+                  : "Show on Our Pros"}
+              </button>
+            </form>
+          ) : null}
         </section>
 
         <section style={{ ...availability, borderColor: provider.is_suspended ? "#efb5c1" : "#d8e8dd", background: provider.is_suspended ? "#fff1f3" : "#f1fbf4" }}>
@@ -207,3 +247,6 @@ const empty: React.CSSProperties = { padding: 28, border: "1px dashed #d8dde3", 
 const reasonInput: React.CSSProperties = { width: "100%", boxSizing: "border-box", resize: "vertical", border: "1px solid #efb5c1", borderRadius: 10, background: "#fff", color: "#16202a", padding: "10px 12px", font: "inherit" };
 const suspendButton: React.CSSProperties = { width: "fit-content", border: 0, borderRadius: 999, background: "#b0384f", color: "#fff", padding: "10px 17px", fontWeight: 900, cursor: "pointer" };
 const restoreButton: React.CSSProperties = { width: "fit-content", border: 0, borderRadius: 999, background: "#17653a", color: "#fff", padding: "10px 17px", fontWeight: 900, cursor: "pointer" };
+const directoryButton: React.CSSProperties = { width: "fit-content", borderRadius: 999, background: "#fff", padding: "10px 17px", fontFamily: "inherit", fontWeight: 900, cursor: "pointer" };
+const hideDirectoryButton: React.CSSProperties = { ...directoryButton, border: "1.5px solid #efb5c1", color: "#a52e47" };
+const showDirectoryButton: React.CSSProperties = { ...directoryButton, border: "1.5px solid #b9dfc7", color: "#137b4e" };

@@ -36,6 +36,7 @@ export default function ProvidersPage() {
         )
         .eq("vetting_status", "approved")
         .eq("is_suspended", false)
+        .eq("show_on_our_pros", true)
         .order("public_rating_avg", { ascending: false, nullsFirst: false });
       setList(data ?? []);
       setLoading(false);

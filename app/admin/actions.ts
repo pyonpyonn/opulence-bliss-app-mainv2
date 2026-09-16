@@ -121,6 +121,22 @@ export async function setProviderSuspension(
   revalidatePath("/worker");
 }
 
+export async function setProviderDirectoryVisibility(
+  id: string,
+  visible: boolean,
+) {
+  const s = await requireAdmin();
+  const { error } = await s.rpc("admin_set_provider_directory_visibility", {
+    p_provider_id: id,
+    p_visible: visible,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/providers");
+  revalidatePath("/admin/cleaners");
+  revalidatePath(`/admin/cleaners/${id}`);
+}
+
 export async function deleteReview(id: string) {
   const s = await requireAdmin();
   await s.from("reviews").delete().eq("id", id);

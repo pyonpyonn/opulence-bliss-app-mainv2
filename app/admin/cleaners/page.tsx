@@ -2,6 +2,7 @@ import AdminNav from "../AdminNav";
 import Link from "next/link";
 import VettingButtons from "../VettingButtons";
 import { requireAdminPage } from "@/lib/adminSession";
+import { setProviderDirectoryVisibility } from "../actions";
 
 function profileOf(value: unknown) {
   if (Array.isArray(value)) return value[0] as { email?: string } | undefined;
@@ -31,7 +32,7 @@ export default async function AdminCleanersPage() {
     supabase
       .from("providers")
       .select(
-        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed)",
+        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed)",
       )
       .order("display_name", { ascending: true }),
     supabase
@@ -154,9 +155,39 @@ export default async function AdminCleanersPage() {
                       </Link>
                     </div>
                   </div>
-                  {pending && !provider.is_suspended ? (
-                    <div className="admin-cleaner-actions">
-                      <VettingButtons id={provider.id} />
+                  {(provider.vetting_status === "approved" ||
+                    (pending && !provider.is_suspended)) ? (
+                    <div className="admin-cleaner-actions" style={cardActions}>
+                      {provider.vetting_status === "approved" ? (
+                        <>
+                          <span style={directoryState}>
+                            {provider.is_suspended
+                              ? "Hidden while suspended"
+                              : provider.show_on_our_pros
+                                ? "Shown on Our Pros"
+                                : "Hidden from Our Pros"}
+                          </span>
+                          <form
+                            action={setProviderDirectoryVisibility.bind(
+                              null,
+                              provider.id,
+                              !provider.show_on_our_pros,
+                            )}
+                          >
+                            <button
+                              type="submit"
+                              style={provider.show_on_our_pros ? hideButton : showButton}
+                            >
+                              {provider.show_on_our_pros
+                                ? "Hide from Our Pros"
+                                : "Show on Our Pros"}
+                            </button>
+                          </form>
+                        </>
+                      ) : null}
+                      {pending && !provider.is_suspended ? (
+                        <VettingButtons id={provider.id} />
+                      ) : null}
                     </div>
                   ) : null}
                 </article>
@@ -183,5 +214,10 @@ const email: React.CSSProperties = { margin: "3px 0 7px", color: "#4b5563", font
 const meta: React.CSSProperties = { margin: "3px 0", color: "#68717d", fontSize: 12.5 };
 const hoursText: React.CSSProperties = { margin: "8px 0", color: "#4b5563", fontSize: 11.5, lineHeight: 1.5 };
 const viewLink: React.CSSProperties = { display: "inline-block", marginTop: 10, color: "#6d28d9", fontSize: 12, fontWeight: 900, textDecoration: "none" };
+const cardActions: React.CSSProperties = { display: "grid", justifyItems: "stretch", gap: 8, minWidth: 170 };
+const directoryState: React.CSSProperties = { color: "#68717d", fontSize: 11, fontWeight: 900, textAlign: "center" };
+const directoryButton: React.CSSProperties = { width: "100%", borderRadius: 999, padding: "9px 13px", background: "#fff", fontFamily: "inherit", fontSize: 11.5, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap" };
+const hideButton: React.CSSProperties = { ...directoryButton, border: "1.5px solid #efb5c1", color: "#a52e47" };
+const showButton: React.CSSProperties = { ...directoryButton, border: "1.5px solid #b9dfc7", color: "#137b4e" };
 const empty: React.CSSProperties = { border: "1px dashed #d8dde3", borderRadius: 15, padding: 30, background: "#fff", color: "#7a828c", textAlign: "center" };
 const errorBox: React.CSSProperties = { ...empty, borderColor: "#f0c5cf", background: "#fff7f8", color: "#a52e47" };
