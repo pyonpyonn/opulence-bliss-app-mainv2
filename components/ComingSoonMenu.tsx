@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import {
-  Check,
-  ChevronDown,
-} from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { ArrowRight, ChevronDown } from "lucide-react";
+import { COMING_SOON } from "@/lib/comingSoon";
+import ServicePoll from "@/components/ServicePoll";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,197 +13,119 @@ import {
 } from "@/components/ui/dropdown-menu";
 import styles from "./ComingSoonMenu.module.css";
 
-const OPTIONS = [
-  {
-    key: "moving_support",
-    title: "House movers",
-    detail: "Moving support, packing, unpacking and organising.",
-  },
-  {
-    key: "maintenance",
-    title: "Maintenance",
-    detail:
-      "Handyman and renovation add-ons, painting, small carpentry and furniture assembly.",
-  },
-] as const;
-
-type ServiceKey = (typeof OPTIONS)[number]["key"];
-
+/**
+ * Desktop header dropdown. Opens on hover with a pointer and on click
+ * otherwise, matching CleaningMenu. The mobile drawer does not use this: it
+ * links to /coming-soon instead, since a nested dropdown inside a drawer is
+ * awkward on touch.
+ */
 export default function ComingSoonMenu() {
+  const pathname = usePathname() ?? "";
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<ServiceKey | null>(null);
-  const [suggestion, setSuggestion] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [signedOut, setSignedOut] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!open || loaded) return;
-    let active = true;
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    [],
+  );
 
-    async function loadVote() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!active) return;
-      if (!user) {
-        setSignedOut(true);
-        setLoaded(true);
-        return;
-      }
-
-      const { data } = await supabase.rpc("my_customer_service_interest");
-      if (!active) return;
-      const vote = Array.isArray(data) ? data[0] : null;
-      if (vote?.service_key) setSelected(vote.service_key as ServiceKey);
-      if (vote?.suggestion) setSuggestion(vote.suggestion);
-      setLoaded(true);
-    }
-
-    void loadVote();
-    return () => {
-      active = false;
-    };
-  }, [loaded, open]);
-
-  async function submitVote() {
-    if (!selected) {
-      setMessage("Choose the service you would most like us to add.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setSignedOut(true);
-      setMessage("Sign in as a client to save your vote.");
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await supabase.rpc("submit_customer_service_interest", {
-      p_service_key: selected,
-      p_suggestion: suggestion.trim() || null,
-    });
-
-    setLoading(false);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setSignedOut(false);
-    setMessage("Thanks — your vote has been saved.");
+  function supportsHover() {
+    return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   }
+
+  function showOnHover() {
+    if (!supportsHover()) return;
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  }
+
+  function hideAfterHover() {
+    if (!supportsHover()) return;
+    closeTimer.current = setTimeout(() => setOpen(false), 180);
+  }
+
+  function keepOpen() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }
+
+  const active = pathname.startsWith("/coming-soon");
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-      <DropdownMenuTrigger
-        className={styles.trigger}
-        aria-label="Open coming soon service poll"
+      <span
+        className={styles.triggerWrap}
+        onMouseEnter={showOnHover}
+        onMouseLeave={hideAfterHover}
       >
-        Coming soon
-        <ChevronDown
-          size={16}
-          className={open ? styles.chevronOpen : styles.chevron}
-        />
-      </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          asChild
+          className={`${styles.trigger} ${active ? styles.active : ""}`}
+        >
+          <Link
+            href="/coming-soon"
+            aria-label="Services coming soon"
+            onClick={() => setOpen(false)}
+          >
+            Coming soon
+            <ChevronDown
+              size={16}
+              className={open ? styles.chevronOpen : styles.chevron}
+            />
+          </Link>
+        </DropdownMenuTrigger>
+      </span>
 
       <DropdownMenuContent
         align="start"
         sideOffset={8}
-        collisionPadding={12}
-        style={{ zIndex: 10050 }}
+        collisionPadding={16}
         className={styles.menu}
+        onMouseEnter={keepOpen}
+        onMouseLeave={hideAfterHover}
         onCloseAutoFocus={(event) => event.preventDefault()}
         onKeyDown={(event) => event.stopPropagation()}
       >
-        <div className={styles.heading}>
-          <span className={styles.eyebrow}>Help shape what comes next</span>
-          <h2>Which service would you like us to add?</h2>
-          <p>Choose one, then share an idea of your own if you have one.</p>
-        </div>
-
-        <div className={styles.form}>
-          <fieldset className={styles.options}>
-            <legend className={styles.srOnly}>Choose a future service</legend>
-            {OPTIONS.map(({ key, title, detail }) => {
-              const checked = selected === key;
-              return (
-                <label
-                  className={`${styles.option} ${checked ? styles.optionSelected : ""}`}
-                  key={key}
+        <div className={styles.listWrap}>
+          <span className={styles.listLabel}>In the works</span>
+          <ul className={styles.list}>
+            {COMING_SOON.map((service) => (
+              <li key={service.key}>
+                <Link
+                  href={`/coming-soon#${service.slug}`}
+                  className={styles.listItem}
+                  onClick={() => setOpen(false)}
                 >
-                  <input
-                    type="radio"
-                    name="future-service"
-                    value={key}
-                    checked={checked}
-                    onChange={() => {
-                      setSelected(key);
-                      setMessage(null);
-                    }}
-                  />
-                  <span className={styles.copy}>
-                    <strong>{title}</strong>
-                    <small>{detail}</small>
+                  <span className={styles.listText}>
+                    <strong>{service.title}</strong>
+                    {service.items.length > 0 && (
+                      <small>
+                        {service.items.slice(0, 3).join(" · ")}
+                        {service.items.length > 3 &&
+                          ` and ${service.items.length - 3} more`}
+                      </small>
+                    )}
                   </span>
-                  <span className={styles.radio} aria-hidden="true">
-                    {checked && <Check size={14} strokeWidth={3} />}
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
-
-          <label className={styles.suggestionLabel}>
-            Suggest something else <span>(optional)</span>
-            <textarea
-              rows={2}
-              maxLength={500}
-              value={suggestion}
-              onChange={(event) => setSuggestion(event.target.value)}
-              placeholder="What other service would make life easier?"
-            />
-          </label>
-
-          {message && (
-            <p
-              className={
-                message.startsWith("Thanks")
-                  ? styles.success
-                  : styles.formMessage
-              }
-              role="status"
-            >
-              {message.startsWith("Thanks") && <Check size={15} />}
-              {message}
-            </p>
-          )}
-
-          {signedOut ? (
-            <Link className={styles.submit} href="/login">
-              Sign in as a client to vote
-            </Link>
-          ) : (
-            <button
-              className={styles.submit}
-              type="button"
-              disabled={loading || !selected}
-              onClick={() => void submitVote()}
-            >
-              {loading ? "Saving…" : "Submit my vote"}
-            </button>
-          )}
+                  <ArrowRight size={15} className={styles.listArrow} />
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
+
+        <div className={styles.pollWrap}>
+          <ServicePoll enabled={open} variant="compact" />
+        </div>
+
+        <Link
+          href="/coming-soon"
+          className={styles.allLink}
+          onClick={() => setOpen(false)}
+        >
+          See everything coming soon
+          <ArrowRight size={15} />
+        </Link>
       </DropdownMenuContent>
     </DropdownMenu>
   );

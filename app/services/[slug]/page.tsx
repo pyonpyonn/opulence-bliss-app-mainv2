@@ -260,6 +260,10 @@ export default function ServicePage() {
               </a>
             </div>
 
+            <a className="hero-services-link" href="#cleaning-services">
+              See our cleaning services ↓
+            </a>
+
             <a className="prolink" href={copy.proLink}>
               {copy.proText} →
             </a>
@@ -341,7 +345,7 @@ export default function ServicePage() {
       </section>
 
       {/* ---------- SERVICES ---------- */}
-      <section className="services">
+      <section className="services" id="cleaning-services">
         <div className="inner">
           <h2>Our cleaning services</h2>
           <p className="intro">{copy.intro}</p>
@@ -691,6 +695,18 @@ export default function ServicePage() {
           font-size: 14.5px;
           font-weight: 600;
         }
+        .hero-services-link {
+          display: inline-block;
+          margin-top: 18px;
+          color: var(--green);
+          font-size: 15px;
+          font-weight: 800;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+        }
+        .hero-services-link:hover {
+          color: var(--apricot-deep);
+        }
         .hero-art {
           display: grid;
           place-items: center;
@@ -797,6 +813,7 @@ export default function ServicePage() {
         /* services */
         .services {
           padding: 62px 0 10px;
+          scroll-margin-top: 24px;
         }
         .intro {
           color: #3A424B;

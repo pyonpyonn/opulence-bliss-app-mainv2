@@ -43,211 +43,30 @@
   box-shadow: 0 22px 55px rgba(76, 29, 149, 0.17) !important;
 }
 
-.heading {
-  padding: 20px 21px 17px;
-  border-bottom: 1px solid #eee6f8;
-  background:
-    radial-gradient(circle at 96% 8%, rgba(200, 111, 201, 0.17), transparent 42%),
-    linear-gradient(135deg, #fffaf0 0%, #fcf8ff 52%, #f4ecfe 100%);
-}
 
-.eyebrow {
-  display: block;
-  margin-bottom: 5px;
-  color: #6d28d9;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
 
-.heading h2 {
-  margin: 0;
-  color: #16202a;
-  font-size: 21px;
-  font-weight: 900;
-  line-height: 1.18;
-  letter-spacing: -0.025em;
-}
 
-.heading p {
-  margin: 6px 0 0;
-  color: #68717d;
-  font-size: 13.5px;
-  font-weight: 650;
-  line-height: 1.45;
-}
 
-.form {
-  padding: 15px 17px 18px;
-}
 
-.options {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
 
-.option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 22px;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  padding: 10px 11px;
-  border: 1.5px solid #e9e4f0;
-  border-radius: 13px;
-  background: #fff;
-  cursor: pointer;
-  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
-}
 
-.option:hover {
-  border-color: #cdb7f3;
-  background: #fcfaff;
-  transform: translateY(-1px);
-}
 
-.optionSelected {
-  border-color: #8b5cf6;
-  background: #f8f3ff;
-  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.07);
-}
 
-.option input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-}
 
-.copy {
-  min-width: 0;
-}
 
-.copy strong,
-.copy small {
-  display: block;
-}
 
-.copy strong {
-  color: #16202a;
-  font-size: 14px;
-  font-weight: 900;
-}
 
-.copy small {
-  margin-top: 2px;
-  color: #6d7580;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.35;
-}
 
-.radio {
-  display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  border: 1.5px solid #cfc8da;
-  border-radius: 50%;
-  color: #fff;
-}
 
-.optionSelected .radio {
-  border-color: #6d28d9;
-  background: #6d28d9;
-}
 
-.suggestionLabel {
-  display: block;
-  margin-top: 13px;
-  color: #303842;
-  font-size: 13px;
-  font-weight: 900;
-}
 
-.suggestionLabel span {
-  color: #8a9099;
-  font-weight: 700;
-}
 
-.suggestionLabel textarea {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 6px;
-  padding: 10px 11px;
-  resize: vertical;
-  border: 1.5px solid #e3deea;
-  border-radius: 11px;
-  outline: none;
-  background: #fff;
-  color: #16202a;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.4;
-}
 
-.suggestionLabel textarea:focus {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.09);
-}
 
-.submit {
-  display: flex;
-  width: 100%;
-  min-height: 43px;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(100deg, #f5c542, #c86fc9 55%, #7b2ff7);
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 900;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 7px 18px rgba(109, 40, 217, 0.2);
-}
 
-.submit:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-  box-shadow: none;
-}
 
-.formMessage,
-.success {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 1px 0;
-  padding: 8px 10px;
-  border-radius: 9px;
-  font-size: 12.5px;
-  font-weight: 800;
-  line-height: 1.35;
-}
 
-.formMessage {
-  background: #fff2f4;
-  color: #a62f49;
-}
 
-.success {
-  background: #eaf8f0;
-  color: #14784d;
-}
 
 .srOnly {
   position: absolute;
@@ -286,5 +105,124 @@
   .chevronOpen,
   .option {
     transition: none;
+  }
+}
+
+/* Wrapper exists so hover is tracked on a plain element; the Radix trigger
+   itself is the <Link>, which must stay focusable and navigable. */
+.triggerWrap {
+  display: inline-flex;
+}
+
+.trigger {
+  text-decoration: none;
+}
+
+.active {
+  color: #6d28d9;
+  border-bottom-color: #6d28d9;
+}
+
+.listWrap {
+  padding: 16px 16px 4px;
+}
+
+.listLabel {
+  display: block;
+  margin-bottom: 9px;
+  color: #6d28d9;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  color: #16202a;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.listText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.listText strong {
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.listText small {
+  overflow: hidden;
+  color: #535d69;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listArrow {
+  flex: 0 0 auto;
+  color: #6d28d9;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .listItem:hover {
+    background: #faf7ff;
+  }
+  .listItem:hover .listArrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+}
+
+.listItem:focus-visible {
+  outline: 3px solid rgba(109, 40, 217, 0.35);
+  outline-offset: -2px;
+}
+
+.pollWrap {
+  margin-top: 8px;
+  padding: 16px;
+  border-top: 1px solid #edeff1;
+  background: #fcfbff;
+}
+
+.allLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 16px;
+  border-top: 1px solid #edeff1;
+  color: #6d28d9;
+  font-size: 13.5px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .allLink:hover {
+    background: #faf7ff;
   }
 }

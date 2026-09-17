@@ -343,12 +343,12 @@ export default function SiteHeader() {
 
             <nav aria-label="Mobile main navigation" className="mobile-links">
               <Link href="/services/cleaning">Cleaning services</Link>
+              <Link href="/coming-soon">Coming soon</Link>
               <Link href="/providers">Our professionals</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/faq">Frequently asked questions</Link>
               <Link href="/reviews">Customer reviews</Link>
               <Link href="/provider/join">Jobs &amp; become a pro</Link>
-              <ComingSoonMenu />
             </nav>
 
             <div className="mobile-account-actions">
