@@ -14,6 +14,43 @@ type Props = {
   variant?: "compact" | "page";
 };
 
+type PollResult = {
+  count: number;
+  percent: number;
+};
+
+type PollResultRow = {
+  service_key: string;
+  vote_count: number | string;
+  vote_percent: number | string;
+  total_votes: number | string;
+};
+
+function normaliseResults(rows: unknown): {
+  byKey: Partial<Record<ComingSoonKey, PollResult>>;
+  total: number;
+} {
+  const byKey: Partial<Record<ComingSoonKey, PollResult>> = {};
+  let total = 0;
+
+  if (!Array.isArray(rows)) return { byKey, total };
+
+  for (const raw of rows as PollResultRow[]) {
+    if (!COMING_SOON.some((service) => service.key === raw.service_key)) {
+      continue;
+    }
+
+    const key = raw.service_key as ComingSoonKey;
+    byKey[key] = {
+      count: Number(raw.vote_count) || 0,
+      percent: Number(raw.vote_percent) || 0,
+    };
+    total = Number(raw.total_votes) || total;
+  }
+
+  return { byKey, total };
+}
+
 export default function ServicePoll({
   enabled = true,
   variant = "compact",
@@ -28,6 +65,11 @@ export default function ServicePoll({
   const [signedOut, setSignedOut] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [results, setResults] = useState<
+    Partial<Record<ComingSoonKey, PollResult>>
+  >({});
+  const [totalVotes, setTotalVotes] = useState(0);
 
   useEffect(() => {
     if (!enabled || loaded) return;
@@ -56,6 +98,15 @@ export default function ServicePoll({
         COMING_SOON.some((s) => s.key === vote.service_key)
       ) {
         setSelected(vote.service_key as ComingSoonKey);
+        setHasVoted(true);
+
+        const { data: resultRows } = await supabase.rpc(
+          "customer_service_poll_results",
+        );
+        if (!active) return;
+        const nextResults = normaliseResults(resultRows);
+        setResults(nextResults.byKey);
+        setTotalVotes(nextResults.total);
       }
       if (vote?.suggestion) setSuggestion(vote.suggestion);
       setLoaded(true);
@@ -67,12 +118,24 @@ export default function ServicePoll({
     };
   }, [enabled, loaded]);
 
-  async function submitVote() {
-    if (!selected) {
+  async function refreshResults() {
+    const supabase = createClient();
+    const { data } = await supabase.rpc("customer_service_poll_results");
+    const nextResults = normaliseResults(data);
+    setResults(nextResults.byKey);
+    setTotalVotes(nextResults.total);
+  }
+
+  async function submitVote(
+    serviceKey: ComingSoonKey | null = selected,
+    successMessage = "Thanks, your vote has been saved.",
+  ) {
+    if (!serviceKey) {
       setMessage("Choose the service you would most like us to add.");
       return;
     }
 
+    setSelected(serviceKey);
     setLoading(true);
     setMessage(null);
     const supabase = createClient();
@@ -88,20 +151,23 @@ export default function ServicePoll({
     }
 
     const { error } = await supabase.rpc("submit_customer_service_interest", {
-      p_service_key: selected,
+      p_service_key: serviceKey,
       p_suggestion: suggestion.trim() || null,
     });
 
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setSaved(false);
       setMessage(error.message);
       return;
     }
 
     setSignedOut(false);
+    setHasVoted(true);
+    await refreshResults();
+    setLoading(false);
     setSaved(true);
-    setMessage("Thanks, your vote has been saved.");
+    setMessage(successMessage);
   }
 
   return (
@@ -125,29 +191,66 @@ export default function ServicePoll({
           <legend className={styles.srOnly}>Choose a future service</legend>
           {COMING_SOON.map(({ key, title, detail }) => {
             const checked = selected === key;
+            const result = results[key] ?? { count: 0, percent: 0 };
             return (
               <label
-                className={`${styles.option} ${checked ? styles.optionOn : ""}`}
+                className={`${styles.option} ${checked ? styles.optionOn : ""} ${
+                  hasVoted ? styles.optionWithResults : ""
+                }`}
                 key={key}
               >
+                {hasVoted && (
+                  <span
+                    className={styles.resultBar}
+                    style={{ width: `${result.percent}%` }}
+                    aria-hidden="true"
+                  />
+                )}
                 <input
                   type="radio"
                   name={`future-service-${variant}`}
                   value={key}
                   checked={checked}
+                  disabled={loading || !loaded}
                   onChange={() => {
                     setSelected(key);
                     setMessage(null);
                     setSaved(false);
+                    if (signedOut) {
+                      setMessage("Sign in to vote.");
+                      return;
+                    }
+                    void submitVote(key);
                   }}
                 />
                 <span className={styles.copy}>
-                  <strong>{title}</strong>
+                  <strong>
+                    {hasVoted && checked && (
+                      <Check
+                        className={styles.selectedCheck}
+                        size={14}
+                        strokeWidth={3}
+                        aria-hidden="true"
+                      />
+                    )}
+                    {title}
+                  </strong>
                   {!compact && <small>{detail}</small>}
                 </span>
-                <span className={styles.radio} aria-hidden="true">
-                  {checked && <Check size={14} strokeWidth={3} />}
-                </span>
+                {hasVoted ? (
+                  <span
+                    className={styles.percentage}
+                    aria-label={`${result.count} ${
+                      result.count === 1 ? "vote" : "votes"
+                    }`}
+                  >
+                    {result.percent}%
+                  </span>
+                ) : (
+                  <span className={styles.radio} aria-hidden="true">
+                    {checked && <Check size={14} strokeWidth={3} />}
+                  </span>
+                )}
               </label>
             );
           })}
@@ -176,18 +279,29 @@ export default function ServicePoll({
         )}
 
         {signedOut ? (
-        <Link className={styles.submit} href="/login">
-          Sign in to vote
-        </Link>
+          <Link className={styles.submit} href="/login">
+            Sign in to vote
+          </Link>
+        ) : hasVoted ? (
+          <div className={styles.resultsFooter}>
+            <span>
+              {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+            </span>
+            <button
+              className={styles.saveSuggestion}
+              type="button"
+              disabled={loading || !selected}
+              onClick={() =>
+                void submitVote(selected, "Your vote and suggestion are saved.")
+              }
+            >
+              {loading ? "Saving…" : "Save suggestion"}
+            </button>
+          </div>
         ) : (
-          <button
-            className={styles.submit}
-            type="button"
-            disabled={loading || !selected}
-            onClick={() => void submitVote()}
-          >
-            {loading ? "Saving…" : "Submit my vote"}
-          </button>
+          <p className={styles.voteHint}>
+            {loading ? "Saving your vote…" : "Choose an option to vote"}
+          </p>
         )}
       </div>
     </div>
