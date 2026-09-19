@@ -18,6 +18,9 @@ export default function ServicePoll({
   enabled = true,
   variant = "compact",
 }: Props) {
+  // The dropdown is a shortcut, not a landing page: the full descriptions
+  // live on /coming-soon, so the compact variant shows titles only.
+  const compact = variant === "compact";
   const [selected, setSelected] = useState<ComingSoonKey | null>(null);
   const [suggestion, setSuggestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -104,13 +107,17 @@ export default function ServicePoll({
   return (
     <div className={`${styles.poll} ${styles[variant]}`}>
       <div className={styles.heading}>
-        <span className={styles.eyebrow}>Help shape what comes next</span>
+        {!compact && (
+          <span className={styles.eyebrow}>Help shape what comes next</span>
+        )}
         <p className={styles.title}>
           Which of these services would you like us to add?
         </p>
-        <p className={styles.sub}>
-          Pick one, and add an idea of your own if you have one.
-        </p>
+        {!compact && (
+          <p className={styles.sub}>
+            Pick one, and add an idea of your own if you have one.
+          </p>
+        )}
       </div>
 
       <div className={styles.formPanel}>
@@ -136,7 +143,7 @@ export default function ServicePoll({
                 />
                 <span className={styles.copy}>
                   <strong>{title}</strong>
-                  <small>{detail}</small>
+                  {!compact && <small>{detail}</small>}
                 </span>
                 <span className={styles.radio} aria-hidden="true">
                   {checked && <Check size={14} strokeWidth={3} />}

@@ -88,7 +88,6 @@ export default function ComingSoonMenu() {
         onKeyDown={(event) => event.stopPropagation()}
       >
         <div className={styles.listWrap}>
-          <span className={styles.listLabel}>In the works</span>
           <ul className={styles.list}>
             {COMING_SOON.map((service) => (
               <li key={service.key}>
@@ -99,13 +98,6 @@ export default function ComingSoonMenu() {
                 >
                   <span className={styles.listText}>
                     <strong>{service.title}</strong>
-                    {service.items.length > 0 && (
-                      <small>
-                        {service.items.slice(0, 3).join(" · ")}
-                        {service.items.length > 3 &&
-                          ` and ${service.items.length - 3} more`}
-                      </small>
-                    )}
                   </span>
                   <ArrowRight size={15} className={styles.listArrow} />
                 </Link>
