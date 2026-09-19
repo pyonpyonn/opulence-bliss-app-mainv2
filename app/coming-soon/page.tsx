@@ -55,19 +55,29 @@ export default function ComingSoonPage() {
                 id={service.slug}
                 className={styles.card}
               >
-                <span className={styles.icon} aria-hidden="true">
-                  <Icon size={25} strokeWidth={1.8} />
-                </span>
-                <span className={styles.cardCopy}>
-                  <strong>{service.title}</strong>
-                  <span>{service.detail}</span>
-                </span>
-                {service.items.length > 0 && (
-                  <span className={styles.cardMeta}>
-                    <span className={styles.count}>
-                      {service.items.length} tasks
-                    </span>
+                <div className={styles.cardTop}>
+                  <span className={styles.icon} aria-hidden="true">
+                    <Icon size={25} strokeWidth={1.8} />
                   </span>
+                  <span className={styles.cardCopy}>
+                    <strong>{service.title}</strong>
+                    <span>{service.detail}</span>
+                  </span>
+                  {service.items.length > 0 && (
+                    <span className={styles.cardMeta}>
+                      <span className={styles.count}>
+                        {service.items.length} tasks
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                {service.items.length > 0 && (
+                  <ul className={styles.items}>
+                    {service.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
                 )}
               </article>
             );
