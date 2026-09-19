@@ -19,13 +19,27 @@ function when(value: string) {
   return new Date(value).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
+function formatApplicationAvailability(value: Record<string, string> | null | undefined) {
+  if (!value) return "Not supplied";
+  const periodLabels: Record<string, string> = {
+    unavailable: "Off",
+    all_day: "Day",
+    morning: "Morning",
+    afternoon: "Afternoon",
+    evening: "Evening",
+  };
+  return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    .map((day) => `${day.slice(0, 3)} ${periodLabels[value[day]] ?? value[day] ?? "Not supplied"}`)
+    .join(" · ");
+}
+
 export default async function ProfessionalRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user } = await requireAdminPage();
   const [providerResult, bookingsResult, hoursResult, suspensionResult] = await Promise.all([
     supabase
       .from("providers")
-      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, created_at)")
+      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, salutation, date_of_birth, right_to_work, current_self_employment_status, current_self_employment_detail, business_name, cleaning_experience_years, cleaning_experience_types, other_cleaning_experience, max_travel_distance, weekly_availability, created_at)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -57,6 +71,17 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
     resident_status: string;
     utr_number: string | null;
     self_employed_confirmed: boolean;
+    salutation: string | null;
+    date_of_birth: string | null;
+    right_to_work: boolean | null;
+    current_self_employment_status: string | null;
+    current_self_employment_detail: string | null;
+    business_name: string | null;
+    cleaning_experience_years: number | null;
+    cleaning_experience_types: string[] | null;
+    other_cleaning_experience: string | null;
+    max_travel_distance: string | null;
+    weekly_availability: Record<string, string> | null;
     created_at: string;
   } | null;
   const bookings = bookingsResult.data ?? [];
@@ -103,10 +128,21 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
             </p>
           </div>
           <div style={applicationGrid}>
+            <ApplicationField label="Title" value={application?.salutation ? application.salutation.toUpperCase() : "Not supplied"} />
+            <ApplicationField label="Date of birth" value={application?.date_of_birth ? new Date(`${application.date_of_birth}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "Not supplied"} />
+            <ApplicationField label="Phone" value={profile?.phone ?? "Not supplied"} />
+            <ApplicationField label="Home address" value={[profile?.address, profile?.postcode].filter(Boolean).join(", ") || "Not supplied"} />
+            <ApplicationField label="Right to work in the UK" value={application?.right_to_work == null ? "Not supplied" : application.right_to_work ? "Yes" : "No"} />
             <ApplicationField label="UK resident status" value={application?.resident_status ?? "Not supplied"} />
             <ApplicationField label="Preferred availability" value={application ? `${application.preferred_weekly_hours} hours per week` : "Not supplied"} />
             <ApplicationField label="Self-employed partnership" value={application?.self_employed_confirmed ? "Agreed" : "Not recorded"} />
+            <ApplicationField label="Currently self-employed" value={application?.current_self_employment_status ? `${application.current_self_employment_status}${application.current_self_employment_detail ? ` — ${application.current_self_employment_detail}` : ""}` : "Not supplied"} />
+            <ApplicationField label="Trading / business name" value={application?.business_name ?? "Not supplied"} />
             <ApplicationField label="UTR number" value={application?.utr_number ?? "Not supplied (optional)"} />
+            <ApplicationField label="Cleaning experience" value={application?.cleaning_experience_years == null ? "Not supplied" : `${application.cleaning_experience_years} year${application.cleaning_experience_years === 1 ? "" : "s"}`} />
+            <ApplicationField label="Experience types" value={application?.cleaning_experience_types?.length ? `${application.cleaning_experience_types.join(", ")}${application.other_cleaning_experience ? ` — ${application.other_cleaning_experience}` : ""}` : "Not supplied"} />
+            <ApplicationField label="Maximum travel distance" value={application?.max_travel_distance ?? "Not supplied"} />
+            <ApplicationField label="Application availability" value={formatApplicationAvailability(application?.weekly_availability)} />
           </div>
         </section>
 

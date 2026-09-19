@@ -11,22 +11,46 @@ import { isValidUkPhone } from "@/lib/ukPhone";
 import {
   estimateProviderMonthlyEarnings,
   isOptionalUtrNumber,
+  PROVIDER_AVAILABILITY_PERIODS,
+  PROVIDER_CLEANING_EXPERIENCE_TYPES,
   PROVIDER_ESTIMATED_HOURLY_EARNINGS,
   PROVIDER_MAX_WEEKLY_HOURS,
   PROVIDER_RESIDENT_STATUSES,
+  PROVIDER_TRAVEL_DISTANCES,
+  PROVIDER_WEEKDAYS,
+  type ProviderAvailabilityPeriod,
+  type ProviderWeeklyAvailability,
 } from "@/lib/providerOnboarding";
 
 const supabase = createClient();
 
 type Area = { id: string; name: string; postcode_prefixes: string[] };
 
-type JoinStep = "estimate" | "account" | "status" | "work";
+type JoinStep = "estimate" | "account" | "status" | "experience" | "work" | "availability";
+
+const INITIAL_WEEKLY_AVAILABILITY: ProviderWeeklyAvailability = {
+  monday: "unavailable",
+  tuesday: "unavailable",
+  wednesday: "unavailable",
+  thursday: "unavailable",
+  friday: "unavailable",
+  saturday: "unavailable",
+  sunday: "unavailable",
+};
+
+const AVAILABILITY_LABELS: Record<ProviderAvailabilityPeriod, string> = {
+  unavailable: "Off",
+  all_day: "Day",
+  morning: "Morning",
+  afternoon: "Afternoon",
+  evening: "Evening",
+};
 
 export default function ProviderJoinPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [joinStep, setJoinStep] = useState<JoinStep>("estimate");
   const [weeklyHours, setWeeklyHours] = useState(20);
-  const [salutation, setSalutation] = useState<"ms_mrs" | "mr" | "">("");
+  const [salutation, setSalutation] = useState<"miss" | "mrs" | "mr" | "">("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,7 +63,16 @@ export default function ProviderJoinPage() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [residentStatus, setResidentStatus] = useState("");
   const [utrNumber, setUtrNumber] = useState("");
+  const [rightToWork, setRightToWork] = useState<"yes" | "no" | "">("");
   const [selfEmployed, setSelfEmployed] = useState<"agree" | "disagree" | "">("");
+  const [currentlySelfEmployed, setCurrentlySelfEmployed] = useState<"yes" | "no" | "other" | "">("");
+  const [currentSelfEmploymentDetail, setCurrentSelfEmploymentDetail] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [cleaningExperienceYears, setCleaningExperienceYears] = useState("");
+  const [cleaningExperienceTypes, setCleaningExperienceTypes] = useState<string[]>([]);
+  const [otherCleaningExperience, setOtherCleaningExperience] = useState("");
+  const [maxTravelDistance, setMaxTravelDistance] = useState("");
+  const [weeklyAvailability, setWeeklyAvailability] = useState<ProviderWeeklyAvailability>(INITIAL_WEEKLY_AVAILABILITY);
   const skills = ["cleaning"];
   const [areaIds, setAreaIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -92,7 +125,11 @@ export default function ProviderJoinPage() {
     setJoinStep("status");
   }
 
-  function continueToWorkAreas() {
+  function continueToExperience() {
+    if (!rightToWork) {
+      setErr("Tell us whether you currently have the right to work in the UK.");
+      return;
+    }
     if (!residentStatus) {
       setErr("Select your resident status in the UK.");
       return;
@@ -105,8 +142,51 @@ export default function ProviderJoinPage() {
       setErr("Enter all 10 digits of your UTR number, or leave it blank.");
       return;
     }
+    if (!currentlySelfEmployed) {
+      setErr("Tell us whether you are currently self-employed.");
+      return;
+    }
+    if (currentlySelfEmployed === "other" && !currentSelfEmploymentDetail.trim()) {
+      setErr("Describe your current self-employment status.");
+      return;
+    }
+    if (!businessName.trim()) {
+      setErr("Enter your trading or business name, or write Not applicable.");
+      return;
+    }
+    setErr(null);
+    setJoinStep("experience");
+  }
+
+  function continueToWorkAreas() {
+    const years = Number(cleaningExperienceYears);
+    if (!cleaningExperienceYears || !Number.isInteger(years) || years < 0 || years > 60) {
+      setErr("Enter your years of cleaning experience between 0 and 60.");
+      return;
+    }
+    if (cleaningExperienceTypes.length === 0) {
+      setErr("Select at least one type of cleaning experience.");
+      return;
+    }
+    if (cleaningExperienceTypes.includes("Other") && !otherCleaningExperience.trim()) {
+      setErr("Describe your other cleaning experience.");
+      return;
+    }
     setErr(null);
     setJoinStep("work");
+  }
+
+  function continueToAvailability() {
+    if (areaIds.length === 0) {
+      setErr("Pick at least one area of London you cover.");
+      return;
+    }
+    if (!maxTravelDistance) {
+      setErr("Select the maximum distance you can travel.");
+      return;
+    }
+    setErr(null);
+    setJoinStep("availability");
   }
 
   async function submit() {
@@ -133,6 +213,15 @@ export default function ProviderJoinPage() {
           residentStatus,
           utrNumber: utrNumber.trim() || null,
           selfEmployed: selfEmployed === "agree",
+          rightToWork: rightToWork === "yes",
+          currentlySelfEmployed,
+          currentSelfEmploymentDetail: currentSelfEmploymentDetail.trim() || null,
+          businessName: businessName.trim(),
+          cleaningExperienceYears: Number(cleaningExperienceYears),
+          cleaningExperienceTypes,
+          otherCleaningExperience: otherCleaningExperience.trim() || null,
+          maxTravelDistance,
+          weeklyAvailability,
           skills,
           areaIds,
         }),
@@ -158,7 +247,23 @@ export default function ProviderJoinPage() {
     }
   }
 
-  const ready = accountReady && residentStatus && selfEmployed === "agree" && skills.length && areaIds.length;
+  const hasWorkingPeriod = Object.values(weeklyAvailability).some(
+    (period) => period !== "unavailable",
+  );
+  const ready = Boolean(
+    accountReady &&
+      rightToWork &&
+      residentStatus &&
+      selfEmployed === "agree" &&
+      currentlySelfEmployed &&
+      businessName.trim() &&
+      cleaningExperienceYears &&
+      cleaningExperienceTypes.length &&
+      skills.length &&
+      areaIds.length &&
+      maxTravelDistance &&
+      hasWorkingPeriod,
+  );
   const monthlyEstimate = estimateProviderMonthlyEarnings(weeklyHours);
 
   return (
@@ -267,10 +372,19 @@ export default function ProviderJoinPage() {
                   <input
                     type="radio"
                     name="salutation"
-                    checked={salutation === "ms_mrs"}
-                    onChange={() => setSalutation("ms_mrs")}
+                    checked={salutation === "miss"}
+                    onChange={() => setSalutation("miss")}
                   />
-                  <span aria-hidden="true" /> Ms / Mrs
+                  <span aria-hidden="true" /> Miss
+                </label>
+                <label className="title-option">
+                  <input
+                    type="radio"
+                    name="salutation"
+                    checked={salutation === "mrs"}
+                    onChange={() => setSalutation("mrs")}
+                  />
+                  <span aria-hidden="true" /> Mrs
                 </label>
                 <label className="title-option">
                   <input
@@ -401,6 +515,20 @@ export default function ProviderJoinPage() {
               <p className="form-kicker">Professional application</p>
               <h2>What&apos;s your professional status?</h2>
 
+              <fieldset className="choice-card">
+                <legend>Do you have the right to work in the UK?</legend>
+                <div className="choice-options">
+                  <label>
+                    <input type="radio" name="right-to-work" checked={rightToWork === "yes"} onChange={() => setRightToWork("yes")} />
+                    <span aria-hidden="true" /> Yes, I do
+                  </label>
+                  <label>
+                    <input type="radio" name="right-to-work" checked={rightToWork === "no"} onChange={() => setRightToWork("no")} />
+                    <span aria-hidden="true" /> No, not yet
+                  </label>
+                </div>
+              </fieldset>
+
               <label htmlFor="provider-resident-status">Resident status in the UK</label>
               <select
                 id="provider-resident-status"
@@ -412,6 +540,43 @@ export default function ProviderJoinPage() {
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>
+
+              <fieldset className="choice-card">
+                <legend>Are you currently self-employed?</legend>
+                <div className="choice-options">
+                  {(["yes", "no", "other"] as const).map((answer) => (
+                    <label key={answer}>
+                      <input
+                        type="radio"
+                        name="currently-self-employed"
+                        checked={currentlySelfEmployed === answer}
+                        onChange={() => setCurrentlySelfEmployed(answer)}
+                      />
+                      <span aria-hidden="true" /> {answer === "other" ? "Other" : answer === "yes" ? "Yes" : "No"}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {currentlySelfEmployed === "other" && (
+                <>
+                  <label htmlFor="provider-self-employment-detail">Tell us about your current status</label>
+                  <input
+                    id="provider-self-employment-detail"
+                    value={currentSelfEmploymentDetail}
+                    onChange={(event) => setCurrentSelfEmploymentDetail(event.target.value)}
+                    placeholder="Describe your current work status"
+                  />
+                </>
+              )}
+
+              <label htmlFor="provider-business-name">Trading or business name</label>
+              <input
+                id="provider-business-name"
+                value={businessName}
+                onChange={(event) => setBusinessName(event.target.value)}
+                placeholder="Write Not applicable if you do not have one"
+              />
 
               <label htmlFor="provider-utr">UTR number <span>(optional)</span></label>
               <input
@@ -440,7 +605,7 @@ export default function ProviderJoinPage() {
                 </fieldset>
               </div>
 
-              <button className="go next" type="button" onClick={continueToWorkAreas}>
+              <button className="go next" type="button" onClick={continueToExperience}>
                 Next
               </button>
             </div>
@@ -464,15 +629,72 @@ export default function ProviderJoinPage() {
             </div>
           )}
 
-          {joinStep === "work" && (
-            <div className="work-fields">
-              <button className="step-back" type="button" onClick={() => setJoinStep("status")} disabled={busy}>
+          {joinStep === "experience" && (
+            <div className="experience-fields">
+              <button className="step-back" type="button" onClick={() => setJoinStep("status")}>
                 ← Back
               </button>
-              <p className="form-kicker">Final step</p>
+              <p className="form-kicker">Professional application</p>
+              <h2>Tell us about your cleaning experience</h2>
+
+              <label htmlFor="provider-experience-years">Years of cleaning experience</label>
+              <input
+                id="provider-experience-years"
+                type="number"
+                min="0"
+                max="60"
+                step="1"
+                value={cleaningExperienceYears}
+                onChange={(event) => setCleaningExperienceYears(event.target.value)}
+                placeholder="For example, 3"
+                inputMode="numeric"
+              />
+
+              <fieldset className="multi-card">
+                <legend>Types of cleaning experience</legend>
+                <p>Select every type that applies to you.</p>
+                <div className="multi-options">
+                  {PROVIDER_CLEANING_EXPERIENCE_TYPES.map((type) => (
+                    <label key={type}>
+                      <input
+                        type="checkbox"
+                        checked={cleaningExperienceTypes.includes(type)}
+                        onChange={() => setCleaningExperienceTypes((list) => toggle(list, type))}
+                      />
+                      <span aria-hidden="true">✓</span>
+                      {type}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {cleaningExperienceTypes.includes("Other") && (
+                <>
+                  <label htmlFor="provider-other-experience">Other cleaning experience</label>
+                  <input
+                    id="provider-other-experience"
+                    value={otherCleaningExperience}
+                    onChange={(event) => setOtherCleaningExperience(event.target.value)}
+                    placeholder="Tell us what kind of cleaning you have done"
+                  />
+                </>
+              )}
+
+              <button className="go next" type="button" onClick={continueToWorkAreas}>
+                Next
+              </button>
+            </div>
+          )}
+
+          {joinStep === "work" && (
+            <div className="work-fields">
+              <button className="step-back" type="button" onClick={() => setJoinStep("experience")} disabled={busy}>
+                ← Back
+              </button>
+              <p className="form-kicker">Professional application</p>
               <h2>Where would you like to work?</h2>
               <p className="section-intro">
-                Choose where you would like to work. You can change your hours later in the professional portal.
+                Choose every London area you cover and how far you are normally willing to travel.
               </p>
 
               <label>What do you offer?</label>
@@ -480,7 +702,7 @@ export default function ProviderJoinPage() {
                 <span className="chk on">Home cleaning</span>
               </div>
 
-              <label>Where do you work?</label>
+              <label>Areas of London covered</label>
               <div className="checks">
                 {areas.length === 0 ? (
                   <span className="muted">Loading areas…</span>
@@ -498,6 +720,75 @@ export default function ProviderJoinPage() {
                   ))
                 )}
               </div>
+
+              <label htmlFor="provider-travel-distance">Maximum travel distance</label>
+              <select
+                id="provider-travel-distance"
+                value={maxTravelDistance}
+                onChange={(event) => setMaxTravelDistance(event.target.value)}
+              >
+                <option value="" disabled>Select a distance</option>
+                {PROVIDER_TRAVEL_DISTANCES.map((distance) => (
+                  <option key={distance} value={distance}>{distance}</option>
+                ))}
+              </select>
+
+              <button className="go next" type="button" onClick={continueToAvailability}>
+                Next
+              </button>
+            </div>
+          )}
+
+          {joinStep === "availability" && (
+            <div className="availability-fields">
+              <button className="step-back" type="button" onClick={() => setJoinStep("work")} disabled={busy}>
+                ← Back
+              </button>
+              <p className="form-kicker">Final step</p>
+              <h2>When are you available?</h2>
+              <p className="section-intro">
+                Choose one period for every day. Select Off when you do not want jobs that day.
+              </p>
+
+              <div className="availability-table">
+                <div className="availability-grid-header" aria-hidden="true">
+                  <span>Day</span>
+                  {PROVIDER_AVAILABILITY_PERIODS.map((period) => (
+                    <span key={period}>{AVAILABILITY_LABELS[period]}</span>
+                  ))}
+                </div>
+                {PROVIDER_WEEKDAYS.map(({ key, label }) => (
+                  <fieldset className="availability-row" key={key}>
+                    <legend>{label}</legend>
+                    {PROVIDER_AVAILABILITY_PERIODS.map((period) => (
+                      <label key={period} title={`${label}: ${AVAILABILITY_LABELS[period]}`}>
+                        <input
+                          type="radio"
+                          name={`availability-${key}`}
+                          checked={weeklyAvailability[key] === period}
+                          onChange={() => setWeeklyAvailability((current) => ({ ...current, [key]: period }))}
+                        />
+                        <span aria-hidden="true" />
+                        <b>{AVAILABILITY_LABELS[period]}</b>
+                      </label>
+                    ))}
+                  </fieldset>
+                ))}
+              </div>
+
+              <label htmlFor="provider-weekly-hours">How many cleaning hours would you ideally like each week?</label>
+              <input
+                id="provider-weekly-hours"
+                type="number"
+                min="0"
+                max={PROVIDER_MAX_WEEKLY_HOURS}
+                step="1"
+                value={weeklyHours}
+                onChange={(event) => setWeeklyHours(Number(event.target.value))}
+              />
+              {!hasWorkingPeriod && (
+                <p className="help-copy">Choose at least one working period before submitting.</p>
+              )}
 
               <div className="form-actions">
                 <button className="go" type="button" onClick={submit} disabled={busy || !ready}>
@@ -822,6 +1113,8 @@ export default function ProviderJoinPage() {
         }
         .account-fields,
         .status-fields,
+        .experience-fields,
+        .availability-fields,
         .work-fields {
           display: grid;
         }
@@ -833,6 +1126,200 @@ export default function ProviderJoinPage() {
         .status-fields label > span {
           color: #8C95A0;
           font-weight: 600;
+        }
+        .choice-card,
+        .multi-card {
+          margin: 0 0 18px;
+          padding: 17px;
+          border: 1px solid #E2D5F8;
+          border-radius: 15px;
+          background: #FAF7FF;
+        }
+        .choice-card legend,
+        .multi-card legend {
+          padding: 0 4px;
+          color: #16202A;
+          font-size: 13.5px;
+          font-weight: 900;
+        }
+        .choice-options {
+          position: relative;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 11px 20px;
+          margin-top: 8px;
+        }
+        .choice-options label {
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          margin: 0;
+          color: #16202A;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .choice-options input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          min-height: 0;
+          margin: 0;
+          opacity: 0;
+        }
+        .choice-options label > span {
+          width: 22px;
+          height: 22px;
+          box-sizing: border-box;
+          border: 1.5px solid #8E96A1;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: inset 0 0 0 5px #fff;
+        }
+        .choice-options input:checked + span {
+          border-color: #6D28D9;
+          background: #6D28D9;
+        }
+        .choice-options input:focus-visible + span {
+          outline: 3px solid rgba(109,40,217,0.18);
+          outline-offset: 2px;
+        }
+        .multi-card > p {
+          margin: 4px 0 13px;
+          color: #68717D;
+          font-size: 12px;
+        }
+        .multi-options {
+          position: relative;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 9px;
+        }
+        .multi-options label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          margin: 0;
+          padding: 10px;
+          border: 1px solid #E5E0EC;
+          border-radius: 10px;
+          background: #fff;
+          color: #343D48;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .multi-options input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          min-height: 0;
+          margin: 0;
+          opacity: 0;
+        }
+        .multi-options label > span {
+          display: grid;
+          flex: 0 0 auto;
+          width: 19px;
+          height: 19px;
+          place-items: center;
+          border: 1.5px solid #8E96A1;
+          border-radius: 6px;
+          color: transparent;
+          font-size: 12px;
+        }
+        .multi-options input:checked + span {
+          border-color: #6D28D9;
+          background: #6D28D9;
+          color: #fff;
+        }
+        .multi-options input:focus-visible + span {
+          outline: 3px solid rgba(109,40,217,0.18);
+          outline-offset: 2px;
+        }
+        .availability-table {
+          display: grid;
+          gap: 5px;
+          margin-bottom: 20px;
+          padding: 10px;
+          overflow-x: auto;
+          border: 1px solid #E2D5F8;
+          border-radius: 15px;
+          background: #FAF7FF;
+        }
+        .availability-grid-header,
+        .availability-row {
+          display: grid;
+          grid-template-columns: minmax(74px, 1.25fr) repeat(5, minmax(44px, 1fr));
+          gap: 5px;
+          min-width: 405px;
+          align-items: center;
+        }
+        .availability-grid-header {
+          padding: 0 3px 5px;
+          color: #7A828C;
+          font-size: 9px;
+          font-weight: 900;
+          text-align: center;
+        }
+        .availability-grid-header span:first-child {
+          text-align: left;
+        }
+        .availability-row {
+          margin: 0;
+          padding: 0;
+          border: 0;
+        }
+        .availability-row legend {
+          float: left;
+          width: auto;
+          padding: 0 4px;
+          color: #16202A;
+          font-size: 11px;
+          font-weight: 900;
+        }
+        .availability-row label {
+          position: relative;
+          display: grid;
+          min-height: 36px;
+          place-items: center;
+          margin: 0;
+          border: 1px solid #E5E0EC;
+          border-radius: 8px;
+          background: #fff;
+          cursor: pointer;
+        }
+        .availability-row input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          min-height: 0;
+          margin: 0;
+          opacity: 0;
+        }
+        .availability-row label > span {
+          width: 16px;
+          height: 16px;
+          box-sizing: border-box;
+          border: 1.5px solid #9AA1AA;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: inset 0 0 0 4px #fff;
+        }
+        .availability-row label > b {
+          display: none;
+        }
+        .availability-row input:checked + span {
+          border-color: #6D28D9;
+          background: #6D28D9;
+        }
+        .availability-row label:has(input:checked) {
+          border-color: #B797EE;
+          background: #F4ECFE;
+        }
+        .availability-row input:focus-visible + span {
+          outline: 3px solid rgba(109,40,217,0.18);
+          outline-offset: 2px;
         }
         .employment-card {
           margin: 2px 0 18px;

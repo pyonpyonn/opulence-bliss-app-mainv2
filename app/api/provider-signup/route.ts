@@ -7,9 +7,14 @@ import { createClient } from "@supabase/supabase-js";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
 import {
   canFinalizeProviderPartnership,
+  isProviderCleaningExperienceTypes,
+  isProviderCleaningExperienceYears,
   isOptionalUtrNumber,
   isProviderResidentStatus,
+  isProviderTravelDistance,
+  isProviderWeeklyAvailability,
   isProviderWeeklyHours,
+  providerAvailabilityRows,
 } from "@/lib/providerOnboarding";
 
 const admin = createClient(
@@ -33,6 +38,15 @@ export async function POST(req: NextRequest) {
       residentStatus,
       utrNumber,
       selfEmployed,
+      rightToWork,
+      currentlySelfEmployed,
+      currentSelfEmploymentDetail,
+      businessName,
+      cleaningExperienceYears,
+      cleaningExperienceTypes,
+      otherCleaningExperience,
+      maxTravelDistance,
+      weeklyAvailability,
       skills,
       areaIds,
     } = await req.json();
@@ -59,6 +73,22 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(normalizedEmail)) {
       return NextResponse.json(
         { error: "Invalid email" },
+        { status: 400 }
+      );
+    }
+    if (!["miss", "mrs", "mr"].includes(String(salutation))) {
+      return NextResponse.json(
+        { error: "Select Miss, Mrs or Mr." },
+        { status: 400 }
+      );
+    }
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(String(dateOfBirth)) ||
+      Number.isNaN(Date.parse(`${dateOfBirth}T00:00:00Z`)) ||
+      new Date(`${dateOfBirth}T00:00:00Z`) > new Date()
+    ) {
+      return NextResponse.json(
+        { error: "Enter a valid date of birth." },
         { status: 400 }
       );
     }
@@ -89,6 +119,66 @@ export async function POST(req: NextRequest) {
     if (!canFinalizeProviderPartnership(selfEmployed)) {
       return NextResponse.json(
         { error: "Opulence Bliss can only partner with self-employed professionals." },
+        { status: 400 }
+      );
+    }
+    if (typeof rightToWork !== "boolean") {
+      return NextResponse.json(
+        { error: "Tell us whether you currently have the right to work in the UK." },
+        { status: 400 }
+      );
+    }
+    if (!["yes", "no", "other"].includes(String(currentlySelfEmployed))) {
+      return NextResponse.json(
+        { error: "Tell us whether you are currently self-employed." },
+        { status: 400 }
+      );
+    }
+    if (
+      currentlySelfEmployed === "other" &&
+      !String(currentSelfEmploymentDetail ?? "").trim()
+    ) {
+      return NextResponse.json(
+        { error: "Describe your current self-employment status." },
+        { status: 400 }
+      );
+    }
+    if (!String(businessName ?? "").trim()) {
+      return NextResponse.json(
+        { error: "Enter your trading or business name, or write Not applicable." },
+        { status: 400 }
+      );
+    }
+    if (!isProviderCleaningExperienceYears(cleaningExperienceYears)) {
+      return NextResponse.json(
+        { error: "Enter your years of cleaning experience." },
+        { status: 400 }
+      );
+    }
+    if (!isProviderCleaningExperienceTypes(cleaningExperienceTypes)) {
+      return NextResponse.json(
+        { error: "Select at least one valid type of cleaning experience." },
+        { status: 400 }
+      );
+    }
+    if (
+      cleaningExperienceTypes.includes("Other") &&
+      !String(otherCleaningExperience ?? "").trim()
+    ) {
+      return NextResponse.json(
+        { error: "Describe your other cleaning experience." },
+        { status: 400 }
+      );
+    }
+    if (!isProviderTravelDistance(maxTravelDistance)) {
+      return NextResponse.json(
+        { error: "Select the maximum distance you can travel." },
+        { status: 400 }
+      );
+    }
+    if (!isProviderWeeklyAvailability(weeklyAvailability)) {
+      return NextResponse.json(
+        { error: "Choose your availability for every day and include at least one working period." },
         { status: 400 }
       );
     }
@@ -165,6 +255,7 @@ export async function POST(req: NextRequest) {
         profile_id: userId,
         services: ["cleaning"],
         display_name: fullName,
+        years_experience: cleaningExperienceYears,
         vetting_status: "pending",
       })
       .select("id")
@@ -186,6 +277,22 @@ export async function POST(req: NextRequest) {
         resident_status: residentStatus,
         utr_number: utrNumber ? String(utrNumber) : null,
         self_employed_confirmed: true,
+        salutation,
+        date_of_birth: dateOfBirth,
+        right_to_work: rightToWork,
+        current_self_employment_status: currentlySelfEmployed,
+        current_self_employment_detail:
+          currentlySelfEmployed === "other"
+            ? String(currentSelfEmploymentDetail).trim()
+            : null,
+        business_name: String(businessName).trim(),
+        cleaning_experience_years: cleaningExperienceYears,
+        cleaning_experience_types: cleaningExperienceTypes,
+        other_cleaning_experience: cleaningExperienceTypes.includes("Other")
+          ? String(otherCleaningExperience).trim()
+          : null,
+        max_travel_distance: maxTravelDistance,
+        weekly_availability: weeklyAvailability,
       });
 
     if (onboardingErr) {
@@ -203,13 +310,11 @@ export async function POST(req: NextRequest) {
       }))
     );
 
-    // 6. Default hours: Mon–Fri, 09:00–17:00 (they can change these later).
+    // 6. Publish the applicant's selected periods as their initial matching hours.
     await admin.from("provider_availability").insert(
-      [1, 2, 3, 4, 5].map((weekday) => ({
+      providerAvailabilityRows(weeklyAvailability).map((row) => ({
         provider_id: prov.id,
-        weekday,
-        start_time: "09:00",
-        end_time: "17:00",
+        ...row,
       }))
     );
 

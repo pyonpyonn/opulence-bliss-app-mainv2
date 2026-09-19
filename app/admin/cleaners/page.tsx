@@ -15,12 +15,18 @@ function applicationOf(value: unknown) {
       preferred_weekly_hours?: number;
       resident_status?: string;
       self_employed_confirmed?: boolean;
+      right_to_work?: boolean;
+      cleaning_experience_years?: number;
+      max_travel_distance?: string;
     } | undefined;
   }
   return value as {
     preferred_weekly_hours?: number;
     resident_status?: string;
     self_employed_confirmed?: boolean;
+    right_to_work?: boolean;
+    cleaning_experience_years?: number;
+    max_travel_distance?: string;
   } | null;
 }
 
@@ -32,7 +38,7 @@ export default async function AdminCleanersPage() {
     supabase
       .from("providers")
       .select(
-        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed)",
+        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed, right_to_work, cleaning_experience_years, max_travel_distance)",
       )
       .order("display_name", { ascending: true }),
     supabase
@@ -136,7 +142,7 @@ export default async function AdminCleanersPage() {
                     <p style={meta}>
                       <strong>Application:</strong>{" "}
                       {application
-                        ? `${application.resident_status ?? "Residency not supplied"} · ${application.preferred_weekly_hours ?? 0} hr/week · ${application.self_employed_confirmed ? "self-employed confirmed" : "self-employed status missing"}`
+                        ? `${application.right_to_work == null ? "Right-to-work not supplied" : application.right_to_work ? "Right to work: yes" : "Right to work: no"} · ${application.cleaning_experience_years ?? 0} years · ${application.preferred_weekly_hours ?? 0} hr/week · ${application.max_travel_distance ?? "Travel range not supplied"}`
                         : "Legacy account — no onboarding details submitted"}
                     </p>
                     <p style={meta}>
