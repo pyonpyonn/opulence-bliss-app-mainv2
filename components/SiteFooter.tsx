@@ -27,8 +27,8 @@ const columns: Array<{
     title: "For professionals",
     links: [
       ["Work with us", "/provider/join"],
-      ["Professional sign in", "/provider/login"],
-      ["Customer sign in", "/login"],
+      ["Sign in as a pro", "/provider/login"],
+      ["Sign in", "/login"],
     ],
   },
 ];

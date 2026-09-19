@@ -79,7 +79,7 @@ export default function ServicePoll({
 
     if (!user) {
       setSignedOut(true);
-      setMessage("Sign in as a client to save your vote.");
+      setMessage("Sign in to save your vote.");
       setLoading(false);
       return;
     }
@@ -169,9 +169,9 @@ export default function ServicePoll({
         )}
 
         {signedOut ? (
-          <Link className={styles.submit} href="/login">
-            Sign in as a client to vote
-          </Link>
+        <Link className={styles.submit} href="/login">
+          Sign in to vote
+        </Link>
         ) : (
           <button
             className={styles.submit}

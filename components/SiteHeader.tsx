@@ -172,7 +172,7 @@ export default function SiteHeader() {
             href={accountHref}
             style={{ ...ghostBtn, position: "relative" }}
           >
-            {role ? "My account" : "Log in"}
+            {role ? "My account" : "Sign in"}
             {unread > 0 && (
               <span
                 style={{
@@ -252,9 +252,9 @@ export default function SiteHeader() {
                 ) : (
                   <>
                     <p>Continue as</p>
-                    <Link href="/login">Login</Link>
+                    <Link href="/login">Sign in</Link>
                     <Link href="/auth/sign-up">Create Account</Link>
-                    <Link href="/provider/login">Professional log in</Link>
+                    <Link href="/provider/login">Sign in as a pro</Link>
                     <Link href="/provider/join">Become a professional</Link>
                   </>
                 )}
@@ -352,8 +352,10 @@ export default function SiteHeader() {
             </nav>
 
             <div className="mobile-account-actions">
-              <Link href={accountHref}>{role ? "Open my account" : "Login"}</Link>
-              {!role && <Link href="/provider/login">Professional log in</Link>}
+              <Link href={accountHref}>
+                {role ? "Open my account" : "Sign in"}
+              </Link>
+              {!role && <Link href="/provider/login">Sign in as a pro</Link>}
             </div>
           </aside>
         </div>

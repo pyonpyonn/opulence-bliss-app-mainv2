@@ -11,9 +11,9 @@ type Mode = "client" | "provider";
 
 const COPY = {
   client: {
-    title: "LOGIN",
+    title: "SIGN IN",
     body: "Manage your bookings, messages and payments.",
-    button: "Log in to my account",
+    button: "Sign in",
     demoEmail: "client@test.com",
     demoLabel: "Use client demo account",
     destination: "/account",
@@ -25,14 +25,14 @@ const COPY = {
     signupHref: "/auth/sign-up",
   },
   provider: {
-    title: "PROFESSIONAL LOGIN",
+    title: "SIGN IN AS A PRO",
     body: "Sign in to manage offers, visits, messages, hours and earnings.",
-    button: "Sign in to professional portal",
+    button: "Sign in as a pro",
     demoEmail: "worker@test.com",
     demoLabel: "Use professional demo account",
     destination: "/worker",
     switchText: "Looking for your bookings?",
-    switchLabel: "Client login",
+    switchLabel: "Sign in",
     switchHref: "/login",
     signupText: "New professional?",
     signupLabel: "Sign up",
@@ -73,8 +73,8 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
       await supabase.auth.signOut();
       setErr(
         mode === "provider"
-          ? "This is not a professional account. Please use the client login instead."
-          : "This is a professional account. Please use the professional login instead.",
+          ? "This is not a professional account. Please use the regular sign-in page instead."
+          : "This is a professional account. Please use Sign in as a pro instead.",
       );
       setBusy(false);
       return;
