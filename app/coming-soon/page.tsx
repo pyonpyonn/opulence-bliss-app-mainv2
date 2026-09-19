@@ -63,13 +63,6 @@ export default function ComingSoonPage() {
                     <strong>{service.title}</strong>
                     <span>{service.detail}</span>
                   </span>
-                  {service.items.length > 0 && (
-                    <span className={styles.cardMeta}>
-                      <span className={styles.count}>
-                        {service.items.length} tasks
-                      </span>
-                    </span>
-                  )}
                 </div>
 
                 {service.items.length > 0 && (

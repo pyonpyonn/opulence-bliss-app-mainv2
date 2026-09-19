@@ -78,7 +78,7 @@
 
 .cardTop {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) auto;
+  grid-template-columns: 62px minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   min-height: 102px;
@@ -113,18 +113,6 @@
   font-size: 13.5px;
   font-weight: 600;
   line-height: 1.42;
-}
-
-.cardMeta {
-  display: grid;
-  justify-items: start;
-  min-width: 56px;
-}
-
-.count {
-  color: #667085;
-  font-size: 12.5px;
-  font-weight: 700;
 }
 
 .items {
@@ -188,10 +176,6 @@
     width: 46px;
     height: 46px;
     border-radius: 13px;
-  }
-
-  .cardMeta {
-    grid-column: 2;
   }
 
   .items {
