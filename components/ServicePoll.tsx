@@ -113,74 +113,76 @@ export default function ServicePoll({
         </p>
       </div>
 
-      <fieldset className={styles.options}>
-        <legend className={styles.srOnly}>Choose a future service</legend>
-        {COMING_SOON.map(({ key, title, detail }) => {
-          const checked = selected === key;
-          return (
-            <label
-              className={`${styles.option} ${checked ? styles.optionOn : ""}`}
-              key={key}
-            >
-              <input
-                type="radio"
-                name={`future-service-${variant}`}
-                value={key}
-                checked={checked}
-                onChange={() => {
-                  setSelected(key);
-                  setMessage(null);
-                  setSaved(false);
-                }}
-              />
-              <span className={styles.copy}>
-                <strong>{title}</strong>
-                <small>{detail}</small>
-              </span>
-              <span className={styles.radio} aria-hidden="true">
-                {checked && <Check size={14} strokeWidth={3} />}
-              </span>
-            </label>
-          );
-        })}
-      </fieldset>
+      <div className={styles.formPanel}>
+        <fieldset className={styles.options}>
+          <legend className={styles.srOnly}>Choose a future service</legend>
+          {COMING_SOON.map(({ key, title, detail }) => {
+            const checked = selected === key;
+            return (
+              <label
+                className={`${styles.option} ${checked ? styles.optionOn : ""}`}
+                key={key}
+              >
+                <input
+                  type="radio"
+                  name={`future-service-${variant}`}
+                  value={key}
+                  checked={checked}
+                  onChange={() => {
+                    setSelected(key);
+                    setMessage(null);
+                    setSaved(false);
+                  }}
+                />
+                <span className={styles.copy}>
+                  <strong>{title}</strong>
+                  <small>{detail}</small>
+                </span>
+                <span className={styles.radio} aria-hidden="true">
+                  {checked && <Check size={14} strokeWidth={3} />}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
 
-      <label className={styles.suggestionLabel}>
-        Suggest something else <span>(optional)</span>
-        <textarea
-          rows={variant === "page" ? 3 : 2}
-          maxLength={500}
-          value={suggestion}
-          onChange={(event) => setSuggestion(event.target.value)}
-          placeholder="What other service would make life easier?"
-        />
-      </label>
+        <label className={styles.suggestionLabel}>
+          Suggest something else <span>(optional)</span>
+          <textarea
+            rows={2}
+            maxLength={500}
+            value={suggestion}
+            onChange={(event) => setSuggestion(event.target.value)}
+            placeholder="What other service would make life easier?"
+          />
+        </label>
 
-      {message && (
-        <p
-          className={saved ? styles.success : styles.error}
-          role="status"
-          aria-live="polite"
-        >
-          {saved && <Check size={15} />}
-          {message}
-        </p>
-      )}
+        {message && (
+          <p
+            className={saved ? styles.success : styles.error}
+            role="status"
+            aria-live="polite"
+          >
+            {saved && <Check size={15} />}
+            {message}
+          </p>
+        )}
 
-      {signedOut ? (
-        <Link className={styles.submit} href="/login">
-          Sign in as a client to vote
-        </Link>
-      ) : (
-        <button
-          className={styles.submit}
-          type="button"
-          disabled={loading || !selected}
-          onClick={() => void submitVote()}
-        >
-          {loading ? "Saving…" : "Submit my vote"}
-        </button>
-      )}
+        {signedOut ? (
+          <Link className={styles.submit} href="/login">
+            Sign in as a client to vote
+          </Link>
+        ) : (
+          <button
+            className={styles.submit}
+            type="button"
+            disabled={loading || !selected}
+            onClick={() => void submitVote()}
+          >
+            {loading ? "Saving…" : "Submit my vote"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

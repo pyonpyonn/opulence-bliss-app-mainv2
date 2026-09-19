@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  ArrowRight,
+  Hammer,
+  Laptop,
+  PackageOpen,
+  PawPrint,
+  Sofa,
+  Sprout,
+  type LucideIcon,
+} from "lucide-react";
 import { COMING_SOON } from "@/lib/comingSoon";
 import ServicePoll from "@/components/ServicePoll";
 import styles from "./page.module.css";
@@ -8,6 +18,15 @@ export const metadata: Metadata = {
   title: "Coming soon | Opulence Bliss",
   description:
     "The services we are building next, from home maintenance to garden, pet and technology help. Tell us which one you want first.",
+};
+
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  maintenance: Hammer,
+  moving_support: PackageOpen,
+  garden: Sprout,
+  pets: PawPrint,
+  tech_help: Laptop,
+  carpet_upholstery: Sofa,
 };
 
 export default function ComingSoonPage() {
@@ -26,28 +45,55 @@ export default function ComingSoonPage() {
         </Link>
       </header>
 
-      <div className={styles.grid}>
-        {COMING_SOON.map((service) => (
-          <section
-            key={service.key}
-            id={service.slug}
-            className={styles.card}
-            aria-labelledby={`${service.slug}-title`}
-          >
-            <h2 id={`${service.slug}-title`}>{service.title}</h2>
-            <p className={styles.detail}>{service.detail}</p>
-            {service.items.length > 0 ? (
-              <ul className={styles.items}>
-                {service.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.tbc}>Full task list to be confirmed.</p>
-            )}
-          </section>
-        ))}
-      </div>
+      <section className={styles.services} aria-labelledby="upcoming-services">
+        <h2 id="upcoming-services">Our upcoming services</h2>
+        <div className={styles.grid}>
+          {COMING_SOON.map((service) => {
+            const Icon = SERVICE_ICONS[service.key] ?? Hammer;
+            return (
+              <details
+                key={service.key}
+                id={service.slug}
+                className={styles.card}
+              >
+                <summary>
+                  <span className={styles.icon} aria-hidden="true">
+                    <Icon size={25} strokeWidth={1.8} />
+                  </span>
+                  <span className={styles.cardCopy}>
+                    <strong>{service.title}</strong>
+                    <span>{service.detail}</span>
+                  </span>
+                  <span className={styles.cardAction}>
+                    <span className={styles.count}>
+                      {service.items.length > 0
+                        ? `${service.items.length} tasks`
+                        : "Coming soon"}
+                    </span>
+                    <span className={styles.viewDetails}>
+                      View details <ArrowRight size={16} />
+                    </span>
+                  </span>
+                </summary>
+
+                <div className={styles.expanded}>
+                  {service.items.length > 0 ? (
+                    <ul className={styles.items}>
+                      {service.items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={styles.tbc}>
+                      Full task list to be confirmed.
+                    </p>
+                  )}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </section>
 
       <section className={styles.pollSection} aria-label="Service poll">
         <ServicePoll variant="page" />
