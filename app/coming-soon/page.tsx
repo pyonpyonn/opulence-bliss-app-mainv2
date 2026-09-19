@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowRight,
   Hammer,
   Laptop,
   PackageOpen,
@@ -51,45 +50,26 @@ export default function ComingSoonPage() {
           {COMING_SOON.map((service) => {
             const Icon = SERVICE_ICONS[service.key] ?? Hammer;
             return (
-              <details
+              <article
                 key={service.key}
                 id={service.slug}
                 className={styles.card}
               >
-                <summary>
-                  <span className={styles.icon} aria-hidden="true">
-                    <Icon size={25} strokeWidth={1.8} />
-                  </span>
-                  <span className={styles.cardCopy}>
-                    <strong>{service.title}</strong>
-                    <span>{service.detail}</span>
-                  </span>
-                  <span className={styles.cardAction}>
+                <span className={styles.icon} aria-hidden="true">
+                  <Icon size={25} strokeWidth={1.8} />
+                </span>
+                <span className={styles.cardCopy}>
+                  <strong>{service.title}</strong>
+                  <span>{service.detail}</span>
+                </span>
+                {service.items.length > 0 && (
+                  <span className={styles.cardMeta}>
                     <span className={styles.count}>
-                      {service.items.length > 0
-                        ? `${service.items.length} tasks`
-                        : "Coming soon"}
-                    </span>
-                    <span className={styles.viewDetails}>
-                      View details <ArrowRight size={16} />
+                      {service.items.length} tasks
                     </span>
                   </span>
-                </summary>
-
-                <div className={styles.expanded}>
-                  {service.items.length > 0 ? (
-                    <ul className={styles.items}>
-                      {service.items.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className={styles.tbc}>
-                      Full task list to be confirmed.
-                    </p>
-                  )}
-                </div>
-              </details>
+                )}
+              </article>
             );
           })}
         </div>
