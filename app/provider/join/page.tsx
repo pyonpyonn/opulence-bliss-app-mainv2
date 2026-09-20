@@ -1066,9 +1066,14 @@ export default function ProviderJoinPage() {
           color: #16202A;
           font-weight: 900;
         }
-        .review-list {
+        /* Keep review cards independent from the bullet styling used by the
+           benefit lists above. */
+        .perks .review-list {
           padding: 0;
           list-style: none;
+        }
+        .perks .review-list > li {
+          padding-left: 0;
         }
         .review-list > li {
           padding: 0 0 18px;
@@ -1090,6 +1095,8 @@ export default function ProviderJoinPage() {
           line-height: 1.5;
         }
         .review-list cite {
+          display: block;
+          margin-top: 3px;
           color: #7A828C;
           font-size: 13px;
           font-style: normal;
