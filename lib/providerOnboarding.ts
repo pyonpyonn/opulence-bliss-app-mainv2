@@ -9,9 +9,9 @@ export const PROVIDER_RESIDENT_STATUSES = [
   "Student Visa",
 ] as const;
 
-export const PROVIDER_ESTIMATED_HOURLY_EARNINGS = 15;
+export const PROVIDER_ESTIMATED_HOURLY_EARNINGS = 18;
 export const PROVIDER_MAX_WEEKLY_HOURS = 40;
-const AVERAGE_WEEKS_PER_MONTH = 4.3;
+const AVERAGE_WEEKS_PER_MONTH = 4;
 
 export const PROVIDER_CLEANING_EXPERIENCE_TYPES = [
   "Domestic cleaning",

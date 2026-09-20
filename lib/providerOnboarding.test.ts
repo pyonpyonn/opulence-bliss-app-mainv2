@@ -23,8 +23,9 @@ test("professional availability accepts every whole hour from zero through forty
 
 test("the earnings simulation follows the selected weekly hours", () => {
   assert.equal(estimateProviderMonthlyEarnings(0), 0);
-  assert.equal(estimateProviderMonthlyEarnings(20), 1290);
-  assert.equal(estimateProviderMonthlyEarnings(40), 2580);
+  assert.equal(estimateProviderMonthlyEarnings(20), 1440);
+  assert.equal(estimateProviderMonthlyEarnings(30), 2160);
+  assert.equal(estimateProviderMonthlyEarnings(40), 2880);
 });
 
 test("professional status only accepts the displayed UK resident options", () => {

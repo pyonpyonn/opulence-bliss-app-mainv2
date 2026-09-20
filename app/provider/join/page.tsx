@@ -49,7 +49,7 @@ const AVAILABILITY_LABELS: Record<ProviderAvailabilityPeriod, string> = {
 export default function ProviderJoinPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [joinStep, setJoinStep] = useState<JoinStep>("estimate");
-  const [weeklyHours, setWeeklyHours] = useState(20);
+  const [weeklyHours, setWeeklyHours] = useState(30);
   const [salutation, setSalutation] = useState<"miss" | "mrs" | "mr" | "">("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -292,6 +292,42 @@ export default function ProviderJoinPage() {
               <li>Your profile live on the platform</li>
               <li>Jobs matched to your skills and area</li>
               <li>Paid automatically after each visit</li>
+            </ul>
+          </div>
+
+          <div className="perks">
+            <h3>Your earnings could be</h3>
+            <ul>
+              <li>£18–£22 per hour before tax</li>
+              <li>Around £2,160 per month at £18 per hour for 30 hours per week</li>
+              <li>
+                We connect you with new customers, without you having to find
+                them yourself
+              </li>
+            </ul>
+          </div>
+
+          <div className="perks">
+            <h3>Your freedom, your peace</h3>
+            <ul>
+              <li>Work when and where you want</li>
+              <li>Free and non-exclusive</li>
+              <li>Self-employed but fully supported</li>
+            </ul>
+          </div>
+
+          <div className="perks">
+            <h3>Protect yourself</h3>
+            <ul>
+              <li>Bookings and customer acquisition</li>
+              <li>Priority access to jobs</li>
+              <li>Easy payment processing: weekly or monthly</li>
+              <li>
+                Insurance for cancellations where applicable, damages and
+                accidents
+              </li>
+              <li>Administrative support</li>
+              <li>Referral income and loyalty or ambassador rewards</li>
             </ul>
           </div>
 
@@ -915,6 +951,45 @@ export default function ProviderJoinPage() {
           left: 0;
           color: #F5C542;
           font-size: 12px;
+        }
+        .perks {
+          margin-bottom: 20px;
+          padding: 18px 20px;
+          border: 1.5px solid #EDEFF1;
+          border-radius: 16px;
+          background: #fff;
+        }
+        .perks h3 {
+          margin: 0 0 10px;
+          color: #16202A;
+          font-size: 16.5px;
+          font-weight: 900;
+          line-height: 1.3;
+        }
+        .perks ul {
+          display: grid;
+          gap: 8px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+        .perks li {
+          position: relative;
+          padding-left: 19px;
+          color: #3F4652;
+          font-size: 14.5px;
+          line-height: 1.45;
+          overflow-wrap: anywhere;
+        }
+        .perks li::before {
+          content: "";
+          position: absolute;
+          top: 8px;
+          left: 4px;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #6D28D9;
         }
         .steps {
           list-style: none;
