@@ -39,8 +39,8 @@ export async function saveLegalDocument(
   if (title.length < 3 || title.length > 120) {
     return { ok: false, message: "Use a title between 3 and 120 characters." };
   }
-  if (!/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/.test(version)) {
-    return { ok: false, message: "Use a version such as 2026-09-20 or 2026-09-20.2." };
+  if (!/^(?:\d{4}-\d{2}-\d{2}(?:\.\d+)?|\d+\.\d+)$/.test(version)) {
+    return { ok: false, message: "Use a version such as 2.0, 2026-09-20 or 2026-09-20.2." };
   }
   if (contentHtml.replace(/<[^>]*>/g, "").trim().length < 80) {
     return { ok: false, message: "The document is too short to publish." };

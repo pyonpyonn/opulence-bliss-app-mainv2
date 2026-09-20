@@ -39,7 +39,12 @@ export default function LegalEditor({ document }: { document: LegalDocument }) {
         </label>
         <label>
           Version
-          <input name="version" defaultValue={document.version} pattern="\d{4}-\d{2}-\d{2}(?:\.\d+)?" required />
+          <input
+            name="version"
+            defaultValue={document.version}
+            pattern="(?:\d{4}-\d{2}-\d{2}(?:\.\d+)?|\d+\.\d+)"
+            required
+          />
         </label>
       </div>
 

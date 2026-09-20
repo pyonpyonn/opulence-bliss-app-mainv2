@@ -1,4 +1,5 @@
 import sanitizeHtml from "sanitize-html";
+import { CUSTOMER_TERMS_HTML } from "@/lib/customerTerms";
 
 export const LEGAL_DOCUMENT_SLUGS = [
   "terms",
@@ -20,32 +21,11 @@ export type LegalDocument = {
 
 const DEFAULTS: Record<LegalDocumentSlug, Omit<LegalDocument, "slug">> = {
   terms: {
-    title: "Terms & Conditions",
+    title: "Customer Terms & Conditions",
     audience: "customers",
-    version: "2026-09-20",
+    version: "2.0",
     updatedAt: null,
-    contentHtml: `
-      <p><strong>Draft for prototype review.</strong> These terms must be reviewed and approved by Opulence Bliss and its legal adviser before production launch.</p>
-      <h2>1. About the service</h2>
-      <p>Opulence Bliss helps customers arrange home-cleaning services with independent service professionals. Booking availability, prices and service details are shown before payment.</p>
-      <h2>2. Accounts and bookings</h2>
-      <p>You must provide accurate contact, address and booking information. A booking is confirmed when the platform confirms it and any required payment authorisation succeeds.</p>
-      <h2>3. Prices and payment</h2>
-      <p>The total price is shown before checkout. A payment method may be authorised when a booking is made and charged according to the status shown in your account.</p>
-      <h2>4. Changes and cancellations</h2>
-      <ul>
-        <li>48 hours or more before the booking: full refund.</li>
-        <li>24 to 48 hours before the booking: 50% refund.</li>
-        <li>Less than 24 hours before the booking: no refund.</li>
-      </ul>
-      <p>Any exceptional charge, refund or professional compensation remains subject to the published policy and review of the booking evidence.</p>
-      <h2>5. Customer responsibilities</h2>
-      <p>Provide safe and reasonable access, disclose relevant hazards, treat professionals respectfully and use the platform only for lawful booking-related purposes.</p>
-      <h2>6. Problems and complaints</h2>
-      <p>Report service, safety, damage or payment concerns through your account or support as soon as possible so the evidence can be reviewed.</p>
-      <h2>7. Changes to these terms</h2>
-      <p>The current published version applies when you create an account or accept an updated version. Material changes will be communicated where required.</p>
-    `,
+    contentHtml: CUSTOMER_TERMS_HTML,
   },
   privacy: {
     title: "Privacy Policy",
