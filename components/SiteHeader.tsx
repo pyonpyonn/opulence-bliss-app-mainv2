@@ -755,14 +755,18 @@ const navInner: React.CSSProperties = {
   margin: "0 auto",
   padding: "0 26px",
   display: "flex",
+  alignItems: "center",
   gap: 26,
   overflowX: "auto",
   overflowY: "hidden",
 };
 
 const navItem: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
   fontSize: 15.5,
   fontWeight: 800,
+  lineHeight: 1.2,
   textDecoration: "none",
   padding: "9px 0 7px",
   borderBottom: "4px solid transparent",
