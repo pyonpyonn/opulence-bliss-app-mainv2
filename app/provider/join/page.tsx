@@ -26,6 +26,14 @@ const supabase = createClient();
 
 type Area = { id: string; name: string; postcode_prefixes: string[] };
 
+type PublicReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  recipient_name: string;
+  recipient_type: "professional" | "client";
+};
+
 type JoinStep = "estimate" | "account" | "status" | "experience" | "work" | "availability";
 
 const INITIAL_WEEKLY_AVAILABILITY: ProviderWeeklyAvailability = {
@@ -48,6 +56,7 @@ const AVAILABILITY_LABELS: Record<ProviderAvailabilityPeriod, string> = {
 
 export default function ProviderJoinPage() {
   const [areas, setAreas] = useState<Area[]>([]);
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [joinStep, setJoinStep] = useState<JoinStep>("estimate");
   const [weeklyHours, setWeeklyHours] = useState(30);
   const [salutation, setSalutation] = useState<"miss" | "mrs" | "mr" | "">("");
@@ -55,6 +64,8 @@ export default function ProviderJoinPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [triedNext, setTriedNext] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
@@ -89,6 +100,22 @@ export default function ProviderJoinPage() {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc("public_reviews_feed", {
+        p_limit: 24,
+      });
+      const list = ((data ?? []) as PublicReview[])
+        .filter(
+          (review) =>
+            review.recipient_type === "professional" &&
+            review.comment?.trim(),
+        )
+        .slice(0, 3);
+      setReviews(list);
+    })();
+  }, []);
+
   function toggle(list: string[], v: string) {
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
   }
@@ -104,6 +131,24 @@ export default function ProviderJoinPage() {
     length: password.length >= 8,
   };
   const passwordValid = isStrongProviderPassword(password);
+  function yearsSince(iso: string) {
+    if (!iso) return null;
+    const born = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(born.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - born.getFullYear();
+    const monthDiff = now.getMonth() - born.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < born.getDate())) {
+      age -= 1;
+    }
+    return age;
+  }
+  const age = yearsSince(dateOfBirth);
+  const dobValid = age !== null && age >= 18 && age < 100;
+  const showFieldError = (field: string) =>
+    Boolean(touched[field] || triedNext);
+  const markTouched = (field: string) =>
+    setTouched((current) => ({ ...current, [field]: true }));
   const accountFieldsPresent = Boolean(
     salutation &&
       firstName.trim() &&
@@ -115,17 +160,14 @@ export default function ProviderJoinPage() {
       dateOfBirth,
   );
   const accountReady = Boolean(
-    accountFieldsPresent && emailValid && phoneValid,
+    accountFieldsPresent && emailValid && phoneValid && dobValid,
   );
 
   function continueToWorkDetails() {
     setEmailTouched(true);
     setPhoneTouched(true);
-    if (!accountFieldsPresent) {
-      setErr("Complete every account field and meet all five password requirements.");
-      return;
-    }
-    if (!emailValid || !phoneValid) {
+    setTriedNext(true);
+    if (!accountReady) {
       setErr(null);
       return;
     }
@@ -373,6 +415,9 @@ export default function ProviderJoinPage() {
                   <span aria-hidden="true" /> Mr
                 </label>
               </fieldset>
+              {showFieldError("salutation") && !salutation && (
+                <p className="field-error">This information is compulsory</p>
+              )}
 
               <label className="sr-only" htmlFor="provider-first-name">First name</label>
               <input
@@ -381,7 +426,17 @@ export default function ProviderJoinPage() {
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="First name"
                 autoComplete="given-name"
+                onBlur={() => markTouched("firstName")}
+                className={
+                  showFieldError("firstName") && !firstName.trim()
+                    ? "invalid"
+                    : undefined
+                }
+                aria-invalid={showFieldError("firstName") && !firstName.trim()}
               />
+              {showFieldError("firstName") && !firstName.trim() && (
+                <p className="field-error">The first name is mandatory</p>
+              )}
 
               <label className="sr-only" htmlFor="provider-last-name">Last name</label>
               <input
@@ -390,7 +445,17 @@ export default function ProviderJoinPage() {
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Last name"
                 autoComplete="family-name"
+                onBlur={() => markTouched("lastName")}
+                className={
+                  showFieldError("lastName") && !lastName.trim()
+                    ? "invalid"
+                    : undefined
+                }
+                aria-invalid={showFieldError("lastName") && !lastName.trim()}
               />
+              {showFieldError("lastName") && !lastName.trim() && (
+                <p className="field-error">The last name is mandatory</p>
+              )}
 
               <label className="sr-only" htmlFor="provider-email">Email</label>
               <input
@@ -401,15 +466,21 @@ export default function ProviderJoinPage() {
                 onBlur={() => setEmailTouched(true)}
                 placeholder="Email"
                 autoComplete="email"
-                className={emailTouched && !emailValid ? "invalid" : undefined}
-                aria-invalid={emailTouched && !emailValid}
-                aria-describedby={emailTouched && !emailValid ? "provider-email-error" : undefined}
+                className={(emailTouched || triedNext) && !emailValid ? "invalid" : undefined}
+                aria-invalid={(emailTouched || triedNext) && !emailValid}
+                aria-describedby={(emailTouched || triedNext) && !emailValid ? "provider-email-error" : undefined}
               />
-              {emailTouched && !emailValid && (
-                <p className="field-error" id="provider-email-error">Invalid email</p>
+              {(emailTouched || triedNext) && !emailValid && (
+                <p className="field-error" id="provider-email-error">
+                  {email.trim() ? "Invalid email" : "Email is compulsory"}
+                </p>
               )}
 
-              <div className="password-field">
+              <div
+                className={`password-field ${
+                  showFieldError("password") && !passwordValid ? "invalid" : ""
+                }`}
+              >
                 <label className="sr-only" htmlFor="provider-password">Password</label>
                 <input
                   id="provider-password"
@@ -418,6 +489,8 @@ export default function ProviderJoinPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   autoComplete="new-password"
+                  onBlur={() => markTouched("password")}
+                  aria-invalid={showFieldError("password") && !passwordValid}
                   aria-describedby="provider-password-requirements"
                 />
                 <button
@@ -431,15 +504,15 @@ export default function ProviderJoinPage() {
               <div className="password-requirements" id="provider-password-requirements">
                 <p>Must contain at least:</p>
                 <ul>
-                  <li className={passwordChecks.uppercase ? "passed" : ""}><b>A</b><span>Uppercase</span></li>
-                  <li className={passwordChecks.lowercase ? "passed" : ""}><b>a</b><span>Lowercase</span></li>
-                  <li className={passwordChecks.digit ? "passed" : ""}><b>123</b><span>Digit</span></li>
-                  <li className={passwordChecks.symbol ? "passed" : ""}><b>@!#</b><span>Symbol</span></li>
-                  <li className={passwordChecks.length ? "passed" : ""}><b>8+</b><span>Characters</span></li>
+                  <li className={passwordChecks.uppercase ? "passed" : showFieldError("password") ? "missing" : ""}><b>A</b><span>Uppercase</span></li>
+                  <li className={passwordChecks.lowercase ? "passed" : showFieldError("password") ? "missing" : ""}><b>a</b><span>Lowercase</span></li>
+                  <li className={passwordChecks.digit ? "passed" : showFieldError("password") ? "missing" : ""}><b>123</b><span>Digit</span></li>
+                  <li className={passwordChecks.symbol ? "passed" : showFieldError("password") ? "missing" : ""}><b>@!#</b><span>Symbol</span></li>
+                  <li className={passwordChecks.length ? "passed" : showFieldError("password") ? "missing" : ""}><b>8+</b><span>Characters</span></li>
                 </ul>
               </div>
 
-              <div className={`phone-field ${phoneTouched && !phoneValid ? "invalid" : ""}`}>
+              <div className={`phone-field ${(phoneTouched || triedNext) && !phoneValid ? "invalid" : ""}`}>
                 <svg
                   className="uk-flag"
                   viewBox="0 0 60 30"
@@ -463,12 +536,14 @@ export default function ProviderJoinPage() {
                   placeholder="Phone"
                   autoComplete="tel"
                   inputMode="numeric"
-                  aria-invalid={phoneTouched && !phoneValid}
-                  aria-describedby={phoneTouched && !phoneValid ? "provider-phone-error" : undefined}
+                  aria-invalid={(phoneTouched || triedNext) && !phoneValid}
+                  aria-describedby={(phoneTouched || triedNext) && !phoneValid ? "provider-phone-error" : undefined}
                 />
               </div>
-              {phoneTouched && !phoneValid && (
-                <p className="field-error" id="provider-phone-error">Invalid phone number</p>
+              {(phoneTouched || triedNext) && !phoneValid && (
+                <p className="field-error" id="provider-phone-error">
+                  {phone.trim() ? "Invalid phone number" : "The phone number is compulsory"}
+                </p>
               )}
 
               <label className="sr-only" htmlFor="provider-address">Address</label>
@@ -478,16 +553,37 @@ export default function ProviderJoinPage() {
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Address"
                 autoComplete="street-address"
+                onBlur={() => markTouched("address")}
+                className={
+                  showFieldError("address") && !address.trim()
+                    ? "invalid"
+                    : undefined
+                }
+                aria-invalid={showFieldError("address") && !address.trim()}
               />
+              {showFieldError("address") && !address.trim() && (
+                <p className="field-error">The address is compulsory</p>
+              )}
 
-              <label className="sr-only" htmlFor="provider-dob">Date of birth</label>
+              <label className="dob-label" htmlFor="provider-dob">Date of birth</label>
               <input
                 id="provider-dob"
                 type="date"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
-                aria-label="Date of birth"
+                onBlur={() => markTouched("dob")}
+                className={showFieldError("dob") && !dobValid ? "invalid" : undefined}
+                aria-invalid={showFieldError("dob") && !dobValid}
               />
+              {showFieldError("dob") && !dobValid && (
+                <p className="field-error">
+                  {!dateOfBirth
+                    ? "The birthdate is compulsory"
+                    : age !== null && age < 18
+                      ? "You must be 18 or over to work with us"
+                      : "Enter a valid date of birth"}
+                </p>
+              )}
 
               <button className="go next" type="button" onClick={continueToWorkDetails}>
                 Next
@@ -832,6 +928,29 @@ export default function ProviderJoinPage() {
               <li>Referral income &amp; loyalty/ambassador rewards</li>
             </ul>
           </article>
+
+          {reviews.length > 0 && (
+            <article className="perks reviews-block">
+              <span className="perks-icon" aria-hidden="true">⭐</span>
+              <h2>What customers say about our professionals</h2>
+              <ul className="review-list">
+                {reviews.map((review) => (
+                  <li key={review.id}>
+                    <span
+                      className="review-stars"
+                      aria-label={`${review.rating} out of 5`}
+                    >
+                      {"★".repeat(review.rating)}
+                      {"☆".repeat(5 - review.rating)}
+                    </span>
+                    <p>{review.comment}</p>
+                    <cite>{review.recipient_name}</cite>
+                  </li>
+                ))}
+              </ul>
+              <a className="review-link" href="/reviews">Read all reviews</a>
+            </article>
+          )}
         </section>
 
         <section className="next-steps" aria-label="How joining works">
@@ -858,7 +977,11 @@ export default function ProviderJoinPage() {
           min-height: 100vh;
           min-height: 100dvh;
           overflow-x: clip;
-          background: #fff;
+          background:
+            radial-gradient(900px 520px at 8% -6%, rgba(245, 197, 66, 0.26), transparent 62%),
+            radial-gradient(820px 560px at 96% 2%, rgba(200, 111, 201, 0.24), transparent 60%),
+            linear-gradient(180deg, #f7f2ff 0%, #fbf8ff 38%, #ffffff 72%, #ffffff 100%);
+          background-repeat: no-repeat;
           color: #16202A;
           font-family: "Nunito", system-ui, sans-serif;
           padding: 0 20px 70px;
@@ -947,6 +1070,45 @@ export default function ProviderJoinPage() {
         .perks strong {
           color: #16202A;
           font-weight: 900;
+        }
+        .review-list {
+          padding: 0;
+          list-style: none;
+        }
+        .review-list > li {
+          padding: 0 0 18px;
+          border-bottom: 1px solid #E5E0EC;
+        }
+        .review-list > li:last-child {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+        .review-stars {
+          color: #F5C542;
+          font-size: 17px;
+          letter-spacing: 2px;
+        }
+        .review-list p {
+          margin: 8px 0 5px;
+          color: #3F4652;
+          font-size: 16px;
+          line-height: 1.5;
+        }
+        .review-list cite {
+          color: #7A828C;
+          font-size: 13px;
+          font-style: normal;
+          font-weight: 800;
+        }
+        .review-link {
+          display: inline-block;
+          margin-top: 22px;
+          color: #6D28D9;
+          font-weight: 900;
+          text-decoration: none;
+        }
+        .review-link:hover {
+          text-decoration: underline;
         }
         .next-steps {
           width: 100%;
@@ -1619,6 +1781,14 @@ export default function ProviderJoinPage() {
         .password-requirements li.passed b {
           color: #137B4E;
         }
+        .password-requirements li.missing,
+        .password-requirements li.missing b {
+          color: #C0392F;
+        }
+        .password-field.invalid input {
+          border-color: #E5394F;
+          box-shadow: 0 0 0 3px rgba(229,57,79,0.08);
+        }
         .phone-field {
           display: grid;
           grid-template-columns: auto auto minmax(0, 1fr);
@@ -1669,6 +1839,12 @@ export default function ProviderJoinPage() {
           font-size: 12.5px;
           font-weight: 700;
           line-height: 1.3;
+        }
+        .dob-label {
+          margin: 4px 0 7px;
+          color: #16202A;
+          font-size: 13.5px;
+          font-weight: 800;
         }
         input[type="date"] {
           /* iOS Safari gives date inputs an intrinsic width that ignores

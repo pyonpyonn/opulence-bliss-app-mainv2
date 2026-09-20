@@ -127,7 +127,7 @@ export default function Home() {
       <section className="quotes-wrap">
         <div className="inner">
           <p className="eyebrow center">From our customers</p>
-          <h2 className="center big">Quietly, reliably better</h2>
+          <h2 className="center big">Our reviews</h2>
           <div className="quotes">
             {[
               [
