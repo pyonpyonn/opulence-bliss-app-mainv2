@@ -327,10 +327,6 @@ export default function ProviderJoinPage() {
         {/* ---- Page introduction ---- */}
         <section className="pitch">
           <h1>Good work, fair pay, your own hours</h1>
-          <p className="lede">
-            Join our vetted network of home cleaners across London. You set
-            your availability — we bring you the clients.
-          </p>
         </section>
 
         {/* ---- In-page application ---- */}
@@ -338,12 +334,6 @@ export default function ProviderJoinPage() {
           <div className="form-surface">
           {joinStep === "estimate" && (
             <div className="estimate-step">
-              <p className="form-kicker">See what your schedule could look like</p>
-              <h2>Choose your weekly availability</h2>
-              <p className="section-intro">
-                Move the slider to estimate your earnings. You can change these hours whenever you need to.
-              </p>
-
               <div className="availability-card">
                 <div className="availability-heading">
                   <b>Your availability</b>
@@ -917,7 +907,6 @@ export default function ProviderJoinPage() {
 
         <section className="benefits" aria-label="Why work with Opulence Bliss">
           <article className="perks">
-            <span className="perks-icon" aria-hidden="true">💸</span>
             <h2>Your earnings could be</h2>
             <ul>
               <li><strong>£18–£22/hr</strong> before taxes</li>
@@ -930,7 +919,6 @@ export default function ProviderJoinPage() {
           </article>
 
           <article className="perks">
-            <span className="perks-icon" aria-hidden="true">🥳</span>
             <h2>Your freedom, your peace</h2>
             <ul>
               <li>Work <strong>when and where you want</strong></li>
@@ -940,7 +928,6 @@ export default function ProviderJoinPage() {
           </article>
 
           <article className="perks">
-            <span className="perks-icon" aria-hidden="true">🫶</span>
             <h2>Protect yourself</h2>
             <ul>
               <li>Bookings &amp; customer acquisition</li>
@@ -957,7 +944,6 @@ export default function ProviderJoinPage() {
 
           {reviews.length > 0 && (
             <article className="perks reviews-block">
-              <span className="perks-icon" aria-hidden="true">⭐</span>
               <h2>What customers say about our professionals</h2>
               <ul className="review-list">
                 {reviews.map((review) => (
@@ -1015,7 +1001,7 @@ export default function ProviderJoinPage() {
         .grid {
           max-width: 960px;
           margin: 0 auto;
-          padding-top: 44px;
+          padding-top: 28px;
           display: grid;
           grid-template-columns: minmax(0, 1fr);
           gap: 30px;
@@ -1038,7 +1024,7 @@ export default function ProviderJoinPage() {
           font-size: clamp(32px, 4.6vw, 46px);
           line-height: 1.06;
           color: #16202A;
-          margin: 0 0 14px;
+          margin: 0;
         }
         h2 {
           font-family: "Nunito", system-ui, sans-serif;
@@ -1046,12 +1032,6 @@ export default function ProviderJoinPage() {
           font-size: 24px;
           color: #16202A;
           margin: 0 0 20px;
-        }
-        .lede {
-          color: #7A828C;
-          font-size: 17px;
-          line-height: 1.6;
-          margin: 0;
         }
         .benefits {
           display: grid;
@@ -1064,13 +1044,6 @@ export default function ProviderJoinPage() {
           border-radius: 18px;
           background: #F7F6F9;
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
-        }
-        .perks-icon {
-          display: block;
-          min-height: 28px;
-          margin-bottom: 12px;
-          font-size: 25px;
-          line-height: 1;
         }
         .perks h2 {
           margin: 0 0 13px;
@@ -2051,7 +2024,7 @@ export default function ProviderJoinPage() {
             padding-inline: 14px;
           }
           .grid {
-            padding-top: 26px;
+            padding-top: 20px;
           }
           .form {
             padding: 10px;
@@ -2063,9 +2036,6 @@ export default function ProviderJoinPage() {
           .perks {
             padding: 26px 22px;
             border-radius: 21px;
-          }
-          .perks-icon {
-            margin-bottom: 22px;
           }
           .form-actions {
             grid-template-columns: 1fr;

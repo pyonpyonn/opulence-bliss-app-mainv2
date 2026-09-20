@@ -385,9 +385,9 @@ export default function SiteHeader() {
 
         @media (max-width: 700px) {
           .site-header-bar {
-            min-height: 64px;
+            min-height: 56px;
             gap: 5px !important;
-            padding: 10px 12px !important;
+            padding: 7px 12px !important;
           }
 
           .desktop-actions,
@@ -397,7 +397,7 @@ export default function SiteHeader() {
 
           .site-logo {
             min-width: 0;
-            font-size: 19px !important;
+            font-size: 18px !important;
             flex: 0 1 auto;
           }
 
@@ -668,7 +668,7 @@ export default function SiteHeader() {
 
         @media (min-width: 701px) {
           .site-logo {
-            font-size: clamp(26px, 4vw, 34px) !important;
+            font-size: clamp(24px, 3vw, 30px) !important;
           }
         }
       `}</style>
@@ -690,7 +690,7 @@ const wrap: React.CSSProperties = {
 const bar: React.CSSProperties = {
   maxWidth: 1180,
   margin: "0 auto",
-  padding: "18px 26px 14px",
+  padding: "11px 26px 9px",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -699,7 +699,7 @@ const bar: React.CSSProperties = {
 
 const logo: React.CSSProperties = {
   fontFamily: "'Nunito', system-ui, sans-serif",
-  fontSize: "clamp(26px, 4vw, 34px)",
+  fontSize: "clamp(24px, 3vw, 30px)",
   fontWeight: 900,
   lineHeight: 1,
   letterSpacing: "-0.035em",
@@ -708,11 +708,11 @@ const logo: React.CSSProperties = {
 };
 
 const ghostBtn: React.CSSProperties = {
-  fontSize: 15,
+  fontSize: 14,
   fontWeight: 800,
   color: INK,
   textDecoration: "none",
-  padding: "10px 16px",
+  padding: "8px 14px",
   borderRadius: 999,
   borderWidth: 2,
   borderStyle: "solid",
@@ -733,11 +733,11 @@ const blogBtn: React.CSSProperties = {
 };
 
 const cta: React.CSSProperties = {
-  fontSize: 15,
+  fontSize: 14,
   fontWeight: 900,
   color: "#fff",
   textDecoration: "none",
-  padding: "12px 22px",
+  padding: "9px 19px",
   borderRadius: 999,
   background: `linear-gradient(100deg,#F5C542,#C86FC9 55%,#7B2FF7)`,
   whiteSpace: "nowrap",
@@ -755,16 +755,16 @@ const navInner: React.CSSProperties = {
   margin: "0 auto",
   padding: "0 26px",
   display: "flex",
-  gap: 30,
+  gap: 26,
   overflowX: "auto",
   overflowY: "hidden",
 };
 
 const navItem: React.CSSProperties = {
-  fontSize: 16.5,
+  fontSize: 15.5,
   fontWeight: 800,
   textDecoration: "none",
-  padding: "14px 0 11px",
+  padding: "9px 0 7px",
   borderBottom: "4px solid transparent",
   marginBottom: -1,
   whiteSpace: "nowrap",
