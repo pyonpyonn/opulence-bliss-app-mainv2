@@ -4,7 +4,6 @@
 // Save at: app/provider/join/page.tsx  →  localhost:3000/provider/join
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isValidUkPhone } from "@/lib/ukPhone";
@@ -278,82 +277,12 @@ export default function ProviderJoinPage() {
   return (
     <main className="wrap">
       <div className="grid">
-        {/* ---- The pitch ---- */}
+        {/* ---- Page introduction ---- */}
         <section className="pitch">
-          <Link className="brand" href="/">
-            Opulence&nbsp;Bliss
-          </Link>
-          <p className="eyebrow">Work with us</p>
-          <h1>Good work, fair pay, your own hours.</h1>
+          <h1>Good work, fair pay, your own hours</h1>
           <p className="lede">
             Join our vetted network of home cleaners across London. You set
             your availability — we bring you the clients.
-          </p>
-
-          <div className="fee">
-            <p className="fee-amount">No joining fee</p>
-            <p className="fee-note">
-              Create your account without an upfront payment. Our team reviews
-              every application before jobs are unlocked.
-            </p>
-            <ul>
-              <li>Background check &amp; onboarding</li>
-              <li>Your profile live on the platform</li>
-              <li>Jobs matched to your skills and area</li>
-              <li>Paid automatically after each visit</li>
-            </ul>
-          </div>
-
-          <div className="perks">
-            <h3>Your earnings could be</h3>
-            <ul>
-              <li>£18–£22 per hour before tax</li>
-              <li>Around £2,160 per month at £18 per hour for 30 hours per week</li>
-              <li>
-                We connect you with new customers, without you having to find
-                them yourself
-              </li>
-            </ul>
-          </div>
-
-          <div className="perks">
-            <h3>Your freedom, your peace</h3>
-            <ul>
-              <li>Work when and where you want</li>
-              <li>Free and non-exclusive</li>
-              <li>Self-employed but fully supported</li>
-            </ul>
-          </div>
-
-          <div className="perks">
-            <h3>Protect yourself</h3>
-            <ul>
-              <li>Bookings and customer acquisition</li>
-              <li>Priority access to jobs</li>
-              <li>Easy payment processing: weekly or monthly</li>
-              <li>
-                Insurance for cancellations where applicable, damages and
-                accidents
-              </li>
-              <li>Administrative support</li>
-              <li>Referral income and loyalty or ambassador rewards</li>
-            </ul>
-          </div>
-
-          <ol className="steps">
-            <li>
-              <span>1</span> Create your professional account
-            </li>
-            <li>
-              <span>2</span> Complete approval and set your hours
-            </li>
-            <li>
-              <span>3</span> Accept jobs and get paid per visit
-            </li>
-          </ol>
-
-          <p className="already">
-            Already a provider? <a href="/provider/login">Log in</a>
           </p>
         </section>
 
@@ -401,7 +330,6 @@ export default function ProviderJoinPage() {
               <button className="go signup-button" type="button" onClick={() => setJoinStep("account")}>
                 Sign up
               </button>
-              <p className="small">No joining fee. Your application stays on this page.</p>
             </div>
           )}
 
@@ -856,13 +784,72 @@ export default function ProviderJoinPage() {
                 </button>
               </div>
               <p className="small">
-                There is no joining charge. Jobs unlock after your application is approved.
+                Jobs unlock after your application is approved.
               </p>
             </div>
           )}
 
           {err && <p className="err">{err}</p>}
           </div>
+        </section>
+
+        <section className="benefits" aria-label="Why work with Opulence Bliss">
+          <article className="perks">
+            <span className="perks-icon" aria-hidden="true">💸</span>
+            <h2>Your earnings could be</h2>
+            <ul>
+              <li><strong>£18–£22/hr</strong> before taxes</li>
+              <li>Up to <strong>£2,160/month</strong> for 30 hours per week</li>
+              <li>
+                We connect you to <strong>new customers</strong> easily without
+                having to search for them
+              </li>
+            </ul>
+          </article>
+
+          <article className="perks">
+            <span className="perks-icon" aria-hidden="true">🥳</span>
+            <h2>Your freedom, your peace</h2>
+            <ul>
+              <li>Work <strong>when and where you want</strong></li>
+              <li><strong>Free</strong> and non-exclusive</li>
+              <li><strong>Self-employed</strong> but fully supported</li>
+            </ul>
+          </article>
+
+          <article className="perks">
+            <span className="perks-icon" aria-hidden="true">🫶</span>
+            <h2>Protect yourself</h2>
+            <ul>
+              <li>Bookings &amp; customer acquisition</li>
+              <li>Priority access to jobs</li>
+              <li>Easy payment processing: <strong>weekly or monthly</strong></li>
+              <li>
+                <strong>Insurance</strong> for cancellations where applicable,
+                damages and accidents
+              </li>
+              <li><strong>Administrative support</strong></li>
+              <li>Referral income &amp; loyalty/ambassador rewards</li>
+            </ul>
+          </article>
+        </section>
+
+        <section className="next-steps" aria-label="How joining works">
+          <ol className="steps">
+            <li>
+              <span>1</span> Create your professional account
+            </li>
+            <li>
+              <span>2</span> Complete approval and set your hours
+            </li>
+            <li>
+              <span>3</span> Accept jobs and get paid per visit
+            </li>
+          </ol>
+
+          <p className="already">
+            Already a provider? <a href="/provider/login">Log in</a>
+          </p>
         </section>
       </div>
 
@@ -877,36 +864,24 @@ export default function ProviderJoinPage() {
           padding: 0 20px 70px;
         }
         .grid {
-          max-width: 1040px;
+          max-width: 960px;
           margin: 0 auto;
           padding-top: 44px;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-          gap: 48px;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 30px;
           align-items: start;
         }
         /* Grid items default to min-width:auto, which lets a wide child
            stretch the track and push the whole page sideways. */
         .pitch,
-        .form {
+        .form,
+        .benefits,
+        .next-steps {
           min-width: 0;
         }
-        .brand {
-          font-family: "Nunito", system-ui, sans-serif;
-          font-size: 19px;
-          font-weight: 600;
-          color: #16202A;
-          text-decoration: none;
-          display: inline-block;
-          margin-bottom: 26px;
-        }
-        .eyebrow {
-          text-transform: uppercase;
-          letter-spacing: 0.14em;
-          font-size: 12px;
-          font-weight: 600;
-          color: #6D28D9;
-          margin: 0 0 8px;
+        .pitch {
+          max-width: 820px;
         }
         h1 {
           font-family: "Nunito", system-ui, sans-serif;
@@ -923,98 +898,61 @@ export default function ProviderJoinPage() {
           color: #16202A;
           margin: 0 0 20px;
         }
-        h3 {
-          margin: 0 0 8px;
-          color: #16202A;
-          font-size: 17px;
-          font-weight: 900;
-        }
         .lede {
           color: #7A828C;
           font-size: 17px;
           line-height: 1.6;
-          margin: 0 0 26px;
-        }
-        .fee {
-          background: #fff;
-          border: 1.5px solid #F5C542;
-          border-radius: 18px;
-          padding: 24px 26px;
-          margin-bottom: 26px;
-        }
-        .fee-amount {
-          font-family: "Nunito", system-ui, sans-serif;
-          font-size: clamp(27px, 7vw, 34px);
-          color: #16202A;
-          margin: 0 0 4px;
-        }
-        .fee-amount span {
-          font-family: "Nunito", sans-serif;
-          font-size: 14px;
-          color: #7A828C;
-        }
-        .fee-note {
-          color: #7A828C;
-          font-size: 14px;
-          margin: 0 0 16px;
-        }
-        .fee ul {
-          list-style: none;
-          padding: 0;
           margin: 0;
+        }
+        .benefits {
           display: grid;
-          gap: 8px;
-        }
-        .fee li {
-          font-size: 14.5px;
-          padding-left: 22px;
-          position: relative;
-        }
-        .fee li::before {
-          content: "✿";
-          position: absolute;
-          left: 0;
-          color: #F5C542;
-          font-size: 12px;
+          gap: 26px;
+          margin-top: 8px;
         }
         .perks {
-          margin-bottom: 20px;
-          padding: 18px 20px;
-          border: 1.5px solid #EDEFF1;
-          border-radius: 16px;
-          background: #fff;
+          padding: clamp(30px, 5vw, 46px);
+          border: 0;
+          border-radius: 26px;
+          background: #F7F6F9;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
         }
-        .perks h3 {
-          margin: 0 0 10px;
+        .perks-icon {
+          display: block;
+          min-height: 46px;
+          margin-bottom: 26px;
+          font-size: 37px;
+          line-height: 1;
+        }
+        .perks h2 {
+          margin: 0 0 25px;
           color: #16202A;
-          font-size: 16.5px;
+          font-size: clamp(27px, 4vw, 36px);
           font-weight: 900;
-          line-height: 1.3;
+          line-height: 1.1;
         }
         .perks ul {
           display: grid;
-          gap: 8px;
+          gap: 12px;
           margin: 0;
-          padding: 0;
-          list-style: none;
+          padding-left: 27px;
+          list-style: disc;
         }
         .perks li {
-          position: relative;
-          padding-left: 19px;
-          color: #3F4652;
-          font-size: 14.5px;
-          line-height: 1.45;
+          padding-left: 4px;
+          color: #25282D;
+          font-size: clamp(16px, 2.3vw, 20px);
+          line-height: 1.5;
           overflow-wrap: anywhere;
         }
-        .perks li::before {
-          content: "";
-          position: absolute;
-          top: 8px;
-          left: 4px;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: #6D28D9;
+        .perks strong {
+          color: #16202A;
+          font-weight: 900;
+        }
+        .next-steps {
+          width: 100%;
+          max-width: 760px;
+          justify-self: center;
+          padding: 8px 4px 0;
         }
         .steps {
           list-style: none;
@@ -1052,6 +990,10 @@ export default function ProviderJoinPage() {
         }
         .form {
           position: relative;
+          width: 100%;
+          max-width: 760px;
+          box-sizing: border-box;
+          justify-self: center;
           min-width: 0;
           overflow: hidden;
           border: 1px solid rgba(109,40,217,0.18);
@@ -1845,11 +1787,7 @@ export default function ProviderJoinPage() {
         }
         @media (max-width: 880px) {
           .grid {
-            grid-template-columns: minmax(0, 1fr);
             gap: 34px;
-          }
-          .form {
-            order: -1;
           }
         }
         @media (max-width: 520px) {
@@ -1866,8 +1804,12 @@ export default function ProviderJoinPage() {
           .application-mode .form-surface {
             padding: 22px 17px;
           }
-          .fee {
-            padding: 22px 18px;
+          .perks {
+            padding: 26px 22px;
+            border-radius: 21px;
+          }
+          .perks-icon {
+            margin-bottom: 22px;
           }
           .form-actions {
             grid-template-columns: 1fr;
