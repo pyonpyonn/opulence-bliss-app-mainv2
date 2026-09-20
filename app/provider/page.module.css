@@ -8,7 +8,8 @@
 
 .head {
   max-width: 640px;
-  margin-bottom: 36px;
+  margin: 0 auto 36px;
+  text-align: center;
 }
 
 /* Tailwind preflight resets heading weight, so it is set explicitly here,

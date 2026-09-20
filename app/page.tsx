@@ -294,6 +294,7 @@ export default function Home() {
         .hero-inner {
           max-width: 1080px;
           margin: 0 auto;
+          text-align: center;
         }
         h1 {
           color: #fff;
@@ -307,7 +308,7 @@ export default function Home() {
           font-size: 18px;
           line-height: 1.6;
           max-width: 44ch;
-          margin: 0 0 30px;
+          margin: 0 auto 30px;
         }
         .composer {
           display: flex;
@@ -317,6 +318,8 @@ export default function Home() {
           border-radius: 999px;
           padding: 7px 7px 7px 22px;
           max-width: 500px;
+          margin-inline: auto;
+          text-align: left;
           box-shadow: 0 18px 48px rgba(45, 19, 73, 0.22);
           backdrop-filter: blur(12px);
         }

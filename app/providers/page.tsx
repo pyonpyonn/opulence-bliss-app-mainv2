@@ -133,6 +133,16 @@ export default function ProvidersPage() {
           margin: 0 auto;
           padding-top: 40px;
         }
+        /* Intro only. The provider cards below keep their own alignment. */
+        .inner > .eyebrow,
+        .inner > h1,
+        .inner > .lede {
+          text-align: center;
+        }
+        .inner > .lede {
+          margin-left: auto;
+          margin-right: auto;
+        }
         .brand {
           font-family: "Nunito", system-ui, sans-serif;
           font-size: 19px;
