@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
+import { compareCleaningSessions } from "@/lib/cleaningBooking";
 
 const supabase = createClient();
 
@@ -16,7 +16,6 @@ type Pkg = {
   description: string | null;
   inclusions: string[] | null;
   good_to_know: string[] | null;
-  price: number;
   duration_minutes: number | null;
   service_type: string | null;
 };
@@ -75,11 +74,11 @@ const COPY: Record<
       },
       {
         q: "Which cleaning session should I choose?",
-        a: "Essential Clean is for regular week-to-week upkeep at £18.90 per hour. One-Time Essential Clean is a one-off standard refresh at £22.90 per hour. Express Clean is our same-day standard clean at £22.90 per hour, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset at £24.90 per hour.",
+        a: "Essential Clean is for regular week-to-week upkeep. One-Time Essential Clean is a one-off standard refresh. Express Clean is our same-day standard clean, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset. Your price is confirmed when you book.",
       },
       {
         q: "What specialist cleaning services can I book?",
-        a: "End of Tenancy / Move-In Clean is £25 per hour for a landlord and inspection-ready deep clean. Guest Ready is £22.90 per hour for fast holiday-rental turnarounds. Linen Care and Window Cleaning are each £16.90 per hour. Essential Clean and Linen Care combines regular cleaning, ironing and laundry for £23.90 per hour.",
+        a: "End of Tenancy / Move-In Clean is a landlord and inspection-ready deep clean. Guest Ready covers fast holiday-rental turnarounds. Linen Care and Window Cleaning are available on their own. Essential Clean and Linen Care combines regular cleaning, ironing and laundry. Your price is confirmed when you book.",
       },
       {
         q: "How long can I book a clean for?",
@@ -138,11 +137,10 @@ export default function ServicePage() {
       const { data } = await supabase
         .from("packages")
         .select(
-          "id, name, description, inclusions, good_to_know, price, duration_minutes, service_type"
+          "id, name, description, inclusions, good_to_know, duration_minutes, service_type"
         )
         .eq("active", true)
-        .eq("billing_type", "per_visit")
-        .order("price");
+        .eq("billing_type", "per_visit");
 
       const matching = ((data ?? []) as Pkg[]).filter((p) =>
         (p.service_type ?? "").includes(copy.match)
@@ -161,9 +159,6 @@ export default function ServicePage() {
     })();
   }, [copy.match]);
 
-  const cheapest = items.length
-    ? Math.min(...items.map((i) => cleaningHourlyRatePence(i) / 100))
-    : 0;
   const avg =
     reviews.length > 0
       ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
@@ -239,13 +234,9 @@ export default function ServicePage() {
               {copy.ticks.map((t) => (
                 <li key={t}>{t}</li>
               ))}
-              {cheapest > 0 && (
-                <li>
-                  <strong>
-                    Cleans from £{cheapest.toFixed(2)} / hour
-                  </strong>
-                </li>
-              )}
+              <li>
+                <strong>Vetted cleaners across London</strong>
+              </li>
             </ul>
 
             <div className="composer">
@@ -260,13 +251,34 @@ export default function ServicePage() {
               </a>
             </div>
 
-            <a className="hero-services-link" href="#cleaning-services">
-              See our cleaning services ↓
-            </a>
-
-            <a className="prolink" href={copy.proLink}>
-              {copy.proText} →
-            </a>
+            <div className="hero-actions">
+              <a className="hero-btn primary" href="#cleaning-services">
+                See our cleaning services
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path
+                    d="M8 3v9M4 8.5l4 4 4-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+              <a className="hero-btn ghost" href={copy.proLink}>
+                {copy.proText}
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path
+                    d="M3 8h9M8.5 4l4 4-4 4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            </div>
           </div>
 
           <div className="hero-art" aria-hidden="true">
@@ -377,10 +389,6 @@ export default function ServicePage() {
                           <span className="tile-pill">Popular</span>
                         )}
                         <span className="tile-name">{pkg.name}</span>
-                        <span className="tile-price">
-                          £{(cleaningHourlyRatePence(pkg) / 100).toFixed(2)}
-                          <small>/hr</small>
-                        </span>
                         <span className="tile-more" aria-hidden="true">
                           Details
                         </span>
@@ -425,8 +433,7 @@ export default function ServicePage() {
                     <div className="detail-body">
                       <h3>{selected.name}</h3>
                       <p className="detail-price">
-                        £{(cleaningHourlyRatePence(selected) / 100).toFixed(2)}
-                        <span> per hour · 2-hour minimum</span>
+                        <span>Two-hour minimum · price shown when you book</span>
                       </p>
                       {selected.description && (
                         <p className="detail-desc">{selected.description}</p>
@@ -688,24 +695,75 @@ export default function ServicePage() {
           max-width: 480px;
           margin: 0 auto;
         }
-        .prolink {
-          display: inline-block;
-          margin-top: 18px;
-          color: var(--green);
-          font-size: 14.5px;
-          font-weight: 600;
+        .hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 20px;
         }
-        .hero-services-link {
-          display: inline-block;
-          margin-top: 18px;
-          color: var(--green);
+        .hero-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          min-height: 46px;
+          padding: 12px 22px;
+          border-radius: 999px;
           font-size: 15px;
           font-weight: 800;
-          text-decoration: underline;
-          text-underline-offset: 4px;
+          text-decoration: none;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease,
+            border-color 0.15s ease, box-shadow 0.15s ease;
         }
-        .hero-services-link:hover {
-          color: var(--apricot-deep);
+        .hero-btn svg {
+          flex: 0 0 auto;
+          width: 15px;
+          height: 15px;
+          transition: transform 0.15s ease;
+        }
+        .hero-btn.primary {
+          border: 1.5px solid var(--apricot-deep);
+          background: var(--apricot-deep);
+          color: #fff;
+        }
+        .hero-btn.ghost {
+          border: 1.5px solid var(--line);
+          background: #fff;
+          color: var(--ink);
+        }
+        .hero-btn:focus-visible {
+          outline: 3px solid rgba(109, 40, 217, 0.4);
+          outline-offset: 3px;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .hero-btn.primary:hover {
+            box-shadow: 0 8px 22px rgba(109, 40, 217, 0.28);
+          }
+          .hero-btn.primary:hover svg {
+            transform: translateY(2px);
+          }
+          .hero-btn.ghost:hover {
+            border-color: var(--apricot-deep);
+            color: var(--apricot-deep);
+          }
+          .hero-btn.ghost:hover svg {
+            transform: translateX(3px);
+          }
+        }
+        @media (max-width: 520px) {
+          .hero-actions {
+            flex-direction: column;
+          }
+          .hero-btn {
+            width: 100%;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-btn,
+          .hero-btn svg {
+            transition: none;
+          }
         }
         .hero-art {
           display: grid;
@@ -903,17 +961,6 @@ export default function ServicePage() {
           line-height: 1.25;
           overflow-wrap: anywhere;
         }
-        .tile-price {
-          margin-top: auto;
-          font-size: 20px;
-          font-weight: 900;
-          line-height: 1.1;
-        }
-        .tile-price small {
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--muted);
-        }
         .tile-more {
           color: var(--apricot-deep);
           font-size: 11.5px;
@@ -967,9 +1014,9 @@ export default function ServicePage() {
         }
         .detail-price {
           margin: 0 0 14px;
-          font-size: 25px;
-          font-weight: 900;
-          line-height: 1.15;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1.4;
         }
         .detail-price span {
           /* Own line, so "2-hour minimum" never orphans a word in the
