@@ -409,3 +409,25 @@
     width: 100%;
   }
 }
+
+/* Non-client accounts see the options but cannot act on them, rather than
+   being offered a button the database will always reject. */
+.readOnly {
+  opacity: 0.6;
+}
+
+.readOnly .option {
+  cursor: default;
+}
+
+.notice {
+  margin: 0;
+  color: #535d69;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.notice a {
+  color: #6d28d9;
+  font-weight: 800;
+}

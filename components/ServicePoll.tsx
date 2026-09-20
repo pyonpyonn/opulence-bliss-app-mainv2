@@ -65,6 +65,9 @@ export default function ServicePoll({
   const [signedOut, setSignedOut] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Signed in, but on an account that the database will not accept a vote
+  // from. Knowing this up front avoids offering a control that always fails.
+  const [notClient, setNotClient] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [results, setResults] = useState<
     Partial<Record<ComingSoonKey, PollResult>>
@@ -84,6 +87,20 @@ export default function ServicePoll({
       if (!active) return;
       if (!user) {
         setSignedOut(true);
+        setLoaded(true);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!active) return;
+      // submit_customer_service_interest rejects anything but 'customer'.
+      if (profile?.role !== "customer") {
+        setNotClient(true);
         setLoaded(true);
         return;
       }
@@ -130,6 +147,7 @@ export default function ServicePoll({
     serviceKey: ComingSoonKey | null = selected,
     successMessage = "Thanks, your vote has been saved.",
   ) {
+    if (notClient) return;
     if (!serviceKey) {
       setMessage("Choose the service you would most like us to add.");
       return;
@@ -187,7 +205,10 @@ export default function ServicePoll({
       </div>
 
       <div className={styles.formPanel}>
-        <fieldset className={styles.options}>
+        <fieldset
+          className={`${styles.options} ${notClient ? styles.readOnly : ""}`}
+          disabled={notClient}
+        >
           <legend className={styles.srOnly}>Choose a future service</legend>
           {COMING_SOON.map(({ key, title, detail }) => {
             const checked = selected === key;
@@ -211,7 +232,7 @@ export default function ServicePoll({
                   name={`future-service-${variant}`}
                   value={key}
                   checked={checked}
-                  disabled={loading || !loaded}
+                  disabled={notClient || loading || !loaded}
                   onChange={() => {
                     setSelected(key);
                     setMessage(null);
@@ -256,16 +277,18 @@ export default function ServicePoll({
           })}
         </fieldset>
 
-        <label className={styles.suggestionLabel}>
-          Suggest something else <span>(optional)</span>
-          <textarea
-            rows={2}
-            maxLength={500}
-            value={suggestion}
-            onChange={(event) => setSuggestion(event.target.value)}
-            placeholder="What other service would make life easier?"
-          />
-        </label>
+        {!notClient && (
+          <label className={styles.suggestionLabel}>
+            Suggest something else <span>(optional)</span>
+            <textarea
+              rows={2}
+              maxLength={500}
+              value={suggestion}
+              onChange={(event) => setSuggestion(event.target.value)}
+              placeholder="What other service would make life easier?"
+            />
+          </label>
+        )}
 
         {message && (
           <p
@@ -278,7 +301,12 @@ export default function ServicePoll({
           </p>
         )}
 
-        {signedOut ? (
+        {notClient ? (
+          <p className={styles.notice}>
+            Voting is for client accounts. Your jobs and hours are in the{" "}
+            <Link href="/worker/current">provider portal</Link>.
+          </p>
+        ) : signedOut ? (
           <Link className={styles.submit} href="/login">
             Sign in to vote
           </Link>

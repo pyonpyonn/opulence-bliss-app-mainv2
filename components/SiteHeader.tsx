@@ -25,7 +25,7 @@ type NavLink = { href: string; label: string; match: string[] };
 const NAV: NavLink[] = [
   { href: "/services/cleaning", label: "Cleaning", match: ["/services/cleaning"] },
   { href: "/providers", label: "Our pros", match: ["/providers"] },
-  { href: "/provider/join", label: "Jobs", match: ["/provider"] },
+  { href: "/provider", label: "Jobs", match: ["/provider"] },
 ];
 
 export default function SiteHeader() {
@@ -164,7 +164,7 @@ export default function SiteHeader() {
             Blog
           </Link>
           {!role && (
-            <Link href="/provider/login" style={proBtn}>
+            <Link href="/provider" style={proBtn}>
               Sign in as a pro
             </Link>
           )}
@@ -205,7 +205,7 @@ export default function SiteHeader() {
           <Link href="/services/cleaning" className="mobile-quick-link">
             Cleaning
           </Link>
-          <Link href="/provider/join" className="mobile-quick-link">
+          <Link href="/provider" className="mobile-quick-link">
             Jobs
           </Link>
           <div className="mobile-profile-wrap">
@@ -254,8 +254,8 @@ export default function SiteHeader() {
                     <p>Continue as</p>
                     <Link href="/login">Sign in</Link>
                     <Link href="/auth/sign-up">Create Account</Link>
-                    <Link href="/provider/login">Sign in as a pro</Link>
-                    <Link href="/provider/join">Become a professional</Link>
+                    <Link href="/provider">Sign in as a pro</Link>
+                    <Link href="/provider">Become a professional</Link>
                   </>
                 )}
               </div>
@@ -348,14 +348,14 @@ export default function SiteHeader() {
               <Link href="/blog">Blog</Link>
               <Link href="/faq">Frequently asked questions</Link>
               <Link href="/reviews">Customer reviews</Link>
-              <Link href="/provider/join">Jobs &amp; become a pro</Link>
+              <Link href="/provider">Jobs &amp; become a pro</Link>
             </nav>
 
             <div className="mobile-account-actions">
               <Link href={accountHref}>
                 {role ? "Open my account" : "Sign in"}
               </Link>
-              {!role && <Link href="/provider/login">Sign in as a pro</Link>}
+              {!role && <Link href="/provider">Sign in as a pro</Link>}
             </div>
           </aside>
         </div>

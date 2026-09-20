@@ -52,6 +52,15 @@ export default function ComingSoonMenu() {
 
   const active = pathname.startsWith("/coming-soon");
 
+  function goToTop() {
+    setOpen(false);
+    // Next does not re-scroll when the target route is the current one, so
+    // clicking from /coming-soon would otherwise leave the page where it was.
+    if (pathname.startsWith("/coming-soon")) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <span
@@ -66,7 +75,7 @@ export default function ComingSoonMenu() {
           <Link
             href="/coming-soon"
             aria-label="Services coming soon"
-            onClick={() => setOpen(false)}
+            onClick={goToTop}
           >
             Coming soon
             <ChevronDown
@@ -92,9 +101,9 @@ export default function ComingSoonMenu() {
             {COMING_SOON.map((service) => (
               <li key={service.key}>
                 <Link
-                  href={`/coming-soon#${service.slug}`}
+                  href="/coming-soon"
                   className={styles.listItem}
-                  onClick={() => setOpen(false)}
+                  onClick={goToTop}
                 >
                   <span className={styles.listText}>
                     <strong>{service.title}</strong>
@@ -113,7 +122,7 @@ export default function ComingSoonMenu() {
         <Link
           href="/coming-soon"
           className={styles.allLink}
-          onClick={() => setOpen(false)}
+          onClick={goToTop}
         >
           See everything coming soon
           <ArrowRight size={15} />
