@@ -1151,7 +1151,8 @@ export default function BookPage() {
         .field {
           width: 100%;
           box-sizing: border-box;
-          padding: 14px 16px;
+          min-height: 44px;
+          padding: 9px 13px;
           border: 2px solid var(--line);
           border-radius: 14px;
           font: inherit;
@@ -1159,7 +1160,7 @@ export default function BookPage() {
           font-weight: 600;
           color: var(--ink);
           background: #fff;
-          margin-bottom: 12px;
+          margin-bottom: 7px;
           resize: vertical;
         }
         .field:focus-visible {
@@ -1170,13 +1171,29 @@ export default function BookPage() {
           font-size: 19px;
           font-weight: 800;
           text-transform: uppercase;
-          padding: 17px 18px;
+          padding: 11px 15px;
           margin-bottom: 0;
         }
         .field.bigAddress {
-          padding: 17px 18px;
+          padding: 13px 16px;
           font-size: 18px;
           font-weight: 800;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .field {
+            min-height: 40px;
+            padding: 7px 12px;
+            font-size: 15px;
+            margin-bottom: 6px;
+          }
+          .field.big {
+            font-size: 17px;
+            padding: 9px 14px;
+          }
+          .field.bigAddress {
+            padding: 10px 14px;
+            font-size: 17px;
+          }
         }
         .inline {
           display: flex;

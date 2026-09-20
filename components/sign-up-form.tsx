@@ -141,7 +141,7 @@ export function SignUpForm() {
         h1 { margin: 0 0 8px; font-size: clamp(27px,7vw,34px); line-height: 1.08; letter-spacing: -.035em; font-weight: 900; }
         .lede { margin: 0 0 25px; color: #707784; font-size: 15px; line-height: 1.5; font-weight: 600; }
         form { display: grid; }
-        input { width: 100%; min-height: 54px; box-sizing: border-box; margin: 0 0 14px; padding: 14px 16px; border: 1.5px solid #dfe2e7; border-radius: 12px; background: #fff; color: #16202a; font: inherit; font-size: 15.5px; }
+        input { width: 100%; min-height: 44px; box-sizing: border-box; margin: 0 0 8px; padding: 9px 12px; border: 1.5px solid #dfe2e7; border-radius: 12px; background: #fff; color: #16202a; font: inherit; font-size: 16px; }
         input:focus-visible { outline: none; border-color: #6d28d9; box-shadow: 0 0 0 3px rgba(109,40,217,.1); }
         input.invalid, input.invalid:focus-visible, .phone-field.invalid, .phone-field.invalid:focus-within { border-color: #e5394f; box-shadow: 0 0 0 3px rgba(229,57,79,.08); }
         .title-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 14px; padding: 0; border: 0; }
@@ -150,9 +150,9 @@ export function SignUpForm() {
         .title-options span { width: 16px; height: 16px; box-sizing: border-box; border: 1.5px solid #8e96a1; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 4px #fff; }
         .title-options input:checked + span { border-color: #6d28d9; background: #6d28d9; }
         .title-options input:focus-visible + span { outline: 3px solid rgba(109,40,217,.18); outline-offset: 2px; }
-        .phone-field { display: grid; grid-template-columns: auto auto minmax(0,1fr); align-items: center; min-height: 54px; margin-bottom: 6px; padding-left: 15px; border: 1.5px solid #dfe2e7; border-radius: 12px; background: #fff; }
+        .phone-field { display: grid; grid-template-columns: auto auto minmax(0,1fr); align-items: center; min-height: 44px; margin-bottom: 6px; padding-left: 13px; border: 1.5px solid #dfe2e7; border-radius: 12px; background: #fff; }
         .phone-field:focus-within { border-color: #6d28d9; box-shadow: 0 0 0 3px rgba(109,40,217,.1); }
-        .phone-field input { min-height: 51px; margin: 0; padding-left: 4px; border: 0; box-shadow: none; }
+        .phone-field input { min-height: 41px; margin: 0; padding-left: 4px; border: 0; box-shadow: none; }
         .phone-field input:focus-visible { box-shadow: none; }
         .uk-flag { display: block; width: 24px; height: 16px; overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px rgba(22,32,42,.15); }
         .phone-code { margin: 0 7px; color: #5f6874; font-size: 14px; font-weight: 800; }
@@ -167,6 +167,12 @@ export function SignUpForm() {
         .account-link, .professional-link { margin: 22px 0 0; text-align: center; color: #59616d; font-size: 14px; }
         .professional-link { padding-top: 19px; border-top: 1px solid #ece9f0; }
         a { color: #6d28d9; font-weight: 900; text-underline-offset: 3px; }
+        @media (hover: hover) and (pointer: fine) {
+          input { min-height: 40px; margin-bottom: 7px; padding: 7px 11px; }
+          .phone-field { min-height: 40px; }
+          .phone-field input { min-height: 37px; margin: 0; }
+          .password-field button { top: 1px; }
+        }
         @media (max-width: 520px) { .signup-shell { align-items: start; padding: 20px 14px; } .signup-card { padding: 27px 22px 25px; } }
       `}</style>
     </main>

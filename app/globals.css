@@ -913,6 +913,16 @@ select {
   font-size: 16px !important;
 }
 
+/* Keep touch fields at 16px so iOS does not zoom the page on focus. Devices
+   with a precise pointer can use the more compact desktop treatment. */
+@media (hover: hover) and (pointer: fine) {
+  input,
+  textarea,
+  select {
+    font-size: 15px !important;
+  }
+}
+
 dd,
 .facts dd,
 .summary dd {

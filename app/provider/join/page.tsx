@@ -1348,20 +1348,20 @@ export default function ProviderJoinPage() {
         input {
           width: 100%;
           box-sizing: border-box;
-          min-height: 56px;
-          padding: 15px 16px;
+          min-height: 44px;
+          padding: 9px 13px;
           border: 1.5px solid #D9DDE3;
           border-radius: 13px;
           font: inherit;
           font-size: 15.5px;
           background: #fff;
           color: #16202A;
-          margin-bottom: 14px;
+          margin-bottom: 7px;
         }
         .application-mode input:not([type="radio"]):not([type="checkbox"]):not(.hours-slider),
         .application-mode select {
-          min-height: 60px;
-          border-radius: 15px;
+          min-height: 44px;
+          border-radius: 13px;
           font-size: 16px;
         }
         input:focus-visible {
@@ -1371,10 +1371,10 @@ export default function ProviderJoinPage() {
         }
         select {
           width: 100%;
-          min-height: 56px;
+          min-height: 44px;
           box-sizing: border-box;
-          margin: 0 0 18px;
-          padding: 14px 44px 14px 16px;
+          margin: 0 0 8px;
+          padding: 9px 38px 9px 13px;
           border: 1.5px solid #D9DDE3;
           border-radius: 13px;
           background: #fff;
@@ -1793,22 +1793,22 @@ export default function ProviderJoinPage() {
           cursor: pointer;
         }
         .password-requirements {
-          margin: -2px 0 18px;
-          padding: 13px 14px;
+          margin: -2px 0 10px;
+          padding: 8px 10px;
           border: 1px solid #E7E0F2;
           border-radius: 13px;
           background: #FAF8FD;
         }
         .password-requirements > p {
-          margin: 0 0 10px;
+          margin: 0 0 6px;
           color: #7A828C;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
         }
         .password-requirements ul {
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 6px;
+          gap: 4px;
           margin: 0;
           padding: 0;
           list-style: none;
@@ -1823,7 +1823,7 @@ export default function ProviderJoinPage() {
         }
         .password-requirements b {
           color: #68717D;
-          font-size: 15px;
+          font-size: 13px;
           line-height: 1;
         }
         .password-requirements span {
@@ -1847,9 +1847,9 @@ export default function ProviderJoinPage() {
           display: grid;
           grid-template-columns: auto auto minmax(0, 1fr);
           align-items: center;
-          min-height: 56px;
-          margin-bottom: 14px;
-          padding-left: 15px;
+          min-height: 44px;
+          margin-bottom: 7px;
+          padding-left: 13px;
           border: 1.5px solid #D9DDE3;
           border-radius: 13px;
           background: #fff;
@@ -1878,7 +1878,7 @@ export default function ProviderJoinPage() {
           box-shadow: 0 0 0 1px rgba(22,32,42, 0.15);
         }
         .phone-field input {
-          min-height: 53px;
+          min-height: 41px;
           margin: 0;
           padding-left: 4px;
           border: 0;
@@ -1888,16 +1888,16 @@ export default function ProviderJoinPage() {
           box-shadow: none;
         }
         .field-error {
-          margin: -7px 2px 14px;
+          margin: -4px 2px 8px;
           color: #D82F45;
           font-size: 12.5px;
           font-weight: 700;
           line-height: 1.3;
         }
         .dob-label {
-          margin: 4px 0 7px;
+          margin: 2px 0 4px;
           color: #16202A;
-          font-size: 13.5px;
+          font-size: 12.5px;
           font-weight: 800;
         }
         input[type="date"] {
@@ -1908,6 +1908,32 @@ export default function ProviderJoinPage() {
           min-width: 0;
           max-width: 100%;
           color: #7A828C;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          input,
+          select,
+          .application-mode input:not([type="radio"]):not([type="checkbox"]):not(.hours-slider),
+          .application-mode select {
+            min-height: 40px;
+            padding-top: 7px;
+            padding-bottom: 7px;
+            margin-bottom: 6px;
+          }
+          .phone-field {
+            min-height: 40px;
+            margin-bottom: 6px;
+          }
+          .phone-field input {
+            min-height: 37px;
+            margin: 0;
+          }
+          .password-requirements {
+            padding: 7px 10px;
+            margin-bottom: 8px;
+          }
+          .field-error {
+            font-size: 12px;
+          }
         }
         .section-intro {
           margin: -5px 0 22px;

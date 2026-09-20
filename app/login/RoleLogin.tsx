@@ -243,14 +243,22 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
         input {
           width: 100%;
           box-sizing: border-box;
-          margin: 0 0 17px;
-          padding: 13px 14px;
+          min-height: 44px;
+          margin: 0 0 8px;
+          padding: 9px 12px;
           border: 1.5px solid #dfe2e7;
           border-radius: 12px;
           background: #fff;
           color: #16202a;
           font: inherit;
           font-size: 16px;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          input {
+            min-height: 40px;
+            padding: 7px 11px;
+            margin-bottom: 7px;
+          }
         }
         input:focus-visible {
           outline: none;
