@@ -46,9 +46,12 @@
   color: #6d28d9;
 }
 
+/* Single column by default. From 820px up it becomes two columns: cleaning
+   spans the full width on top, and the six coming-soon trades fill the
+   2 x 3 below it. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin: 0 0 30px;
   padding: 0;
@@ -60,9 +63,14 @@
   min-width: 0;
 }
 
-/* Cleaning leads, so it takes two columns where there is room for it. */
-.cell:first-child {
-  grid-column: span 2;
+@media (min-width: 820px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Cleaning leads, so it takes the full width of the first row. */
+  .cell:first-child {
+    grid-column: 1 / -1;
+  }
 }
 
 .panel {
@@ -190,18 +198,9 @@
   font-weight: 800;
 }
 
-@media (max-width: 720px) {
-  .cell:first-child {
-    grid-column: span 1;
-  }
-}
-
 @media (max-width: 560px) {
   .wrap {
     padding: 32px 16px 64px;
-  }
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
   }
   .panel {
     min-height: 196px;
