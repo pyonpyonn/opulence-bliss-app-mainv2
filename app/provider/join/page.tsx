@@ -948,8 +948,17 @@ export default function ProviderJoinPage() {
               <ul className="review-list">
                 {reviews.map((review) => (
                   <li key={review.id}>
-                    <span className="review-score">
-                      {review.rating} out of 5
+                    <span
+                      className="review-score"
+                      aria-label={`${review.rating} out of 5 stars`}
+                    >
+                      <span aria-hidden="true">
+                        {"★".repeat(review.rating)}
+                        {"☆".repeat(5 - review.rating)}
+                      </span>
+                      <span className="sr-only">
+                        {review.rating} out of 5 stars
+                      </span>
                     </span>
                     {review.comment?.trim() && <p>{review.comment}</p>}
                     <cite>{review.recipient_name}</cite>
@@ -1084,9 +1093,12 @@ export default function ProviderJoinPage() {
           border-bottom: 0;
         }
         .review-score {
+          display: inline-flex;
           color: #6D28D9;
-          font-size: 13px;
+          font-size: 18px;
           font-weight: 900;
+          letter-spacing: 2px;
+          line-height: 1;
         }
         .review-list p {
           margin: 8px 0 5px;

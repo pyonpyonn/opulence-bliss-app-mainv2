@@ -287,6 +287,123 @@ export default function ServicePage() {
         </div>
       </header>
 
+      {/* ---------- SERVICES ---------- */}
+      <section className="services" id="cleaning-services">
+        <div className="inner">
+          <h2>Our cleaning services</h2>
+          <p className="intro">{copy.intro}</p>
+
+          <div className="service-collection">
+            {items.length === 0 ? (
+              <p className="muted">Loading…</p>
+            ) : (
+              <div className="svc-layout">
+                <ul className="tiles">
+                  {items.map((pkg) => {
+                    const active = picked === pkg.id;
+                    return (
+                      <li key={pkg.id}>
+                        <button
+                          type="button"
+                          className={`tile${active ? " on" : ""}${
+                            pkg.name === POPULAR ? " pop" : ""
+                          }`}
+                          aria-expanded={active}
+                          aria-controls="svc-detail"
+                          onClick={(e) => {
+                            lastTileRef.current = e.currentTarget;
+                            setPicked((prev) =>
+                              prev === pkg.id && isNarrow ? null : pkg.id,
+                            );
+                          }}
+                        >
+                          {pkg.name === POPULAR && (
+                            <span className="tile-pill">Popular</span>
+                          )}
+                          <span className="tile-name">{pkg.name}</span>
+                          <span className="tile-more" aria-hidden="true">
+                            Details
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {isNarrow && selected && (
+                  <div
+                    className="sheet-backdrop"
+                    onClick={closeSheet}
+                    aria-hidden="true"
+                  />
+                )}
+
+                {/* Fixed-height column. Panel content varies a lot between
+                    services, so without a reserve the whole page below
+                    shifts every time the selection changes. */}
+                <div className="detail-col">
+                  {selected && (
+                    <div
+                      id="svc-detail"
+                      ref={sheetRef}
+                      tabIndex={-1}
+                      className="detail"
+                      role={isNarrow ? "dialog" : undefined}
+                      aria-modal={isNarrow ? true : undefined}
+                      aria-label={isNarrow ? selected.name : undefined}
+                    >
+                      {isNarrow && (
+                        <button
+                          type="button"
+                          className="sheet-close"
+                          onClick={closeSheet}
+                        >
+                          Close
+                        </button>
+                      )}
+                      <span className="detail-grip" aria-hidden="true" />
+                      <div className="detail-body">
+                        <h3>{selected.name}</h3>
+                        <p className="detail-price">
+                          <span>Two-hour minimum · price shown when you book</span>
+                        </p>
+                        {selected.description && (
+                          <p className="detail-desc">{selected.description}</p>
+                        )}
+                        {selected.inclusions && selected.inclusions.length > 0 && (
+                          <>
+                            <p className="detail-label">What&apos;s included</p>
+                            <ul className="detail-list">
+                              {selected.inclusions.map((x) => (
+                                <li key={x}>{x}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                        {selected.good_to_know &&
+                          selected.good_to_know.length > 0 && (
+                            <>
+                              <p className="detail-label">Good to know</p>
+                              <ul className="detail-list subtle">
+                                {selected.good_to_know.map((x) => (
+                                  <li key={x}>{x}</li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                      </div>
+                      <a className="btn detail-cta" href={bookLink}>
+                        Book this
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ---------- REASSURANCE ---------- */}
       <section className="love">
         <div className="inner">
@@ -352,121 +469,6 @@ export default function ServicePage() {
                 ))}
               </div>
             </>
-          )}
-        </div>
-      </section>
-
-      {/* ---------- SERVICES ---------- */}
-      <section className="services" id="cleaning-services">
-        <div className="inner">
-          <h2>Our cleaning services</h2>
-          <p className="intro">{copy.intro}</p>
-
-          {items.length === 0 ? (
-            <p className="muted">Loading…</p>
-          ) : (
-            <div className="svc-layout">
-              <ul className="tiles">
-                {items.map((pkg) => {
-                  const active = picked === pkg.id;
-                  return (
-                    <li key={pkg.id}>
-                      <button
-                        type="button"
-                        className={`tile${active ? " on" : ""}${
-                          pkg.name === POPULAR ? " pop" : ""
-                        }`}
-                        aria-expanded={active}
-                        aria-controls="svc-detail"
-                        onClick={(e) => {
-                          lastTileRef.current = e.currentTarget;
-                          setPicked((prev) =>
-                            prev === pkg.id && isNarrow ? null : pkg.id,
-                          );
-                        }}
-                      >
-                        {pkg.name === POPULAR && (
-                          <span className="tile-pill">Popular</span>
-                        )}
-                        <span className="tile-name">{pkg.name}</span>
-                        <span className="tile-more" aria-hidden="true">
-                          Details
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {isNarrow && selected && (
-                <div
-                  className="sheet-backdrop"
-                  onClick={closeSheet}
-                  aria-hidden="true"
-                />
-              )}
-
-              {/* Fixed-height column. Panel content varies a lot between
-                  services, so without a reserve the whole page below
-                  shifts every time the selection changes. */}
-              <div className="detail-col">
-                {selected && (
-                  <div
-                    id="svc-detail"
-                    ref={sheetRef}
-                    tabIndex={-1}
-                    className="detail"
-                    role={isNarrow ? "dialog" : undefined}
-                    aria-modal={isNarrow ? true : undefined}
-                    aria-label={isNarrow ? selected.name : undefined}
-                  >
-                    {isNarrow && (
-                      <button
-                        type="button"
-                        className="sheet-close"
-                        onClick={closeSheet}
-                      >
-                        Close
-                      </button>
-                    )}
-                    <span className="detail-grip" aria-hidden="true" />
-                    <div className="detail-body">
-                      <h3>{selected.name}</h3>
-                      <p className="detail-price">
-                        <span>Two-hour minimum · price shown when you book</span>
-                      </p>
-                      {selected.description && (
-                        <p className="detail-desc">{selected.description}</p>
-                      )}
-                      {selected.inclusions && selected.inclusions.length > 0 && (
-                        <>
-                          <p className="detail-label">What&apos;s included</p>
-                          <ul className="detail-list">
-                            {selected.inclusions.map((x) => (
-                              <li key={x}>{x}</li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                      {selected.good_to_know &&
-                        selected.good_to_know.length > 0 && (
-                          <>
-                            <p className="detail-label">Good to know</p>
-                            <ul className="detail-list subtle">
-                              {selected.good_to_know.map((x) => (
-                                <li key={x}>{x}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                    </div>
-                    <a className="btn detail-cta" href={bookLink}>
-                      Book this
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
           )}
         </div>
       </section>
@@ -873,6 +875,18 @@ export default function ServicePage() {
           padding: 62px 0 10px;
           scroll-margin-top: 24px;
         }
+        .service-collection {
+          position: relative;
+          padding: clamp(18px, 3vw, 30px);
+          overflow: visible;
+          border: 1px solid rgba(109, 40, 217, 0.16);
+          border-radius: 28px;
+          background:
+            radial-gradient(circle at 8% 8%, rgba(245, 197, 66, 0.3), transparent 34%),
+            radial-gradient(circle at 92% 14%, rgba(123, 47, 247, 0.18), transparent 38%),
+            linear-gradient(135deg, #fffaf0 0%, #fbf3ff 52%, #f2edff 100%);
+          box-shadow: 0 20px 55px rgba(71, 44, 106, 0.1);
+        }
         .intro {
           color: #3A424B;
           font-size: 16.5px;
@@ -928,7 +942,7 @@ export default function ServicePage() {
           padding: 16px 14px 14px;
           border: 1.5px solid var(--line);
           border-radius: 16px;
-          background: #fff;
+          background: rgba(255, 255, 255, 0.9);
           color: var(--ink);
           font: inherit;
           text-align: left;
@@ -991,7 +1005,7 @@ export default function ServicePage() {
           border: 1.5px solid var(--line);
           border-top: 4px solid var(--apricot-deep);
           border-radius: 18px;
-          background: #fff;
+          background: rgba(255, 255, 255, 0.92);
           box-shadow: 0 14px 38px rgba(22, 32, 42, 0.08);
         }
         .detail:focus {
@@ -1258,6 +1272,10 @@ export default function ServicePage() {
           }
         }
         @media (max-width: 620px) {
+          .service-collection {
+            padding: 16px;
+            border-radius: 22px;
+          }
           .tiles {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
