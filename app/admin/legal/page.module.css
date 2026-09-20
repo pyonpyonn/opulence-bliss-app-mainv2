@@ -1,0 +1,65 @@
+.shell {
+  min-height: 100vh;
+  padding: 0 20px 80px;
+  background: #f7f8fa;
+  color: #16202a;
+  font-family: "Nunito", system-ui, sans-serif;
+}
+
+.page { width: min(100%, 1050px); margin: 0 auto; }
+.eyebrow { margin: 0 0 7px; color: #6d28d9; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.page > h1 { margin: 0; font-size: clamp(32px, 5vw, 48px); font-weight: 900; letter-spacing: -.04em; }
+.intro { max-width: 720px; margin: 10px 0 28px; color: #6b7380; line-height: 1.55; }
+.warning { margin: 0 0 22px; padding: 13px 15px; border: 1px solid #f0d697; border-radius: 13px; background: #fff8dd; color: #805700; font-size: 13px; font-weight: 800; }
+.editors { display: grid; gap: 24px; }
+
+.editorCard {
+  padding: 24px;
+  border: 1px solid #e1e4e9;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 14px 38px rgba(22, 32, 42, .07);
+}
+
+.editorHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 19px; }
+.editorHeading span { display: block; margin-bottom: 4px; color: #887d92; font-size: 10px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.editorHeading h2 { margin: 0; font-size: 23px; font-weight: 900; }
+.draft { padding: 6px 9px; border-radius: 999px; background: #fff3d6; color: #8a5a00; font-size: 10px; white-space: nowrap; }
+
+.fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .3fr); gap: 12px; margin-bottom: 15px; }
+.fields label { color: #626b77; font-size: 11px; font-weight: 900; }
+.fields input { width: 100%; min-height: 43px; box-sizing: border-box; margin-top: 6px; padding: 10px 12px; border: 1px solid #dce0e6; border-radius: 10px; color: #16202a; font: inherit; }
+.fields input:focus { outline: 3px solid rgba(109,40,217,.12); border-color: #6d28d9; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid #dfe2e7; border-bottom: 0; border-radius: 13px 13px 0 0; background: #f7f7f9; }
+.toolbar button, .toolbar select { min-height: 34px; border: 1px solid #dfe2e7; border-radius: 8px; background: #fff; color: #39424d; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.toolbar button { display: grid; width: 36px; place-items: center; padding: 0; }
+.toolbar select { padding: 0 30px 0 10px; }
+.toolbar button:hover, .toolbar select:hover { border-color: #9b72d9; color: #6d28d9; }
+.toolbarSpacer { flex: 1; }
+
+.richEditor { min-height: 300px; padding: 22px; border: 1px solid #dfe2e7; border-radius: 0 0 13px 13px; color: #3f4651; font-size: 15px; line-height: 1.65; }
+.richEditor:focus { outline: 3px solid rgba(109,40,217,.12); border-color: #6d28d9; }
+.richEditor :global(h2) { margin: 25px 0 8px; color: #16202a; font-size: 24px; font-weight: 900; }
+.richEditor :global(h3) { margin: 20px 0 7px; color: #16202a; font-size: 18px; font-weight: 900; }
+.richEditor :global(p) { margin: 0 0 13px; }
+.richEditor :global(ul), .richEditor :global(ol) { padding-left: 24px; }
+
+.editorFooter { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+.editorFooter > span { color: #6b7380; font-size: 12px; font-weight: 800; }
+.saveButton { min-width: 154px; padding: 11px 18px; border: 0; border-radius: 999px; background: linear-gradient(100deg,#f5c542,#c86fc9 55%,#7b2ff7); color: #fff; font: inherit; font-weight: 900; cursor: pointer; }
+.saveButton:disabled { opacity: .6; cursor: wait; }
+.success, .error { margin: 13px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; font-weight: 800; }
+.success { background: #e4f6ec; color: #137b4e; }
+.error { background: #ffe6ea; color: #b0384f; }
+
+@media (max-width: 680px) {
+  .shell { padding-inline: 12px; }
+  .editorCard { padding: 16px; border-radius: 17px; }
+  .fields { grid-template-columns: 1fr; }
+  .editorHeading { display: grid; }
+  .draft { justify-self: start; }
+  .richEditor { min-height: 260px; padding: 16px; }
+  .editorFooter { align-items: stretch; flex-direction: column; }
+  .saveButton { width: 100%; }
+}

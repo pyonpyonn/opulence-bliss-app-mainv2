@@ -1,0 +1,79 @@
+.shell {
+  min-height: 70vh;
+  padding: 54px 20px 84px;
+  color: #16202a;
+  font-family: "Nunito", system-ui, sans-serif;
+}
+
+.document {
+  width: min(100%, 840px);
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 56px);
+  border: 1px solid #e5deed;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 22px 60px rgba(38, 24, 57, 0.09);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.document h1 {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 50px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 17px 0 34px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #ece8f0;
+  color: #777f8b;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.content {
+  color: #3f4651;
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+.content :global(h2) {
+  margin: 34px 0 10px;
+  color: #16202a;
+  font-size: clamp(21px, 3vw, 27px);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.content :global(h3) {
+  margin: 26px 0 8px;
+  color: #16202a;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.content :global(p) { margin: 0 0 16px; }
+.content :global(ul),
+.content :global(ol) { margin: 0 0 18px; padding-left: 25px; }
+.content :global(li) { margin-bottom: 7px; }
+.content :global(a) { color: #6d28d9; font-weight: 800; }
+
+@media (max-width: 560px) {
+  .shell { padding: 25px 12px 56px; }
+  .document { border-radius: 20px; }
+  .content { font-size: 15px; line-height: 1.65; }
+}

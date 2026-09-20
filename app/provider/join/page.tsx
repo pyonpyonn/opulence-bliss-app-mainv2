@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isValidUkPhone } from "@/lib/ukPhone";
+import { PROFESSIONAL_PARTNER_AGREEMENT_URL } from "@/lib/legal";
 import {
   estimateProviderMonthlyEarnings,
   isOptionalUtrNumber,
@@ -89,6 +90,8 @@ export default function ProviderJoinPage() {
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [professionalAgreementAccepted, setProfessionalAgreementAccepted] =
+    useState(false);
 
   useEffect(() => {
     (async () => {
@@ -236,6 +239,10 @@ export default function ProviderJoinPage() {
   }
 
   async function submit() {
+    if (!professionalAgreementAccepted) {
+      setErr("Accept the Service Professional Partner Agreement to continue.");
+      return;
+    }
     setBusy(true);
     setErr(null);
 
@@ -270,6 +277,7 @@ export default function ProviderJoinPage() {
           weeklyAvailability,
           skills,
           areaIds,
+          professionalAgreementAccepted,
         }),
       });
       const data = await res.json();
@@ -308,7 +316,8 @@ export default function ProviderJoinPage() {
       skills.length &&
       areaIds.length &&
       maxTravelDistance &&
-      hasWorkingPeriod,
+      hasWorkingPeriod &&
+      professionalAgreementAccepted,
   );
   const monthlyEstimate = estimateProviderMonthlyEarnings(weeklyHours);
 
@@ -870,6 +879,27 @@ export default function ProviderJoinPage() {
                 <p className="help-copy">Choose at least one working period before submitting.</p>
               )}
 
+              <label className="legal-consent">
+                <input
+                  type="checkbox"
+                  checked={professionalAgreementAccepted}
+                  onChange={(event) =>
+                    setProfessionalAgreementAccepted(event.target.checked)
+                  }
+                />
+                <span>
+                  I have read and accept the{" "}
+                  <a
+                    href={PROFESSIONAL_PARTNER_AGREEMENT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Service Professional Partner Agreement
+                  </a>
+                  .
+                </span>
+              </label>
+
               <div className="form-actions">
                 <button className="go" type="button" onClick={submit} disabled={busy || !ready}>
                   {busy ? step || "Working…" : "Create professional account"}
@@ -1373,6 +1403,34 @@ export default function ProviderJoinPage() {
           margin: -8px 2px 20px;
           color: #7A828C;
           font-size: 12px;
+        }
+        .legal-consent {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin: 2px 0 17px;
+          padding: 14px;
+          border: 1px solid #e2d5f8;
+          border-radius: 13px;
+          background: #faf7ff;
+          color: #4b5563;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1.5;
+        }
+        .legal-consent input {
+          width: 18px;
+          height: 18px;
+          min-height: 0;
+          flex: 0 0 auto;
+          margin: 1px 0 0;
+          padding: 0;
+          accent-color: #6d28d9;
+        }
+        .legal-consent a {
+          color: #6d28d9;
+          font-weight: 900;
+          text-underline-offset: 2px;
         }
         .status-fields label > span {
           color: #8C95A0;

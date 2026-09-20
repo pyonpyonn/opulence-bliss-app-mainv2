@@ -18,6 +18,7 @@ export async function updateSession(request: NextRequest) {
     "/reviews",
     "/blog",
     "/faq",
+    "/legal",
     "/provider",
     "/account",
     "/worker",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isValidUkPhone } from "@/lib/ukPhone";
+import ConsentCheckbox from "@/components/ConsentCheckbox";
 
 export function SignUpForm() {
   const [salutation, setSalutation] = useState<"ms_mrs" | "mr" | "">("");
@@ -17,6 +18,7 @@ export function SignUpForm() {
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -35,6 +37,10 @@ export function SignUpForm() {
       setError("Complete every field. Your password must have at least 6 characters.");
       return;
     }
+    if (!consentAccepted) {
+      setError("Accept the Terms & Conditions and Privacy Policy to create your account.");
+      return;
+    }
     if (!emailValid || !phoneValid) return;
 
     setIsLoading(true);
@@ -51,6 +57,7 @@ export function SignUpForm() {
           email: email.trim(),
           address: address.trim(),
           password,
+          consentAccepted,
         }),
       });
       const result = await response.json();
@@ -118,8 +125,10 @@ export function SignUpForm() {
             </button>
           </div>
 
+          <ConsentCheckbox checked={consentAccepted} onChange={setConsentAccepted} />
+
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="submit" type="submit" disabled={isLoading}>{isLoading ? "Creating account…" : "Sign up"}</button>
+          <button className="submit" type="submit" disabled={isLoading || !consentAccepted}>{isLoading ? "Creating account…" : "Sign up"}</button>
         </form>
 
         <p className="account-link">Already signed up? <Link href="/login">Log in here</Link></p>

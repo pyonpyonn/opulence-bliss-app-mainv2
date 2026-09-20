@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
+import { LEGAL_VERSION } from "@/lib/legal";
 import {
   canFinalizeProviderPartnership,
   isProviderCleaningExperienceTypes,
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       weeklyAvailability,
       skills,
       areaIds,
+      professionalAgreementAccepted,
     } = await req.json();
     const normalizedEmail = String(email ?? "").trim().toLowerCase();
     const normalizedPhone = normalizeUkPhone(phone);
@@ -205,6 +207,21 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    if (professionalAgreementAccepted !== true) {
+      return NextResponse.json(
+        { error: "Accept the Service Professional Partner Agreement to continue." },
+        { status: 400 },
+      );
+    }
+
+    const { data: agreementRow } = await admin
+      .from("legal_documents")
+      .select("version")
+      .eq("slug", "professional-partner-agreement")
+      .eq("published", true)
+      .maybeSingle();
+    const professionalAgreementVersion =
+      agreementRow?.version ?? LEGAL_VERSION;
 
     // 1. Create the account, already confirmed (no confirmation email).
     const { data: created, error: createErr } =
@@ -218,6 +235,9 @@ export async function POST(req: NextRequest) {
           last_name: lastName,
           address,
           date_of_birth: dateOfBirth,
+          professional_agreement_accepted: true,
+          professional_agreement_version: professionalAgreementVersion,
+          professional_agreement_accepted_at: new Date().toISOString(),
         },
       });
 

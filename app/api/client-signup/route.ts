@@ -20,6 +20,13 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = String(email ?? "").trim().toLowerCase();
     const normalizedPhone = normalizeUkPhone(phone);
 
+    if (consentAccepted !== true) {
+      return NextResponse.json(
+        { error: "Accept the Terms & Conditions and Privacy Policy to sign up." },
+        { status: 400 },
+      );
+    }
+
     if (!fullName || !email || !password) {
       return NextResponse.json(
         { error: "Please fill in your name, email and a password." },
@@ -39,18 +46,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { data: legalRows } = await admin
+      .from("legal_documents")
+      .select("slug, version")
+      .in("slug", ["terms", "privacy"])
+      .eq("published", true);
+    const legalVersions = Object.fromEntries(
+      ["terms", "privacy"].map((slug) => [
+        slug,
+        legalRows?.find((row) => row.slug === slug)?.version ?? LEGAL_VERSION,
+      ]),
+    );
+
     const userMetadata = {
       salutation: salutation || null,
       first_name: firstName || null,
       last_name: lastName || null,
       address: address || null,
-      ...(consentAccepted === true
-        ? {
-            legal_accepted: true,
-            legal_version: LEGAL_VERSION,
-            legal_accepted_at: new Date().toISOString(),
-          }
-        : {}),
+      legal_accepted: true,
+      legal_version: legalVersions.terms,
+      legal_versions: legalVersions,
+      legal_accepted_at: new Date().toISOString(),
     };
     const credentials = { email: normalizedEmail, password: String(password) };
     const { data: created, error: creationError } =

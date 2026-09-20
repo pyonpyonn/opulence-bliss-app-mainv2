@@ -7,7 +7,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CLEANING_DURATIONS, isCleaning, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
-import ConsentCheckbox from "@/components/ConsentCheckbox";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
 const supabase = createClient();
@@ -97,7 +96,6 @@ export default function BookPage() {
 
   const [cleaningMinutes, setCleaningMinutes] = useState(120);
   const [frequency, setFrequency] = useState<BookingFrequency>("one_time");
-  const [consentAccepted, setConsentAccepted] = useState(false);
   const [previousCleaners, setPreviousCleaners] = useState<{ provider_id: string; display_name: string }[]>([]);
   const [preferredCleaner, setPreferredCleaner] = useState("");
   const cleaning = isCleaning(selected?.service_type);
@@ -121,11 +119,6 @@ export default function BookPage() {
   const [payError, setPayError] = useState<string | null>(null);
   const [handoffError, setHandoffError] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<"new" | "existing">("new");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
   /* ---------- load ---------- */
   useEffect(() => {
     (async () => {
@@ -358,48 +351,19 @@ export default function BookPage() {
     }
   }
 
-  async function accountThenPay() {
-    setPaying(true);
-    setPayError(null);
-    try {
-      if (mode === "new") {
-        if (!consentAccepted) throw new Error("Accept the Terms & Conditions and Privacy Policy to sign up.");
-        const res = await fetch("/api/client-signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullName, email, password, phone, address, postcode, consentAccepted }),
-        });
-        const data = await res.json();
-        if (!data.ok) {
-          if (data.exists) setMode("existing");
-          throw new Error(data.error || "Could not create your account");
-        }
-      }
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error) throw new Error(error.message);
-      setSignedIn(true);
-      if (mode === "existing" && cleaning) {
-        const { data: cleaners } = await supabase.rpc("my_previous_cleaners");
-        setPreviousCleaners(cleaners ?? []);
-        if (cleaners?.length) {
-          setPaying(false);
-          setStep(1);
-          setHandoffError("You’re signed in. You can now request a cleaner from a previous visit.");
-          return;
-        }
-      }
-      await startCheckout();
-    } catch (e) {
-      setPayError(e instanceof Error ? e.message : "Something went wrong");
-      setPaying(false);
-    }
-  }
-
   function checkout() {
-    if (signedIn === false) return accountThenPay();
+    if (signedIn === false) {
+      const bookingQuery = new URLSearchParams({
+        pc: postcode,
+        type: "clean",
+        service: selected?.id ?? "",
+        slot: slot ?? "",
+        review: "1",
+      });
+      const returnTo = `/book?${bookingQuery.toString()}`;
+      window.location.href = `/login?next=${encodeURIComponent(returnTo)}`;
+      return;
+    }
     return startCheckout();
   }
 
@@ -866,64 +830,6 @@ export default function BookPage() {
                 </p>
               )}
 
-              {signedIn === false && (
-                <div className="acct">
-                  <p className="label" style={{ marginTop: 0 }}>
-                    Your details
-                  </p>
-                  <div className="toggle">
-                    <button
-                      className={mode === "new" ? "tg on" : "tg"}
-                      onClick={() => setMode("new")}
-                    >
-                      I&apos;m new
-                    </button>
-                    <button
-                      className={mode === "existing" ? "tg on" : "tg"}
-                      onClick={() => setMode("existing")}
-                    >
-                      I have an account
-                    </button>
-                  </div>
-
-                  {mode === "new" && (
-                    <input
-                      className="field"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Full name"
-                    />
-                  )}
-                  <input
-                    className="field"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    autoComplete="email"
-                  />
-                  <input
-                    className="field"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={mode === "new" ? "Password (6+ characters)" : "Password"}
-                    autoComplete={mode === "new" ? "new-password" : "current-password"}
-                  />
-                  {mode === "new" && (
-                    <>
-                      <ConsentCheckbox checked={consentAccepted} onChange={setConsentAccepted} />
-                      <input
-                        className="field"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Phone (optional)"
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-
               <div className="held">
                 <strong>Your card is held, not charged</strong>
                 <span>
@@ -1016,13 +922,11 @@ export default function BookPage() {
               <p className="hint">Now choose how often you would like it.</p>
             )}
             {step === 5 && (
-              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || (signedIn === false && mode === "new" && !consentAccepted)}>
+              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid}>
                 {paying
                   ? "Taking you to checkout…"
                   : signedIn === false
-                  ? mode === "new"
-                    ? "Create account & pay"
-                    : "Sign in & pay"
+                  ? "Sign in to continue"
                   : "Confirm & pay"}
               </button>
             )}
@@ -1642,34 +1546,6 @@ export default function BookPage() {
           color: var(--muted);
           font-size: 11.5px;
           font-weight: 700;
-        }
-        .acct {
-          background: #fbfaff;
-          border: 2px solid #ece5fb;
-          border-radius: 18px;
-          padding: 18px 20px 8px;
-          margin: 22px 0 0;
-        }
-        .toggle {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 14px;
-        }
-        .tg {
-          background: #fff;
-          border: 2px solid var(--line);
-          border-radius: 999px;
-          padding: 9px 16px;
-          font: inherit;
-          font-size: 14px;
-          font-weight: 800;
-          cursor: pointer;
-          color: var(--ink);
-        }
-        .tg.on {
-          background: var(--purple);
-          border-color: var(--purple);
-          color: #fff;
         }
         .held {
           background: #f4fbf7;

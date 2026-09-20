@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { PRIVACY_URL, TERMS_URL } from "@/lib/legal";
+import {
+  PRIVACY_URL,
+  PROFESSIONAL_PARTNER_AGREEMENT_URL,
+  TERMS_URL,
+} from "@/lib/legal";
 import styles from "./SiteFooter.module.css";
 
 const columns: Array<{
@@ -80,6 +84,13 @@ export default function SiteFooter() {
               Privacy Policy
             </a>
           )}
+          <a
+            href={PROFESSIONAL_PARTNER_AGREEMENT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Professional Partner Agreement
+          </a>
           <Link href="/faq">Help &amp; FAQ</Link>
         </div>
       </div>
