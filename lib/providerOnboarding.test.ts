@@ -7,6 +7,7 @@ import {
   isProviderCleaningExperienceYears,
   isOptionalUtrNumber,
   isProviderResidentStatus,
+  isStrongProviderPassword,
   isProviderTravelDistance,
   isProviderWeeklyAvailability,
   isProviderWeeklyHours,
@@ -45,6 +46,14 @@ test("only self-employed professionals can finalize the partnership", () => {
   assert.equal(canFinalizeProviderPartnership(true), true);
   assert.equal(canFinalizeProviderPartnership(false), false);
   assert.equal(canFinalizeProviderPartnership("agree"), false);
+});
+
+test("professional passwords require eight characters and a full character mix", () => {
+  assert.equal(isStrongProviderPassword("Clean#123"), true);
+  assert.equal(isStrongProviderPassword("clean#123"), false);
+  assert.equal(isStrongProviderPassword("CLEAN#123"), false);
+  assert.equal(isStrongProviderPassword("Cleaner12"), false);
+  assert.equal(isStrongProviderPassword("Cl#1"), false);
 });
 
 test("cleaning experience accepts the displayed experience choices", () => {

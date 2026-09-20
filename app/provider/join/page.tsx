@@ -11,6 +11,7 @@ import { isValidUkPhone } from "@/lib/ukPhone";
 import {
   estimateProviderMonthlyEarnings,
   isOptionalUtrNumber,
+  isStrongProviderPassword,
   PROVIDER_AVAILABILITY_PERIODS,
   PROVIDER_CLEANING_EXPERIENCE_TYPES,
   PROVIDER_ESTIMATED_HOURLY_EARNINGS,
@@ -96,12 +97,20 @@ export default function ProviderJoinPage() {
   const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
   const emailValid = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email.trim());
   const phoneValid = isValidUkPhone(phone);
+  const passwordChecks = {
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    digit: /\d/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password),
+    length: password.length >= 8,
+  };
+  const passwordValid = isStrongProviderPassword(password);
   const accountFieldsPresent = Boolean(
     salutation &&
       firstName.trim() &&
       lastName.trim() &&
       email.trim() &&
-      password.length >= 6 &&
+      passwordValid &&
       phone.trim() &&
       address.trim() &&
       dateOfBirth,
@@ -114,7 +123,7 @@ export default function ProviderJoinPage() {
     setEmailTouched(true);
     setPhoneTouched(true);
     if (!accountFieldsPresent) {
-      setErr("Complete every account field. Your password must have at least 6 characters.");
+      setErr("Complete every account field and meet all five password requirements.");
       return;
     }
     if (!emailValid || !phoneValid) {
@@ -349,7 +358,8 @@ export default function ProviderJoinPage() {
         </section>
 
         {/* ---- In-page application ---- */}
-        <section className="form">
+        <section className={`form ${joinStep === "estimate" ? "estimate-mode" : "application-mode"}`}>
+          <div className="form-surface">
           {joinStep === "estimate" && (
             <div className="estimate-step">
               <p className="form-kicker">See what your schedule could look like</p>
@@ -388,8 +398,8 @@ export default function ProviderJoinPage() {
                 <p className="estimate-note">Estimate before tax, based on the hours you choose.</p>
               </div>
 
-              <button className="go" type="button" onClick={() => setJoinStep("account")}>
-                Join for free
+              <button className="go signup-button" type="button" onClick={() => setJoinStep("account")}>
+                Sign up
               </button>
               <p className="small">No joining fee. Your application stays on this page.</p>
             </div>
@@ -401,7 +411,10 @@ export default function ProviderJoinPage() {
                 ← Back
               </button>
               <p className="form-kicker">Professional application</p>
-              <h2>Create your provider account</h2>
+              <h2 className="meet-heading">Let&apos;s meet!</h2>
+              <p className="section-intro">
+                Tell us who you are to start your cleaner application.
+              </p>
               <fieldset className="title-options">
                 <legend className="sr-only">Title</legend>
                 <label className="title-option">
@@ -477,6 +490,7 @@ export default function ProviderJoinPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   autoComplete="new-password"
+                  aria-describedby="provider-password-requirements"
                 />
                 <button
                   type="button"
@@ -485,6 +499,16 @@ export default function ProviderJoinPage() {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
+              </div>
+              <div className="password-requirements" id="provider-password-requirements">
+                <p>Must contain at least:</p>
+                <ul>
+                  <li className={passwordChecks.uppercase ? "passed" : ""}><b>A</b><span>Uppercase</span></li>
+                  <li className={passwordChecks.lowercase ? "passed" : ""}><b>a</b><span>Lowercase</span></li>
+                  <li className={passwordChecks.digit ? "passed" : ""}><b>123</b><span>Digit</span></li>
+                  <li className={passwordChecks.symbol ? "passed" : ""}><b>@!#</b><span>Symbol</span></li>
+                  <li className={passwordChecks.length ? "passed" : ""}><b>8+</b><span>Characters</span></li>
+                </ul>
               </div>
 
               <div className={`phone-field ${phoneTouched && !phoneValid ? "invalid" : ""}`}>
@@ -838,6 +862,7 @@ export default function ProviderJoinPage() {
           )}
 
           {err && <p className="err">{err}</p>}
+          </div>
         </section>
       </div>
 
@@ -1026,12 +1051,45 @@ export default function ProviderJoinPage() {
           font-weight: 600;
         }
         .form {
-          background: #fff;
-          border: 1px solid #E7DCFA;
-          border-top: 5px solid #6D28D9;
-          border-radius: 24px;
-          padding: 34px 32px;
-          box-shadow: 0 20px 54px rgba(76,29,149, 0.12);
+          position: relative;
+          min-width: 0;
+          overflow: hidden;
+          border: 1px solid rgba(109,40,217,0.18);
+          border-radius: 28px;
+          padding: 14px;
+          box-shadow: 0 24px 64px rgba(76,29,149,0.15);
+          transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .form::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(circle at 92% 4%, rgba(200,111,201,0.3), transparent 34%),
+            radial-gradient(circle at 5% 96%, rgba(245,197,66,0.26), transparent 38%);
+        }
+        .estimate-mode {
+          background: linear-gradient(145deg, #fff8df 0%, #f8efff 48%, #e9e1ff 100%);
+        }
+        .application-mode {
+          background: linear-gradient(155deg, #ddd9ff 0%, #eee8ff 48%, #fff5df 100%);
+        }
+        .form-surface {
+          position: relative;
+          z-index: 1;
+          min-width: 0;
+          border-radius: 19px;
+        }
+        .estimate-mode .form-surface {
+          padding: 24px 20px;
+          background: rgba(255,255,255,0.2);
+        }
+        .application-mode .form-surface {
+          padding: 28px;
+          border: 1px solid rgba(255,255,255,0.86);
+          background: rgba(255,255,255,0.96);
+          box-shadow: 0 12px 34px rgba(76,29,149,0.1);
         }
         .form-kicker {
           margin: 0 0 7px;
@@ -1055,9 +1113,11 @@ export default function ProviderJoinPage() {
         }
         .availability-card {
           padding: 22px;
-          border: 1px solid #E2D5F8;
+          border: 1px solid rgba(109,40,217,0.18);
           border-radius: 18px;
-          background: linear-gradient(145deg, #FFF8E7 0%, #F4ECFE 100%);
+          background: rgba(255,255,255,0.64);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+          backdrop-filter: blur(8px);
         }
         .availability-heading {
           display: flex;
@@ -1104,7 +1164,7 @@ export default function ProviderJoinPage() {
           padding: 18px;
           border: 1.5px solid #16202A;
           border-radius: 14px;
-          background: rgba(255,255,255,0.58);
+          background: rgba(255,255,255,0.9);
         }
         .simulation > p {
           margin: 0 0 14px;
@@ -1139,6 +1199,16 @@ export default function ProviderJoinPage() {
           font-size: 11px;
           text-align: center;
         }
+        .signup-button {
+          min-height: 54px;
+          margin-top: 18px;
+          box-shadow: 0 11px 28px rgba(109,40,217,0.2);
+        }
+        .meet-heading {
+          margin-bottom: 7px;
+          font-size: clamp(30px, 4.5vw, 39px);
+          letter-spacing: -0.025em;
+        }
         label {
           display: block;
           font-size: 13.5px;
@@ -1157,6 +1227,12 @@ export default function ProviderJoinPage() {
           background: #fff;
           color: #16202A;
           margin-bottom: 14px;
+        }
+        .application-mode input:not([type="radio"]):not([type="checkbox"]):not(.hours-slider),
+        .application-mode select {
+          min-height: 60px;
+          border-radius: 15px;
+          font-size: 16px;
         }
         input:focus-visible {
           outline: none;
@@ -1558,6 +1634,49 @@ export default function ProviderJoinPage() {
           color: #16202A;
           cursor: pointer;
         }
+        .password-requirements {
+          margin: -2px 0 18px;
+          padding: 13px 14px;
+          border: 1px solid #E7E0F2;
+          border-radius: 13px;
+          background: #FAF8FD;
+        }
+        .password-requirements > p {
+          margin: 0 0 10px;
+          color: #7A828C;
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .password-requirements ul {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 6px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+        .password-requirements li {
+          display: grid;
+          min-width: 0;
+          justify-items: center;
+          gap: 2px;
+          color: #9AA1AA;
+          text-align: center;
+        }
+        .password-requirements b {
+          color: #68717D;
+          font-size: 15px;
+          line-height: 1;
+        }
+        .password-requirements span {
+          font-size: 8.5px;
+          font-weight: 900;
+          overflow-wrap: anywhere;
+        }
+        .password-requirements li.passed,
+        .password-requirements li.passed b {
+          color: #137B4E;
+        }
         .phone-field {
           display: grid;
           grid-template-columns: auto auto minmax(0, 1fr);
@@ -1729,6 +1848,9 @@ export default function ProviderJoinPage() {
             grid-template-columns: minmax(0, 1fr);
             gap: 34px;
           }
+          .form {
+            order: -1;
+          }
         }
         @media (max-width: 520px) {
           .wrap {
@@ -1738,7 +1860,11 @@ export default function ProviderJoinPage() {
             padding-top: 26px;
           }
           .form {
-            padding: 28px 20px;
+            padding: 10px;
+          }
+          .estimate-mode .form-surface,
+          .application-mode .form-surface {
+            padding: 22px 17px;
           }
           .fee {
             padding: 22px 18px;
@@ -1755,8 +1881,12 @@ export default function ProviderJoinPage() {
         }
         @media (max-width: 400px) {
           .form {
-            padding: 24px 16px;
+            padding: 8px;
             border-radius: 20px;
+          }
+          .estimate-mode .form-surface,
+          .application-mode .form-surface {
+            padding: 20px 14px;
           }
           .availability-card {
             padding: 16px;

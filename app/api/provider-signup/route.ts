@@ -11,6 +11,7 @@ import {
   isProviderCleaningExperienceYears,
   isOptionalUtrNumber,
   isProviderResidentStatus,
+  isStrongProviderPassword,
   isProviderTravelDistance,
   isProviderWeeklyAvailability,
   isProviderWeeklyHours,
@@ -198,9 +199,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (String(password).length < 6) {
+    if (!isStrongProviderPassword(password)) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters." },
+        { error: "Password must have at least 8 characters, including uppercase, lowercase, a number and a symbol." },
         { status: 400 }
       );
     }

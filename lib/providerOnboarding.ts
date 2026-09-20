@@ -95,6 +95,17 @@ export function canFinalizeProviderPartnership(selfEmployed: unknown) {
   return selfEmployed === true;
 }
 
+export function isStrongProviderPassword(value: unknown) {
+  const password = String(value ?? "");
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 export function isProviderCleaningExperienceYears(value: unknown) {
   return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 60;
 }
