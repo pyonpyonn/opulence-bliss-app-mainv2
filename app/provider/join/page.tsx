@@ -106,11 +106,7 @@ export default function ProviderJoinPage() {
         p_limit: 24,
       });
       const list = ((data ?? []) as PublicReview[])
-        .filter(
-          (review) =>
-            review.recipient_type === "professional" &&
-            review.comment?.trim(),
-        )
+        .filter((review) => review.recipient_type === "professional")
         .slice(0, 3);
       setReviews(list);
     })();
@@ -943,7 +939,7 @@ export default function ProviderJoinPage() {
                       {"★".repeat(review.rating)}
                       {"☆".repeat(5 - review.rating)}
                     </span>
-                    <p>{review.comment}</p>
+                    {review.comment?.trim() && <p>{review.comment}</p>}
                     <cite>{review.recipient_name}</cite>
                   </li>
                 ))}
@@ -1029,42 +1025,42 @@ export default function ProviderJoinPage() {
         }
         .benefits {
           display: grid;
-          gap: 26px;
+          gap: 14px;
           margin-top: 8px;
         }
         .perks {
-          padding: clamp(30px, 5vw, 46px);
+          padding: clamp(18px, 3vw, 24px);
           border: 0;
-          border-radius: 26px;
+          border-radius: 18px;
           background: #F7F6F9;
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
         }
         .perks-icon {
           display: block;
-          min-height: 46px;
-          margin-bottom: 26px;
-          font-size: 37px;
+          min-height: 28px;
+          margin-bottom: 12px;
+          font-size: 25px;
           line-height: 1;
         }
         .perks h2 {
-          margin: 0 0 25px;
+          margin: 0 0 13px;
           color: #16202A;
-          font-size: clamp(27px, 4vw, 36px);
+          font-size: clamp(20px, 3vw, 25px);
           font-weight: 900;
           line-height: 1.1;
         }
         .perks ul {
           display: grid;
-          gap: 12px;
+          gap: 7px;
           margin: 0;
-          padding-left: 27px;
+          padding-left: 21px;
           list-style: disc;
         }
         .perks li {
-          padding-left: 4px;
+          padding-left: 2px;
           color: #25282D;
-          font-size: clamp(16px, 2.3vw, 20px);
-          line-height: 1.5;
+          font-size: clamp(14px, 2vw, 16px);
+          line-height: 1.42;
           overflow-wrap: anywhere;
         }
         .perks strong {
