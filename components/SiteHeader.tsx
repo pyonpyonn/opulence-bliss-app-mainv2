@@ -24,6 +24,7 @@ type NavLink = { href: string; label: string; match: string[] };
 // lives inside the portal, reached via "My account".
 const NAV: NavLink[] = [
   { href: "/services/cleaning", label: "Cleaning", match: ["/services/cleaning"] },
+  { href: "/services/handyman", label: "Handyman", match: ["/services/handyman"] },
   { href: "/providers", label: "Our pros", match: ["/providers"] },
   { href: "/provider", label: "Jobs", match: ["/provider"] },
 ];
@@ -282,15 +283,10 @@ export default function SiteHeader() {
         <div className="site-header-nav-inner" style={navInner}>
           {NAV.map((l) => {
             if (l.href === "/services/cleaning")
-              return (
-                <Fragment key={l.href}>
-                  <CleaningMenu />
-                  <ComingSoonMenu />
-                </Fragment>
-              );
+              return <CleaningMenu key={l.href} />;
             const on = active === l.href;
             const hot = hover === l.href;
-            return (
+            const link = (
               <Link
                 key={l.href + l.label}
                 href={l.href}
@@ -311,6 +307,15 @@ export default function SiteHeader() {
                 {l.label}
               </Link>
             );
+            if (l.href === "/services/handyman") {
+              return (
+                <Fragment key={l.href}>
+                  {link}
+                  <ComingSoonMenu />
+                </Fragment>
+              );
+            }
+            return link;
           })}
         </div>
       </nav>
@@ -343,6 +348,7 @@ export default function SiteHeader() {
 
             <nav aria-label="Mobile main navigation" className="mobile-links">
               <Link href="/services/cleaning">Cleaning services</Link>
+              <Link href="/services/handyman">Handyman quotations</Link>
               <Link href="/coming-soon">Coming soon</Link>
               <Link href="/providers">Our professionals</Link>
               <Link href="/blog">Blog</Link>

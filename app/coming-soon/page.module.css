@@ -36,6 +36,12 @@
   line-height: 1.55;
 }
 
+.liveLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+
 .liveLink {
   display: inline-block;
   color: #6d28d9;

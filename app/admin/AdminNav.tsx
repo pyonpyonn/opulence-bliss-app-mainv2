@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 const LINKS = [
   ["/admin", "Overview"],
   ["/admin/bookings", "Bookings & schedule"],
+  ["/admin/quotes", "Handyman quotes"],
   ["/admin/customers", "Customers"],
   ["/admin/cleaners", "Cleaners"],
   ["/admin/reviews", "Reviews"],

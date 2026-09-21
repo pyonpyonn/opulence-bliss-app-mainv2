@@ -6,34 +6,11 @@
 //
 // Landing page — two-level nav, hero, coloured service bands.
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 import SiteFooter from "@/components/SiteFooter";
-import { cleaningHourlyRatePence } from "@/lib/cleaningBooking";
-
-const supabase = createClient();
-
-type Pkg = { price: number; service_type: string | null; billing_type: string; duration_minutes: number | null };
 
 export default function Home() {
-  const [from, setFrom] = useState(0);
   const [postcode, setPostcode] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("packages")
-        .select("price, service_type, billing_type, duration_minutes")
-        .eq("active", true)
-        .eq("billing_type", "per_visit");
-
-      const list = (data ?? []) as Pkg[];
-      const cleaningRates = list
-        .filter((x) => (x.service_type ?? "").includes("clean"))
-        .map((x) => cleaningHourlyRatePence(x) / 100);
-      setFrom(cleaningRates.length ? Math.min(...cleaningRates) : 0);
-    })();
-  }, []);
 
   const bookLink = postcode
     ? `/book?pc=${encodeURIComponent(postcode)}`
@@ -45,13 +22,12 @@ export default function Home() {
       <header className="hero">
         <div className="hero-inner">
           <h1>
-            You do the living,
-            <br />
-            we&apos;ll handle the rest
+            Your home,
+            <br />taken care of
           </h1>
           <p className="lede">
-            Vetted home cleaners across London. Book the cleaning you need,
-            whenever it suits you.
+            Vetted cleaners and trusted handymen across London. Book a clean or
+            request a tailored quote for work around your home.
           </p>
 
           <div className="composer">
@@ -66,8 +42,11 @@ export default function Home() {
             </a>
           </div>
           <p className="micro">
-            Central, North &amp; West London · simple pay-per-visit booking
+            Central, North &amp; West London · cleaning bookings and handyman quotations
           </p>
+          <a className="hero-quote" href="/services/handyman">
+            Need something repaired or installed? Request a handyman quote →
+          </a>
         </div>
       </header>
 
@@ -77,20 +56,28 @@ export default function Home() {
           <div>
             <h2>Cleaning</h2>
             <p>and ironing, at home</p>
-            {from > 0 && <span className="from">from £{from.toFixed(2)} / hour</span>}
+            <span className="from">Book a cleaning visit</span>
           </div>
           <span className="arrow">→</span>
         </a>
 
+        <a className="band handyman" href="/services/handyman">
+          <div>
+            <h2>Handyman</h2>
+            <p>repairs, assembly and home maintenance</p>
+            <span className="from">Request a tailored quote</span>
+          </div>
+          <span className="arrow">→</span>
+        </a>
       </section>
 
       {/* ---------- TRUST ---------- */}
       <section className="strip">
         {[
           ["Vetted & insured", "Every provider background-checked"],
-          ["Clear pricing", "No hourly haggling, no hidden fees"],
+          ["Clear before you commit", "See the cleaning price or approve a handyman quote"],
           ["Your regular pro", "Ask for them again next time"],
-          ["Book in 2 hours", "Same-day slots when pros are free"],
+          ["Made for your schedule", "Choose a cleaning slot or request a preferred time"],
         ].map(([t, s]) => (
           <div key={t}>
             <strong>{t}</strong>
@@ -106,10 +93,10 @@ export default function Home() {
           <h2 className="center big">Four steps, then it just happens</h2>
           <ol className="steps">
             {[
-              ["Enter your postcode", "We check we cover you."],
-              ["Choose your service", "See the price before you commit."],
-              ["Pick a time", "Only times a pro is genuinely free."],
-              ["Sit back", "They arrive, check in, and take care of it."],
+              ["Choose a service", "Book cleaning or request handyman help."],
+              ["Tell us what you need", "Add your address, job details and preferred timing."],
+              ["Book or approve", "Confirm a cleaning price or approve your handyman quote."],
+              ["Your pro arrives", "They check in and take care of the work."],
             ].map(([t, s], i) => (
               <li key={t}>
                 <span className="num">{i + 1}</span>
@@ -294,13 +281,14 @@ export default function Home() {
         .hero-inner {
           max-width: 1080px;
           margin: 0 auto;
-          text-align: center;
+          text-align: left;
         }
         h1 {
           color: #fff;
           font-size: clamp(38px, 6.5vw, 74px);
           line-height: 1.02;
           letter-spacing: -0.015em;
+          max-width: 760px;
           margin: 0 0 18px;
         }
         .lede {
@@ -308,7 +296,7 @@ export default function Home() {
           font-size: 18px;
           line-height: 1.6;
           max-width: 44ch;
-          margin: 0 auto 30px;
+          margin: 0 0 30px;
         }
         .composer {
           display: flex;
@@ -318,7 +306,7 @@ export default function Home() {
           border-radius: 999px;
           padding: 7px 7px 7px 22px;
           max-width: 500px;
-          margin-inline: auto;
+          margin-inline: 0;
           text-align: left;
           box-shadow: 0 18px 48px rgba(45, 19, 73, 0.22);
           backdrop-filter: blur(12px);
@@ -360,6 +348,14 @@ export default function Home() {
           font-size: 13.5px;
           margin: 14px 0 0;
         }
+        .hero-quote {
+          display: inline-block;
+          margin-top: 16px;
+          color: #fff;
+          font-size: 14px;
+          font-weight: 900;
+          text-underline-offset: 4px;
+        }
 
         /* SERVICE BANDS */
         .bands {
@@ -367,6 +363,7 @@ export default function Home() {
           margin: 0 auto;
           padding: 44px 28px 10px;
           display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 16px;
         }
         .band {
@@ -412,6 +409,9 @@ export default function Home() {
         }
         .band.clean {
           background: linear-gradient(100deg,#F6F1FF,#EDE4FB);
+        }
+        .band.handyman {
+          background: linear-gradient(120deg, #fff7df 0%, #f8e9f7 56%, #eee7ff 100%);
         }
 
         /* TRUST STRIP */
@@ -565,6 +565,7 @@ export default function Home() {
           }
           .bands {
             padding: 30px 16px 4px;
+            grid-template-columns: 1fr;
           }
           .band {
             min-height: 130px;

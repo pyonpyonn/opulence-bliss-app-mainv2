@@ -20,7 +20,17 @@ type Pkg = {
   service_type: string | null;
 };
 
-type Review = { rating: number; comment: string | null; created_at: string };
+type Review = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  service_label: string;
+  customer_name: string;
+  location: string | null;
+  is_demo: boolean;
+  verified: boolean;
+};
 
 const COPY: Record<
   string,
@@ -147,21 +157,59 @@ export default function ServicePage() {
       );
       setItems(matching.sort(compareCleaningSessions));
 
-      const { data: revs } = await supabase
-        .from("reviews")
-        .select("rating, comment, created_at")
-        .eq("reviewer", "client")
-        .eq("visibility", "public")
-        .gte("rating", 4)
-        .order("created_at", { ascending: false })
-        .limit(6);
-      setReviews((revs ?? []) as Review[]);
+      const [{ data: revs }, { data: curated }] = await Promise.all([
+        supabase
+          .from("reviews")
+          .select("id, rating, comment, created_at")
+          .eq("reviewer", "client")
+          .eq("visibility", "public")
+          .gte("rating", 4)
+          .order("created_at", { ascending: false })
+          .limit(6),
+        supabase
+          .from("marketing_reviews")
+          .select(
+            "id, rating, comment, service_label, customer_name, location, reviewed_at, is_demo",
+          )
+          .eq("service_type", "cleaning")
+          .eq("published", true)
+          .order("sort_order", { ascending: true })
+          .order("reviewed_at", { ascending: false })
+          .limit(12),
+      ]);
+
+      const verified = (revs ?? []).map((review) => ({
+        id: `verified-${review.id}`,
+        rating: review.rating,
+        comment: review.comment,
+        created_at: review.created_at,
+        service_label: "Home cleaning",
+        customer_name: "Verified customer",
+        location: null,
+        is_demo: false,
+        verified: true,
+      }));
+      const managed = (curated ?? []).map((review) => ({
+        id: `managed-${review.id}`,
+        rating: review.rating,
+        comment: review.comment,
+        created_at: review.reviewed_at,
+        service_label: review.service_label,
+        customer_name: review.customer_name,
+        location: review.location,
+        is_demo: review.is_demo,
+        verified: false,
+      }));
+      setReviews([...managed, ...verified].slice(0, 12));
     })();
   }, [copy.match]);
 
+  const verifiedReviews = reviews.filter((review) => review.verified);
+  const publicReviews = reviews.filter((review) => !review.is_demo);
+  const scoreReviews = verifiedReviews.length > 0 ? verifiedReviews : publicReviews;
   const avg =
-    reviews.length > 0
-      ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+    scoreReviews.length > 0
+      ? scoreReviews.reduce((s, r) => s + r.rating, 0) / scoreReviews.length
       : null;
 
   const bookLink = `/book?type=${copy.match}${
@@ -443,32 +491,46 @@ export default function ServicePage() {
               appear here as they come in.
             </div>
           ) : (
-            <>
-              {avg !== null && (
-                <p className="big-score">
-                  <strong>{avg.toFixed(1)}</strong> /5 · from{" "}
-                  {reviews.length} verified customer
-                  {reviews.length === 1 ? "" : "s"}
+            <div className="reviews-layout">
+              <aside className="review-summary">
+                <div className="summary-score">
+                  <strong>{avg?.toFixed(1) ?? "—"}</strong>
+                  <span>/5</span>
+                </div>
+                <p>
+                  {verifiedReviews.length > 0
+                    ? `${verifiedReviews.length} verified cleaning review${verifiedReviews.length === 1 ? "" : "s"}`
+                    : "Customer feedback from cleaning visits"}
                 </p>
-              )}
-              <div className="revgrid">
-                {reviews.map((r, i) => (
-                  <blockquote key={i}>
-                    <p className="rstars">
-                      {"★".repeat(r.rating)}
-                      {"☆".repeat(5 - r.rating)}{" "}
-                      <small>{ago(r.created_at)}</small>
+                <a href="#cleaning-services">Book your cleaning</a>
+              </aside>
+
+              <div className="review-feed">
+                {reviews.map((review) => (
+                  <article className="review-row" key={review.id}>
+                    <div className="review-meta">
+                      <span className="rstars" aria-label={`${review.rating} out of 5 stars`}>
+                        {"★".repeat(review.rating)}
+                        <i>{"★".repeat(5 - review.rating)}</i>
+                      </span>
+                      <strong>{review.rating}/5</strong>
+                      <span aria-hidden="true">·</span>
+                      <span>{ago(review.created_at)}</span>
+                      {review.verified && <em>Verified visit</em>}
+                      {review.is_demo && <em className="sample">Prototype sample</em>}
+                    </div>
+                    <h3>Cleaning: {review.service_label}</h3>
+                    <p className="rtext">
+                      {review.comment?.trim() || `Rated ${review.rating} out of 5.`}
                     </p>
-                    {r.comment ? (
-                      <p className="rtext">{r.comment}</p>
-                    ) : (
-                      <p className="rtext muted">Rated {r.rating} out of 5.</p>
-                    )}
-                    <footer>Verified customer</footer>
-                  </blockquote>
+                    <footer>
+                      {review.customer_name}
+                      {review.location ? ` (${review.location})` : ""}
+                    </footer>
+                  </article>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
       </section>
@@ -818,47 +880,114 @@ export default function ServicePage() {
         .reviews {
           padding: 62px 0 10px;
         }
-        .big-score {
-          margin: 0 0 22px;
-          font-size: 16px;
-          color: var(--muted);
-        }
-        .big-score strong {
-          font-family: "Nunito", system-ui, sans-serif;
-          font-size: 34px;
-          color: var(--apricot-deep);
-        }
-        .revgrid {
+        .reviews-layout {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-          gap: 16px;
+          grid-template-columns: minmax(210px, 0.36fr) minmax(0, 1fr);
+          gap: clamp(28px, 6vw, 88px);
+          padding: clamp(24px, 4vw, 48px);
+          border: 1px solid #eadffc;
+          border-radius: 24px;
+          background: linear-gradient(145deg, #fffdf7 0%, #fff8fb 48%, #f6f1ff 100%);
+          box-shadow: 0 18px 45px rgba(72, 40, 118, 0.06);
         }
-        blockquote {
-          background: #fff;
-          border: 1px solid var(--line);
-          border-radius: 16px;
-          padding: 20px 22px;
-          margin: 0;
+        .review-summary {
+          align-self: start;
+          position: sticky;
+          top: 24px;
+        }
+        .summary-score {
+          display: flex;
+          align-items: baseline;
+          color: #efad17;
+          line-height: 1;
+        }
+        .summary-score strong {
+          font-size: clamp(54px, 7vw, 78px);
+          font-weight: 1000;
+          letter-spacing: -0.07em;
+        }
+        .summary-score span {
+          margin-left: 6px;
+          font-size: clamp(28px, 3vw, 42px);
+          font-weight: 950;
+        }
+        .review-summary p {
+          max-width: 24ch;
+          margin: 18px 0;
+          color: var(--ink);
+          font-size: 17px;
+          font-weight: 750;
+          line-height: 1.45;
+        }
+        .review-summary a {
+          color: var(--apricot-deep);
+          font-weight: 900;
+          text-underline-offset: 4px;
+        }
+        .review-feed {
+          min-width: 0;
+        }
+        .review-row {
+          padding: 0 0 28px;
+          border-bottom: 1px solid #e7dfec;
+        }
+        .review-row + .review-row {
+          padding-top: 28px;
+        }
+        .review-row:last-child {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+        .review-meta {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 7px;
+          color: var(--muted);
+          font-size: 13px;
         }
         .rstars {
-          margin: 0 0 8px;
-          color: var(--apricot-deep);
-          letter-spacing: 2px;
-          font-size: 15px;
+          color: #f4bd00;
+          letter-spacing: 1px;
+          font-size: 20px;
+          line-height: 1;
         }
-        .rstars small {
-          color: var(--muted);
-          letter-spacing: 0;
-          font-size: 12.5px;
+        .rstars i {
+          color: #ddd5c1;
+          font-style: normal;
+        }
+        .review-meta > strong {
+          color: var(--ink);
+          font-size: 14px;
+        }
+        .review-meta em {
+          padding: 3px 8px;
+          border-radius: 999px;
+          background: #e9f7ef;
+          color: #177a4f;
+          font-size: 10px;
+          font-style: normal;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .review-meta em.sample {
+          background: #f2eaff;
+          color: #6d28d9;
+        }
+        .review-row h3 {
+          margin: 11px 0 9px;
+          font-size: 14px;
+          font-weight: 950;
         }
         .rtext {
-          margin: 0 0 12px;
-          font-size: 14.5px;
-          line-height: 1.55;
+          margin: 0 0 13px;
+          font-size: 16px;
+          line-height: 1.6;
           color: var(--ink);
         }
-        blockquote footer {
-          font-size: 12.5px;
+        .review-row footer {
+          font-size: 13.5px;
           color: var(--muted);
         }
         .empty {
@@ -877,15 +1006,6 @@ export default function ServicePage() {
         }
         .service-collection {
           position: relative;
-          padding: clamp(18px, 3vw, 30px);
-          overflow: visible;
-          border: 1px solid rgba(109, 40, 217, 0.16);
-          border-radius: 28px;
-          background:
-            radial-gradient(circle at 8% 8%, rgba(245, 197, 66, 0.3), transparent 34%),
-            radial-gradient(circle at 92% 14%, rgba(123, 47, 247, 0.18), transparent 38%),
-            linear-gradient(135deg, #fffaf0 0%, #fbf3ff 52%, #f2edff 100%);
-          box-shadow: 0 20px 55px rgba(71, 44, 106, 0.1);
         }
         .intro {
           color: #3A424B;
@@ -942,7 +1062,7 @@ export default function ServicePage() {
           padding: 16px 14px 14px;
           border: 1.5px solid var(--line);
           border-radius: 16px;
-          background: rgba(255, 255, 255, 0.9);
+          background: linear-gradient(145deg, #fff9e9 0%, #fff5f7 52%, #f3edff 100%);
           color: var(--ink);
           font: inherit;
           text-align: left;
@@ -952,6 +1072,12 @@ export default function ServicePage() {
         }
         .tile.pop {
           border-color: var(--apricot);
+        }
+        .tiles > li:nth-child(3n + 2) .tile {
+          background: linear-gradient(145deg, #fff7ee 0%, #faefff 58%, #eee8ff 100%);
+        }
+        .tiles > li:nth-child(3n) .tile {
+          background: linear-gradient(145deg, #fff4f5 0%, #f7edff 55%, #ebe7ff 100%);
         }
         .tile.on {
           border-color: var(--apricot-deep);
@@ -1005,7 +1131,7 @@ export default function ServicePage() {
           border: 1.5px solid var(--line);
           border-top: 4px solid var(--apricot-deep);
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.92);
+          background: linear-gradient(155deg, #fffdf8 0%, #fbf4ff 58%, #f1ecff 100%);
           box-shadow: 0 14px 38px rgba(22, 32, 42, 0.08);
         }
         .detail:focus {
@@ -1170,6 +1296,24 @@ export default function ServicePage() {
           .cards3 {
             grid-template-columns: 1fr;
           }
+          .reviews-layout {
+            grid-template-columns: 1fr;
+            gap: 30px;
+          }
+          .review-summary {
+            position: static;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            column-gap: 22px;
+            align-items: center;
+          }
+          .review-summary p {
+            margin: 0;
+          }
+          .review-summary a {
+            grid-column: 1 / -1;
+            margin-top: 12px;
+          }
         }
         /* Detail becomes a modal bottom sheet. Matches the 899px
            matchMedia query that switches the ARIA role in the component. */
@@ -1272,9 +1416,21 @@ export default function ServicePage() {
           }
         }
         @media (max-width: 620px) {
-          .service-collection {
-            padding: 16px;
-            border-radius: 22px;
+          .reviews-layout {
+            padding: 22px 18px;
+            border-radius: 19px;
+          }
+          .review-summary {
+            display: block;
+          }
+          .review-summary p {
+            margin: 12px 0;
+          }
+          .review-row + .review-row {
+            padding-top: 22px;
+          }
+          .review-row {
+            padding-bottom: 22px;
           }
           .tiles {
             grid-template-columns: repeat(2, minmax(0, 1fr));

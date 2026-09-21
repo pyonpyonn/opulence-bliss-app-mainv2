@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  Hammer,
   Laptop,
   PackageOpen,
   PawPrint,
@@ -16,11 +15,10 @@ import styles from "./page.module.css";
 export const metadata: Metadata = {
   title: "Coming soon | Opulence Bliss",
   description:
-    "The services we are building next, from home maintenance to garden, pet and technology help. Tell us which one you want first.",
+    "The services we are building next, from moving support to garden, pet and technology help. Tell us which one you want first.",
 };
 
 const SERVICE_ICONS: Record<string, LucideIcon> = {
-  maintenance: Hammer,
   moving_support: PackageOpen,
   garden: Sprout,
   pets: PawPrint,
@@ -35,20 +33,25 @@ export default function ComingSoonPage() {
         <p className={styles.eyebrow}>Coming soon</p>
         <h1>More than cleaning, soon</h1>
         <p className={styles.lede}>
-          Cleaning is live today. These are the services we are building next.
-          Nothing here is bookable yet, so tell us which one you want first and
-          we will start with that.
+          Cleaning and handyman services are live today. These are the services
+          we are building next. Nothing here is bookable yet, so tell us which
+          one you want first and we will start with that.
         </p>
-        <Link href="/services/cleaning" className={styles.liveLink}>
-          Book cleaning, available now →
-        </Link>
+        <div className={styles.liveLinks}>
+          <Link href="/services/cleaning" className={styles.liveLink}>
+            Book cleaning →
+          </Link>
+          <Link href="/services/handyman" className={styles.liveLink}>
+            Request a handyman quote →
+          </Link>
+        </div>
       </header>
 
       <section className={styles.services} aria-labelledby="upcoming-services">
         <h2 id="upcoming-services">Our upcoming services</h2>
         <div className={styles.grid}>
           {COMING_SOON.map((service) => {
-            const Icon = SERVICE_ICONS[service.key] ?? Hammer;
+            const Icon = SERVICE_ICONS[service.key] ?? PackageOpen;
             return (
               <article
                 key={service.key}

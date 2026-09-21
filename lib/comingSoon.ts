@@ -17,7 +17,6 @@ export type ComingSoonService = {
 };
 
 export const COMING_SOON_KEYS = [
-  "maintenance",
   "moving_support",
   "garden",
   "pets",
@@ -28,23 +27,6 @@ export const COMING_SOON_KEYS = [
 export type ComingSoonKey = (typeof COMING_SOON_KEYS)[number];
 
 export const COMING_SOON: ComingSoonService[] = [
-  {
-    key: "maintenance",
-    slug: "home-maintenance",
-    title: "Home maintenance / handyman",
-    detail: "Odd jobs, assembly, repairs and renovation work around the home.",
-    items: [
-      "Hanging pictures, mirrors and TVs",
-      "Flat-pack furniture assembly & Installation",
-      "Changing light bulbs/batteries",
-      "Minor repairs",
-      "Curtain/blind installation",
-      "Furniture moving",
-      "Plumbing",
-      "Painting",
-      "Renovation (Bathroom and Kitchen)",
-    ],
-  },
   {
     key: "moving_support",
     slug: "home-organisation",
