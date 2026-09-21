@@ -1,0 +1,30 @@
+.shell { min-height: 100vh; padding: 0 20px 80px; background: #f7f8fa; color: #16202a; font-family: "Nunito", system-ui, sans-serif; }
+.page { width: min(100%, 1050px); margin: 0 auto; }
+.eyebrow { margin: 0 0 7px; color: #6d28d9; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.page > h1 { margin: 0; font-size: clamp(32px, 5vw, 48px); font-weight: 900; letter-spacing: -.04em; }
+.intro { max-width: 720px; margin: 10px 0 28px; color: #6b7380; line-height: 1.55; }
+.error { padding: 13px 15px; border: 1px solid #efc7cf; border-radius: 13px; background: #fff0f3; color: #a72d46; font-weight: 800; }
+.createCard, .group { padding: 22px; border: 1px solid #e1e4e9; border-radius: 20px; background: #fff; box-shadow: 0 12px 34px rgba(22,32,42,.055); }
+.createCard { margin-bottom: 24px; background: linear-gradient(145deg,#fffdf7,#fff8fb 52%,#f5efff); }
+.createCard > h2 { margin: 0 0 15px; font-size: 24px; font-weight: 900; }
+.groups { display: grid; gap: 20px; }
+.groupHeading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
+.groupHeading h2 { margin: 0; font-size: 23px; font-weight: 900; }
+.groupHeading span { padding: 5px 9px; border-radius: 999px; background: #f4ecfe; color: #6d28d9; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.list { display: grid; gap: 12px; }
+.form { display: grid; gap: 11px; padding: 16px; border: 1px solid #e3e6eb; border-radius: 15px; background: rgba(255,255,255,.86); }
+.row { display: grid; grid-template-columns: minmax(0,1fr) 100px; gap: 10px; }
+.form label { display: grid; gap: 5px; color: #626b77; font-size: 11px; font-weight: 900; }
+.form input, .form select, .form textarea { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #dce0e6; border-radius: 10px; background: #fff; color: #16202a; font: inherit; font-size: 14px; }
+.form input, .form select { min-height: 42px; }
+.form textarea { resize: vertical; line-height: 1.5; }
+.form input:focus, .form select:focus, .form textarea:focus { outline: 3px solid rgba(109,40,217,.11); border-color: #6d28d9; }
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.form .publish { display: flex; align-items: center; gap: 8px; color: #4d5662; font-size: 12px; }
+.publish input { width: 17px; min-height: 17px; }
+.buttons { display: flex; gap: 8px; }
+.buttons button { min-height: 39px; padding: 8px 15px; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; }
+.save { border: 0; background: #6d28d9; color: #fff; }
+.delete { border: 1px solid #d4455c; background: #fff; color: #b82d46; }
+.empty { margin: 0; padding: 16px; border: 1px dashed #d9dce1; border-radius: 12px; color: #7a828c; text-align: center; }
+@media (max-width: 620px) { .shell { padding-inline: 12px; } .createCard, .group { padding: 15px; border-radius: 16px; } .row { grid-template-columns: 1fr; } .actions { align-items: stretch; flex-direction: column; } .buttons { justify-content: flex-end; } }

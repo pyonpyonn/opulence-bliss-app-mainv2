@@ -11,6 +11,7 @@ const LINKS = [
   ["/admin/customers", "Customers"],
   ["/admin/cleaners", "Cleaners"],
   ["/admin/reviews", "Reviews"],
+  ["/admin/faqs", "FAQs"],
   ["/admin/chat-flags", "Chat safety"],
   ["/admin/legal", "Legal content"],
   ["/admin/review", "Reports"],

@@ -15,7 +15,7 @@ import styles from "./page.module.css";
 export const metadata: Metadata = {
   title: "Become an Opulence Bliss partner",
   description:
-    "Join our London network of self-employed home professionals. Cleaning is live now, with more trades opening soon.",
+    "Join our London network of self-employed home professionals. Cleaning and handyman services are live now, with more trades opening soon.",
 };
 
 type Trade = {
@@ -32,6 +32,8 @@ type Trade = {
    * behind the text instead of the tint, e.g. "/trades/cleaner.jpg".
    */
   image?: string;
+  /** A live customer service without an online professional application yet. */
+  liveService?: boolean;
 };
 
 const TRADES: Trade[] = [
@@ -48,7 +50,9 @@ const TRADES: Trade[] = [
     role: "Handyman",
     blurb: "Repairs, assembly, mounting and small renovation jobs.",
     icon: Hammer,
-    tint: "linear-gradient(145deg, #5b6472, #7a828c)",
+    tint: "linear-gradient(145deg, #f5c542 0%, #c86fc9 62%, #7b2ff7 120%)",
+    href: "/services/handyman",
+    liveService: true,
   },
   {
     key: "moving_support",
@@ -102,7 +106,7 @@ export default function PartnerPage() {
       </header>
 
       <ul className={styles.grid}>
-        {TRADES.map(({ key, role, blurb, icon: Icon, tint, href, image }) => {
+        {TRADES.map(({ key, role, blurb, icon: Icon, tint, href, image, liveService }) => {
           const open = Boolean(href);
 
           const inner = (
@@ -121,7 +125,9 @@ export default function PartnerPage() {
               <span className={styles.shade} aria-hidden="true" />
               <span className={styles.body}>
                 {!open && <span className={styles.flag}>Coming soon</span>}
-                <span className={styles.kicker}>Join as a</span>
+                <span className={styles.kicker}>
+                  {liveService ? "Service available" : "Join as a"}
+                </span>
                 <span className={styles.role}>{role}</span>
                 <span className={styles.blurb}>{blurb}</span>
               </span>
@@ -146,8 +152,10 @@ export default function PartnerPage() {
       </ul>
 
       <p className={styles.foot}>
-        Only cleaning is open right now. The rest follow as we launch them, and
-        the order depends partly on what customers vote for on our{" "}
+        Cleaning applications and Handyman services are live now. Professional
+        Handyman onboarding is currently handled directly by our team. The
+        remaining trades follow as we launch them, and the order depends partly
+        on what customers vote for on our{" "}
         <Link href="/coming-soon">coming soon page</Link>.
       </p>
     </main>

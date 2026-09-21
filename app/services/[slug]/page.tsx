@@ -32,6 +32,8 @@ type Review = {
   verified: boolean;
 };
 
+type ServiceFaq = { q: string; a: string };
+
 const COPY: Record<
   string,
   {
@@ -124,6 +126,7 @@ export default function ServicePage() {
 
   const [items, setItems] = useState<Pkg[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [faqs, setFaqs] = useState<ServiceFaq[]>([]);
   const [postcode, setPostcode] = useState("");
   const [open, setOpen] = useState<number | null>(0);
 
@@ -157,7 +160,7 @@ export default function ServicePage() {
       );
       setItems(matching.sort(compareCleaningSessions));
 
-      const [{ data: revs }, { data: curated }] = await Promise.all([
+      const [{ data: revs }, { data: curated }, { data: faqRows }] = await Promise.all([
         supabase
           .from("reviews")
           .select("id, rating, comment, created_at")
@@ -176,6 +179,13 @@ export default function ServicePage() {
           .order("sort_order", { ascending: true })
           .order("reviewed_at", { ascending: false })
           .limit(12),
+        supabase
+          .from("faqs")
+          .select("question, answer")
+          .eq("category", "cleaning")
+          .eq("published", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true }),
       ]);
 
       const verified = (revs ?? []).map((review) => ({
@@ -184,7 +194,7 @@ export default function ServicePage() {
         comment: review.comment,
         created_at: review.created_at,
         service_label: "Home cleaning",
-        customer_name: "Verified customer",
+        customer_name: "",
         location: null,
         is_demo: false,
         verified: true,
@@ -201,6 +211,9 @@ export default function ServicePage() {
         verified: false,
       }));
       setReviews([...managed, ...verified].slice(0, 12));
+      setFaqs(
+        (faqRows ?? []).map((faq) => ({ q: faq.question, a: faq.answer })),
+      );
     })();
   }, [copy.match]);
 
@@ -371,9 +384,6 @@ export default function ServicePage() {
                             <span className="tile-pill">Popular</span>
                           )}
                           <span className="tile-name">{pkg.name}</span>
-                          <span className="tile-more" aria-hidden="true">
-                            Details
-                          </span>
                         </button>
                       </li>
                     );
@@ -500,8 +510,8 @@ export default function ServicePage() {
                   <span>/5</span>
                 </div>
                 <p>
-                  {verifiedReviews.length > 0
-                    ? `${verifiedReviews.length} verified cleaning review${verifiedReviews.length === 1 ? "" : "s"}`
+                  {scoreReviews.length > 0
+                    ? `${scoreReviews.length} cleaning review${scoreReviews.length === 1 ? "" : "s"}`
                     : "Customer feedback from cleaning visits"}
                 </p>
                 <a href="#cleaning-services">Book your cleaning</a>
@@ -518,17 +528,18 @@ export default function ServicePage() {
                       <strong>{review.rating}/5</strong>
                       <span aria-hidden="true">·</span>
                       <span>{ago(review.created_at)}</span>
-                      {review.verified && <em>Verified visit</em>}
                       {review.is_demo && <em className="sample">Prototype sample</em>}
                     </div>
                     <h3>Cleaning: {review.service_label}</h3>
                     <p className="rtext">
                       {review.comment?.trim() || `Rated ${review.rating} out of 5.`}
                     </p>
-                    <footer>
-                      {review.customer_name}
-                      {review.location ? ` (${review.location})` : ""}
-                    </footer>
+                    {(review.customer_name || review.location) && (
+                      <footer>
+                        {review.customer_name}
+                        {review.location ? ` (${review.location})` : ""}
+                      </footer>
+                    )}
                   </article>
                 ))}
               </div>
@@ -558,7 +569,7 @@ export default function ServicePage() {
             All about our cleaning service
           </h2>
           <div className="qs">
-            {copy.faq.map((f, i) => (
+            {(faqs.length > 0 ? faqs : copy.faq).map((f, i) => (
               <div key={f.q} className={open === i ? "q open" : "q"}>
                 <button onClick={() => setOpen(open === i ? null : i)}>
                   <span>{f.q}</span>
@@ -1102,13 +1113,6 @@ export default function ServicePage() {
           font-weight: 800;
           line-height: 1.25;
           overflow-wrap: anywhere;
-        }
-        .tile-more {
-          color: var(--apricot-deep);
-          font-size: 11.5px;
-          font-weight: 800;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
         }
         .tile-pill {
           position: absolute;

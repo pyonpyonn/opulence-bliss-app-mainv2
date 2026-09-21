@@ -9,7 +9,12 @@ import {
   PaintRoller,
   Wrench,
 } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
+
+type HandymanFaq = { id: string; question: string; answer: string };
 
 const TASKS = [
   { name: "Mounting and hanging", note: "Pictures, mirrors, shelves and TVs", icon: Drill },
@@ -32,6 +37,20 @@ export default function HandymanPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
+  const [faqs, setFaqs] = useState<HandymanFaq[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("faqs")
+        .select("id, question, answer")
+        .eq("category", "handyman")
+        .eq("published", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      setFaqs((data ?? []) as HandymanFaq[]);
+    })();
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,6 +131,28 @@ export default function HandymanPage() {
           ))}
         </div>
       </section>
+
+      {faqs.length > 0 && (
+        <section className="faqBand" aria-labelledby="handyman-faqs">
+          <div className="inner faqGrid">
+            <div>
+              <p className="eyebrow">Before you request a quote</p>
+              <h2 id="handyman-faqs">Handyman questions</h2>
+              <p className="faqIntro">
+                Useful details about jobs, materials, assembly and specialist work.
+              </p>
+            </div>
+            <div className="faqList">
+              {faqs.map((faq) => (
+                <details key={faq.id}>
+                  <summary>{faq.question}</summary>
+                  <p>{faq.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="quoteBand" id="quote">
         <div className="inner quoteGrid">
@@ -223,6 +264,16 @@ export default function HandymanPage() {
         .task span { display:grid; gap:5px; }
         .task strong { font-size:16px; font-weight:900; }
         .task small { color:#68717d; font-size:13px; line-height:1.4; }
+        .faqBand { padding:72px 0; border-top:1px solid #eee9f3; background:linear-gradient(145deg,#fffdf8,#fff8fb 52%,#f6f0ff); }
+        .faqGrid { display:grid; grid-template-columns:minmax(230px,.62fr) minmax(0,1.38fr); gap:52px; align-items:start; }
+        .faqIntro { margin:0; color:#68717d; line-height:1.6; }
+        .faqList { display:grid; gap:10px; }
+        .faqList details { border:1px solid #e3deea; border-radius:15px; background:rgba(255,255,255,.9); }
+        .faqList summary { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:18px 20px; font-weight:900; cursor:pointer; list-style:none; }
+        .faqList summary::-webkit-details-marker { display:none; }
+        .faqList summary::after { content:"+"; color:#6d28d9; font-size:23px; line-height:1; }
+        .faqList details[open] summary::after { content:"−"; }
+        .faqList details p { margin:0; padding:0 20px 19px; color:#68717d; line-height:1.65; white-space:pre-line; }
         .quoteBand { padding:76px 0 88px; background:#f8f5fc; scroll-margin-top:24px; }
         .quoteGrid { display:grid; grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr); gap:54px; align-items:start; }
         .quoteIntro > p:not(.eyebrow) { color:#68717d; line-height:1.6; }
@@ -246,7 +297,7 @@ export default function HandymanPage() {
         .success > span { display:grid; width:48px; height:48px; place-items:center; border-radius:50%; background:#e3f7ec; color:#138454; font-size:24px; font-weight:900; }
         .success p { margin:0; color:#68717d; }
         .success button { margin-top:8px; padding:11px 18px; border:1.5px solid #6d28d9; border-radius:999px; background:#fff; color:#6d28d9; font:inherit; font-weight:900; cursor:pointer; }
-        @media (max-width:800px) { .heroGrid,.quoteGrid { grid-template-columns:1fr; } .taskGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media (max-width:800px) { .heroGrid,.quoteGrid,.faqGrid { grid-template-columns:1fr; } .taskGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         @media (max-width:560px) { .inner { width:min(100% - 28px,1120px); } .hero { padding:50px 0; } .taskGrid,.two { grid-template-columns:1fr; } .services,.quoteBand { padding-top:54px; padding-bottom:60px; } .quoteForm,.success { padding:21px 17px; } }
       `}</style>
     </main>
