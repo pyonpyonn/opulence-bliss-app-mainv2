@@ -3,8 +3,8 @@
 ## Release flow
 
 - `main` is the production branch.
-- `staging` is the persistent pre-production branch and receives a Vercel Preview URL.
-- Test changes on `staging`, then merge the approved commit into `main`.
+- `codex/staging` is the persistent pre-production branch and receives a Vercel Preview URL.
+- Test changes on `codex/staging`, then merge the approved commit into `main`.
 - Preview pages display a testing banner and tell search engines not to index them.
 
 ## Environment isolation
