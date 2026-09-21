@@ -244,10 +244,12 @@ export default function ServicePage() {
     };
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.classList.add("service-sheet-open");
     document.addEventListener("keydown", onKey);
     sheetRef.current?.focus();
     return () => {
       document.body.style.overflow = prevOverflow;
+      document.body.classList.remove("service-sheet-open");
       document.removeEventListener("keydown", onKey);
     };
   }, [isNarrow, selected, closeSheet]);

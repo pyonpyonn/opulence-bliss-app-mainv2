@@ -231,7 +231,7 @@ export default function SupportChat() {
   /* ---------- closed: the floating button ---------- */
   if (!open) {
     return (
-      <div className="fabWrap">
+      <div className="fabWrap support-chat-fab">
         <span className="tip">Need a hand?</span>
         <button
           className="fab"
@@ -359,7 +359,7 @@ export default function SupportChat() {
 
   /* ---------- open: the panel ---------- */
   return (
-    <div className="panel">
+    <div className="panel support-chat-panel">
       <header>
         <div className="hwho">
           <span className="dot" />

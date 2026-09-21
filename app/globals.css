@@ -1125,3 +1125,12 @@ dd,
     transition-duration: 0.001ms !important;
   }
 }
+
+/* The mobile service-details sheet needs the full viewport. The support
+   launcher returns as soon as the sheet is closed. */
+@media (max-width: 899px) {
+  .service-sheet-open .support-chat-fab,
+  .service-sheet-open .support-chat-panel {
+    display: none !important;
+  }
+}
