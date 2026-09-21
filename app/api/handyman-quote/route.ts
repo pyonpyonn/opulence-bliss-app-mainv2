@@ -26,6 +26,28 @@ function text(value: unknown, max: number) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Sign in with a customer account before requesting a quote." },
+        { status: 401 },
+      );
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.role !== "customer") {
+      return NextResponse.json(
+        { error: "A customer account is required to request a handyman quote." },
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const fullName = text(body.fullName, 120);
     const email = text(body.email, 180).toLowerCase();
@@ -63,15 +85,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Choose a valid handyman task." }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     const { data, error } = await admin
       .from("handyman_quote_requests")
       .insert({
-        customer_id: user?.id ?? null,
+        customer_id: user.id,
         full_name: fullName,
         email,
         phone: normalizeUkPhone(phone),

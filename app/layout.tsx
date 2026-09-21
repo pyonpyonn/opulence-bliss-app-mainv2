@@ -11,6 +11,7 @@ import SiteHeader from "@/components/SiteHeader";
 import Toaster from "@/components/Toaster";
 import RatingGate from "@/components/RatingGate";
 import SupportChat from "@/components/SupportChat";
+import EnvironmentBanner from "@/components/EnvironmentBanner";
 
 // Self-hosted by Next, so no extra request to Google and no flash of
 // unstyled text. Components ask for "Nunito" by name and get this.
@@ -28,6 +29,10 @@ export const metadata: Metadata = {
   title: "Opulence Bliss — trusted home cleaning in London",
   description:
     "Vetted home cleaners across London. Book flexible home-cleaning visits and pay securely after the visit.",
+  robots:
+    process.env.VERCEL_ENV === "preview"
+      ? { index: false, follow: false, noarchive: true }
+      : { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
@@ -47,6 +52,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
+        <EnvironmentBanner />
         <TopBar />
         <SiteHeader />
         {children}

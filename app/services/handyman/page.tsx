@@ -15,6 +15,14 @@ import { createClient } from "@/lib/supabase/client";
 const supabase = createClient();
 
 type HandymanFaq = { id: string; question: string; answer: string };
+type CustomerProfile = {
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  postcode: string | null;
+};
+type QuoteAccess = "loading" | "signed_out" | "customer" | "wrong_role";
 
 const TASKS = [
   { name: "Mounting and hanging", note: "Pictures, mirrors, shelves and TVs", icon: Drill },
@@ -38,6 +46,8 @@ export default function HandymanPage() {
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
   const [faqs, setFaqs] = useState<HandymanFaq[]>([]);
+  const [quoteAccess, setQuoteAccess] = useState<QuoteAccess>("loading");
+  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -52,8 +62,41 @@ export default function HandymanPage() {
     })();
   }, []);
 
+  useEffect(() => {
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setQuoteAccess("signed_out");
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, full_name, email, phone, address, postcode")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.role !== "customer") {
+        setQuoteAccess("wrong_role");
+        return;
+      }
+      setCustomer({
+        full_name: profile.full_name,
+        email: profile.email ?? user.email ?? null,
+        phone: profile.phone,
+        address: profile.address,
+        postcode: profile.postcode,
+      });
+      setQuoteAccess("customer");
+    })();
+  }, []);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (quoteAccess !== "customer") {
+      setError("Sign in with a customer account before requesting a quote.");
+      return;
+    }
     setBusy(true);
     setError(null);
     const form = new FormData(event.currentTarget);
@@ -170,7 +213,40 @@ export default function HandymanPage() {
             </ol>
           </div>
 
-          {reference ? (
+          {quoteAccess === "loading" ? (
+            <div className="accessGate" aria-live="polite">
+              <span className="gateMark">•••</span>
+              <h2>Checking your account</h2>
+              <p>This takes just a moment.</p>
+            </div>
+          ) : quoteAccess === "signed_out" ? (
+            <div className="accessGate">
+              <span className="gateMark">✓</span>
+              <h2>Sign in to request a quote</h2>
+              <p>
+                Handyman quotations are available to registered Opulence Bliss
+                customers so every request stays linked to the correct account.
+              </p>
+              <div className="gateActions">
+                <Link href="/login?next=%2Fservices%2Fhandyman%23quote">Sign in</Link>
+                <Link className="secondary" href="/auth/sign-up?next=%2Fservices%2Fhandyman%23quote">
+                  Create an account
+                </Link>
+              </div>
+            </div>
+          ) : quoteAccess === "wrong_role" ? (
+            <div className="accessGate">
+              <span className="gateMark">!</span>
+              <h2>A customer account is required</h2>
+              <p>
+                This quotation form cannot be submitted from a professional or
+                administrator account. Sign in with your customer account instead.
+              </p>
+              <Link className="gateSingle" href="/login?next=%2Fservices%2Fhandyman%23quote">
+                Go to customer sign in
+              </Link>
+            </div>
+          ) : reference ? (
             <div className="success" role="status">
               <span>✓</span>
               <h2>Quote request received</h2>
@@ -181,14 +257,14 @@ export default function HandymanPage() {
           ) : (
             <form className="quoteForm" onSubmit={submit}>
               <div className="two">
-                <label>Full name<input name="fullName" autoComplete="name" required /></label>
-                <label>Email<input name="email" type="email" autoComplete="email" required /></label>
+                <label>Full name<input name="fullName" autoComplete="name" defaultValue={customer?.full_name ?? ""} required /></label>
+                <label>Email<input name="email" type="email" autoComplete="email" defaultValue={customer?.email ?? ""} required /></label>
               </div>
               <div className="two">
-                <label>Phone<input name="phone" type="tel" autoComplete="tel" required /></label>
-                <label>Postcode<input name="postcode" autoComplete="postal-code" required /></label>
+                <label>Phone<input name="phone" type="tel" autoComplete="tel" defaultValue={customer?.phone ?? ""} required /></label>
+                <label>Postcode<input name="postcode" autoComplete="postal-code" defaultValue={customer?.postcode ?? ""} required /></label>
               </div>
-              <label>Service address<input name="address" autoComplete="street-address" required /></label>
+              <label>Service address<input name="address" autoComplete="street-address" defaultValue={customer?.address ?? ""} required /></label>
               <label>
                 What do you need help with?
                 <select
@@ -280,7 +356,7 @@ export default function HandymanPage() {
         .quoteIntro ol { display:grid; gap:16px; margin:30px 0 0; padding:0; list-style:none; }
         .quoteIntro li { display:flex; align-items:center; gap:11px; font-weight:800; }
         .quoteIntro li span { display:grid; width:32px; height:32px; place-items:center; border-radius:50%; background:#ede4fb; color:#6d28d9; }
-        .quoteForm,.success { display:grid; gap:15px; padding:28px; border:1px solid #e6e0ec; border-radius:24px; background:#fff; box-shadow:0 16px 45px rgba(51,35,75,.09); }
+        .quoteForm,.success,.accessGate { display:grid; gap:15px; padding:28px; border:1px solid #e6e0ec; border-radius:24px; background:#fff; box-shadow:0 16px 45px rgba(51,35,75,.09); }
         .two { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
         label { display:grid; gap:7px; color:#3f4652; font-size:13px; font-weight:900; }
         input,select,textarea { width:100%; box-sizing:border-box; min-height:46px; padding:11px 13px; border:1.5px solid #dde1e7; border-radius:12px; background:#fff; color:#16202a; font:inherit; font-size:16px; }
@@ -297,6 +373,13 @@ export default function HandymanPage() {
         .success > span { display:grid; width:48px; height:48px; place-items:center; border-radius:50%; background:#e3f7ec; color:#138454; font-size:24px; font-weight:900; }
         .success p { margin:0; color:#68717d; }
         .success button { margin-top:8px; padding:11px 18px; border:1.5px solid #6d28d9; border-radius:999px; background:#fff; color:#6d28d9; font:inherit; font-weight:900; cursor:pointer; }
+        .accessGate { min-height:320px; align-content:center; justify-items:center; text-align:center; }
+        .accessGate h2 { margin:0; }
+        .accessGate p { max-width:520px; margin:0; color:#68717d; line-height:1.6; }
+        .gateMark { display:grid; width:50px; height:50px; place-items:center; border-radius:50%; background:#f2eafd; color:#6d28d9; font-size:18px; font-weight:900; }
+        .gateActions { display:flex; flex-wrap:wrap; justify-content:center; gap:9px; margin-top:5px; }
+        .gateActions a,.gateSingle { padding:11px 19px; border:1.5px solid #6d28d9; border-radius:999px; background:#6d28d9; color:#fff; font-weight:900; text-decoration:none; }
+        .gateActions a.secondary { background:#fff; color:#6d28d9; }
         @media (max-width:800px) { .heroGrid,.quoteGrid,.faqGrid { grid-template-columns:1fr; } .taskGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         @media (max-width:560px) { .inner { width:min(100% - 28px,1120px); } .hero { padding:50px 0; } .taskGrid,.two { grid-template-columns:1fr; } .services,.quoteBand { padding-top:54px; padding-bottom:60px; } .quoteForm,.success { padding:21px 17px; } }
       `}</style>

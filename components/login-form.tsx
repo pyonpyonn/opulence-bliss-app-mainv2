@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export function LoginForm({
   className,
@@ -39,7 +40,7 @@ export function LoginForm({
       });
       if (error) throw error;
       // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      router.push("/account");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -92,6 +93,13 @@ export function LoginForm({
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
+              <div className="relative text-center text-xs text-muted-foreground before:absolute before:left-0 before:right-0 before:top-1/2 before:border-t">
+                <span className="relative bg-background px-2">or</span>
+              </div>
+              <GoogleAuthButton
+                label="Continue with Google"
+                onError={(message) => setError(message || null)}
+              />
             </div>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isValidUkPhone } from "@/lib/ukPhone";
 import ConsentCheckbox from "@/components/ConsentCheckbox";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export function SignUpForm() {
   const [salutation, setSalutation] = useState<"ms_mrs" | "mr" | "">("");
@@ -76,6 +77,18 @@ export function SignUpForm() {
         <h1>CREATE YOUR ACCOUNT</h1>
         <p className="lede">Sign up to book visits, message professionals and manage your account.</p>
 
+        <div className="google-signup">
+          <ConsentCheckbox checked={consentAccepted} onChange={setConsentAccepted} />
+          <GoogleAuthButton
+            label="Sign up with Google"
+            disabled={!consentAccepted}
+            onError={(message) => setError(message || null)}
+          />
+          {!consentAccepted && <p>Accept the terms above to continue with Google.</p>}
+        </div>
+
+        <div className="divider"><span>or sign up with email</span></div>
+
         <form onSubmit={handleSignUp} noValidate>
           <fieldset className="title-options">
             <legend className="sr-only">Title</legend>
@@ -125,8 +138,6 @@ export function SignUpForm() {
             </button>
           </div>
 
-          <ConsentCheckbox checked={consentAccepted} onChange={setConsentAccepted} />
-
           {error && <p className="form-error" role="alert">{error}</p>}
           <button className="submit" type="submit" disabled={isLoading || !consentAccepted}>{isLoading ? "Creating account…" : "Sign up"}</button>
         </form>
@@ -140,6 +151,10 @@ export function SignUpForm() {
         .signup-card { width: min(100%, 470px); box-sizing: border-box; padding: 34px; border: 1px solid #e7e1ef; border-top: 6px solid #6d28d9; border-radius: 24px; background: rgba(255,255,255,.97); box-shadow: 0 22px 60px rgba(55,37,78,.13); }
         h1 { margin: 0 0 8px; font-size: clamp(27px,7vw,34px); line-height: 1.08; letter-spacing: -.035em; font-weight: 900; }
         .lede { margin: 0 0 25px; color: #707784; font-size: 15px; line-height: 1.5; font-weight: 600; }
+        .google-signup { display: grid; gap: 9px; }
+        .google-signup > p { margin: -2px 0 0; color: #8a919b; font-size: 11.5px; text-align: center; }
+        .divider { display: flex; align-items: center; gap: 10px; margin: 17px 0; color: #8a919b; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #e7e9ed; }
         form { display: grid; }
         input { width: 100%; min-height: 44px; box-sizing: border-box; margin: 0 0 8px; padding: 9px 12px; border: 1.5px solid #dfe2e7; border-radius: 12px; background: #fff; color: #16202a; font: inherit; font-size: 16px; }
         input:focus-visible { outline: none; border-color: #6d28d9; box-shadow: 0 0 0 3px rgba(109,40,217,.1); }

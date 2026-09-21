@@ -907,6 +907,18 @@ img {
   height: auto;
 }
 
+.preproduction-banner {
+  position: relative;
+  z-index: 1000;
+  padding: 7px 14px;
+  background: #241438;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 input,
 textarea,
 select {

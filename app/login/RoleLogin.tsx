@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 const supabase = createClient();
 const DEMO_PASSWORD = "Demo1234!";
@@ -46,6 +47,15 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get("error");
+    if (reason === "wrong-account") {
+      setErr("That Google account belongs to a professional or administrator. Use the correct sign-in page.");
+    } else if (reason) {
+      setErr("Google sign-in could not be completed. Please try again.");
+    }
+  }, []);
 
   async function signIn(em: string, pw: string) {
     setBusy(true);
@@ -97,6 +107,20 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
       <section className="login-card">
         <h1>{content.title}</h1>
         <p className="lede">{content.body}</p>
+
+        {mode === "client" && (
+          <>
+            <GoogleAuthButton
+              label="Continue with Google"
+              onError={(message) => setErr(message || null)}
+            />
+            <p className="google-terms">
+              By continuing, you agree to our <Link href="/legal/terms">Terms</Link> and{" "}
+              <Link href="/legal/privacy">Privacy Policy</Link>.
+            </p>
+            <div className="divider"><span>or use email</span></div>
+          </>
+        )}
 
         <label htmlFor={`${mode}-email`}>Email</label>
         <input
@@ -233,6 +257,25 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
           line-height: 1.5;
           font-weight: 600;
         }
+        .google-terms {
+          margin: 8px 8px 14px;
+          color: #7a828c;
+          font-size: 11.5px;
+          line-height: 1.4;
+          text-align: center;
+        }
+        .google-terms :global(a) { color: #6d28d9; font-weight: 800; }
+        .divider {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 4px 0 15px;
+          color: #8a919b;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #e7e9ed; }
         label {
           display: block;
           margin: 0 0 6px;
