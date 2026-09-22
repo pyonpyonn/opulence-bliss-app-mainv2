@@ -10,13 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default function BlogPage() {
-  const [featured, ...posts] = blogPosts;
-
   return (
     <main className={styles.page}>
       <header className={`${styles.hero} ${styles.blogHero}`}>
         <div className={styles.heroInner}>
-          <p className={styles.eyebrow}>The Opulence Bliss journal</p>
+          <p className={styles.eyebrow}>Blog</p>
           <h1>Helpful ideas for a calmer home</h1>
           <p className={styles.heroIntro}>
             Straightforward guides for getting more from your cleaning visits.
@@ -25,27 +23,14 @@ export default function BlogPage() {
       </header>
 
       <section className={styles.content} aria-label="Latest articles">
-        <article className={styles.featured}>
-          <div className={styles.featureArt} aria-hidden="true"><span className={styles.artMark}>⌂</span></div>
-          <div className={styles.featureCopy}>
-            <div className={styles.meta}>
-              <span className={styles.category}>{featured.category}</span>
-              <time dateTime={featured.publishedIso}>{featured.published}</time>
-              <span>{featured.readTime}</span>
-            </div>
-            <h2>{featured.title}</h2>
-            <p>{featured.summary}</p>
-            <Link className={styles.readLink} href={`/blog/${featured.slug}`}>Read the guide <span aria-hidden="true">→</span></Link>
-          </div>
-        </article>
-
-        <div className={styles.grid}>
-          {posts.map((post) => (
+        <div className={`${styles.grid} ${styles.blogGrid}`}>
+          {blogPosts.map((post) => (
             <article className={styles.card} key={post.slug}>
               <div className={`${styles.cardArt} ${styles[post.accent]}`} aria-hidden="true"><span className={styles.artMark}>{post.accent === "gold" ? "✓" : "✦"}</span></div>
               <div className={styles.cardBody}>
                 <div className={styles.meta}>
                   <span className={styles.category}>{post.category}</span>
+                  <time dateTime={post.publishedIso}>{post.published}</time>
                   <span>{post.readTime}</span>
                 </div>
                 <h2>{post.title}</h2>
