@@ -13,6 +13,7 @@ import {
 } from "@/lib/reviewVisibility";
 import { sendEmail } from "@/lib/email";
 import { rotateBookingOffer } from "@/lib/offerRotation";
+import { settlePrepaidVisit } from "@/lib/prepaidVisitPayout";
 import {
   claimMoneyOperation,
   maybeReleasePayout,
@@ -465,19 +466,36 @@ export async function checkOutJob(id: string) {
     .eq("booking_id", id)
     .is("left_at", null);
 
-  // Is this a one-off visit or part of a membership?
+  // An upfront-paid regular visit has its own funded ledger allocation.
   const { data: bk } = await admin
     .from("bookings")
     .select(
-      "subscription_id, provider_id, provider_payout, membership_fee_deducted",
+      "subscription_id, regular_series_id, provider_id, provider_payout, membership_fee_deducted",
     )
     .eq("id", id)
     .maybeSingle();
 
   let earned = 0;
-  let paymentSettled = Boolean(bk?.subscription_id);
+  let paymentSettled = Boolean(bk?.subscription_id || bk?.regular_series_id);
 
-  if (bk?.subscription_id) {
+  if (bk?.regular_series_id) {
+    try {
+      const result = await settlePrepaidVisit(id);
+      earned = result.earned;
+      paymentSettled = true;
+    } catch (cause) {
+      console.error(`Prepaid visit ${id} payout needs review:`, cause);
+      await admin.rpc("open_review_case", {
+        p_booking_id: id,
+        p_category: "payment_failure",
+        p_priority: "high",
+        p_blocks_payment: false,
+        p_blocks_payout: true,
+        p_notes: cause instanceof Error ? cause.message : "Prepaid transfer failed",
+        p_created_by: null,
+      });
+    }
+  } else if (bk?.subscription_id) {
     // Membership visit: create the durable payout in not_ready, then let the
     // database release it only when both work and covering funds are present.
     const payout = Number(bk.provider_payout ?? 0);
@@ -705,6 +723,8 @@ export async function checkOutJob(id: string) {
       : "Visit completed — payment under review",
     bk?.subscription_id
       ? `${service} — all done. This visit is covered by your membership.`
+      : bk?.regular_series_id
+        ? `${service} — all done. This visit was paid for with your six-visit booking.`
       : paymentSettled
         ? `${service} — all done. Your card has now been charged.`
         : `${service} — all done. We are checking the payment and you do not need to retry anything.`,
@@ -719,6 +739,9 @@ export async function checkOutJob(id: string) {
     body: bk?.subscription_id
       ? `<p>Your <strong>${service}</strong> is complete and covered by your membership.</p>
          <p>If you have a moment, we'd love a quick rating for your provider.</p>`
+      : bk?.regular_series_id
+        ? `<p>Your <strong>${service}</strong> is complete and was already paid for as part of your six-visit booking.</p>
+           <p>If you have a moment, we'd love a quick rating for your provider.</p>`
       : paymentSettled
         ? `<p>Your <strong>${service}</strong> is complete and your card has now been charged.</p>
            <p>If you have a moment, we'd love a quick rating for your provider.</p>`

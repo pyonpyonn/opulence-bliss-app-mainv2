@@ -72,7 +72,7 @@ const COPY: Record<
       },
       {
         q: "Which cleaning session should I choose?",
-        a: "Essential Clean is for regular week-to-week upkeep. One-Time Essential Clean is a one-off standard refresh. Express Clean is our same-day standard clean, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset. Your price is confirmed when you book.",
+        a: "Essential Clean is £18.90 per hour for a booking of six weekly or monthly visits paid upfront. If you want to arrange each clean separately, choose One-Time Essential Clean. Express Clean is our same-day standard clean, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset. Your full price is confirmed before checkout.",
       },
       {
         q: "What specialist cleaning services can I book?",
@@ -84,7 +84,7 @@ const COPY: Record<
       },
       {
         q: "When am I charged?",
-        a: "Your card is held when you book, but only charged once the visit is complete. If no cleaner accepts your booking, the hold is released and you pay nothing.",
+        a: "For a one-time visit, your card is held when you book and charged after the visit. For a six-visit Essential Clean booking, you pay for all six upfront. If a prepaid visit cannot be filled, that visit's amount is refunded.",
       },
       {
         q: "Can I have the same cleaner each time?",
@@ -411,7 +411,7 @@ export default function ServicePage() {
                       <div className="detail-body">
                         <h3>{selected.name}</h3>
                         <p className="detail-price">
-                          <span>Two-hour minimum · price shown when you book</span>
+                          <span>{selected.name === "Essential Clean" ? "Six-visit minimum · paid upfront · price shown when you book" : "Two-hour minimum · price shown when you book"}</span>
                         </p>
                         {selected.description && (
                           <p className="detail-desc">{selected.description}</p>
@@ -466,7 +466,7 @@ export default function ServicePage() {
               ],
               [
                 "We're fair",
-                "You're only charged once the visit is done — and your provider keeps their full rate.",
+                "One-time visits are charged after completion; six-visit plans are paid upfront. Providers are paid after their visits.",
               ],
             ].map(([t, s]) => (
               <div key={t} className="lovecard">

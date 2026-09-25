@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { refundUnfilledPrepaidVisit } from "@/lib/prepaidVisitRefund";
 import {
   claimMoneyOperation,
   systemFinaliseMoneyOperation,
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
   // Still on offer, past the deadline, nobody claimed it.
   const { data: stale } = await admin
     .from("bookings")
-    .select("id, customer_id, customer_email, scheduled_at, packages(name)")
+    .select("id, customer_id, customer_email, scheduled_at, regular_series_id, packages(name)")
     .eq("status", "offered")
     .is("provider_id", null)
     .lt("offer_expires_at", now)
@@ -64,7 +65,8 @@ export async function GET(req: NextRequest) {
       .eq("booking_id", b.id)
       .eq("status", "open");
 
-    // 3. Release the card hold — they were never charged
+    // 3. One-time visits release a hold. Upfront series visits refund only
+    //    this visit's share of the shared six-visit charge.
     const { data: pays } = await admin
       .from("payments")
       .select("id, stripe_payment_ref, status, gross_amount")
@@ -72,7 +74,16 @@ export async function GET(req: NextRequest) {
       .limit(1);
 
     const pay = pays?.[0];
-    if (pay?.stripe_payment_ref && pay.status === "authorised") {
+    let financialMessage = "Nothing was charged.";
+    if (b.regular_series_id) {
+      try {
+        await refundUnfilledPrepaidVisit(b.id);
+        financialMessage = `The prepaid amount for this visit (£${Number(pay?.gross_amount ?? 0).toFixed(2)}) has been refunded; your other booked visits remain unchanged.`;
+      } catch (cause) {
+        financialMessage = "This visit's prepaid refund needs attention. Support has been notified; please do not pay again.";
+        console.error(`Could not refund unfilled prepaid visit ${b.id}:`, cause);
+      }
+    } else if (pay?.stripe_payment_ref && pay.status === "authorised") {
       const operationKey = `release:booking:${b.id}`;
       try {
         await systemTransitionPayment(admin, pay.id, "cancelling");
@@ -119,7 +130,7 @@ export async function GET(req: NextRequest) {
       await admin.from("notifications").insert({
         user_id: b.customer_id,
         title: "We couldn't fill your booking",
-        body: `${service} — no provider was free for that time, so we've cancelled it. Nothing was charged.`,
+        body: `${service} — no provider was free for that time, so we've cancelled it. ${financialMessage}`,
         href: "/book",
       });
     }
@@ -128,7 +139,7 @@ export async function GET(req: NextRequest) {
       subject: "We couldn't fill your booking",
       title: "No provider available",
       body: `<p>We're sorry — no provider was free for your <strong>${service}</strong>, so we've cancelled the booking.</p>
-             <p><strong>You haven't been charged</strong> — the hold on your card has been released.</p>
+             <p>${financialMessage}</p>
              <p>Try another time and we'll find someone.</p>`,
       cta: { text: "Book another time", url: "/book" },
     });

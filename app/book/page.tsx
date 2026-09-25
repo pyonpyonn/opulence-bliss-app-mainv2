@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CLEANING_DURATIONS, isCleaning, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 import { bookingPolicyError } from "@/lib/bookingPolicy";
+import { REGULAR_VISIT_COUNT, regularVisitSlots, type RegularFrequency } from "@/lib/regularBooking";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
 const supabase = createClient();
@@ -35,8 +36,8 @@ const FREQUENCIES: Array<{
   note: string;
 }> = [
   { value: "one_time", title: "One time", note: "Just this visit" },
-  { value: "weekly", title: "Every week", note: "A weekly cleaning preference" },
-  { value: "monthly", title: "Every month", note: "A monthly cleaning preference" },
+  { value: "weekly", title: "Every week", note: "Six weekly visits, paid upfront" },
+  { value: "monthly", title: "Every month", note: "Six monthly visits, paid upfront" },
 ];
 
 function frequencyLabel(value: BookingFrequency) {
@@ -96,7 +97,7 @@ export default function BookPage() {
   const [selected, setSelected] = useState<Pkg | null>(null);
 
   const [cleaningMinutes, setCleaningMinutes] = useState(120);
-  const [frequency, setFrequency] = useState<BookingFrequency>("one_time");
+  const [frequency, setFrequency] = useState<BookingFrequency>("weekly");
   const [previousCleaners, setPreviousCleaners] = useState<{ provider_id: string; display_name: string }[]>([]);
   const [preferredCleaner, setPreferredCleaner] = useState("");
   const cleaning = isCleaning(selected?.service_type);
@@ -199,6 +200,7 @@ export default function BookPage() {
         essential;
       if (match) {
         setSelected(match);
+        setFrequency(match.name === "Essential Clean" ? "weekly" : "one_time");
         setCleaningMinutes(Math.max(120, match.duration_minutes ?? 120));
       }
       const hasAddress = (savedAddress ?? "").trim().length >= 5;
@@ -237,7 +239,7 @@ export default function BookPage() {
 
           if (data.covered && liveSlot) {
             setSlot(liveSlot);
-            setStep(5);
+            setStep(match.name === "Essential Clean" ? 2 : 5);
           } else {
             setStep(data.covered ? 4 : 0);
             setHandoffError(
@@ -266,7 +268,7 @@ export default function BookPage() {
         setStep(0);
       } else if (match && wantSlot && covered && hasAddress) {
         setSlot(wantSlot);
-        setStep(5);
+        setStep(match.name === "Essential Clean" ? 2 : 5);
       } else {
         // Every normal booking starts by confirming the service address.
         setStep(0);
@@ -310,6 +312,7 @@ export default function BookPage() {
 
   function pick(p: Pkg) {
     setSelected(p);
+    setFrequency(p.name === "Essential Clean" ? "weekly" : "one_time");
     setPromoInfo(null);
     setPreferredCleaner("");
     setCleaningMinutes(Math.max(120, p.duration_minutes ?? 120));
@@ -339,7 +342,7 @@ export default function BookPage() {
       const res = await fetch("/api/promo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: promo, packageId: selected.id, durationMinutes: minutes }),
+        body: JSON.stringify({ code: promo, packageId: selected.id, durationMinutes: minutes, frequency }),
       });
       const d = await res.json();
       setPromoInfo(
@@ -469,10 +472,20 @@ export default function BookPage() {
   const total = selected
     ? promoInfo?.ok && promoInfo.total !== undefined
       ? promoInfo.total
-      : bookingPricePence(selected, minutes) / 100
+      : bookingPricePence(selected, minutes) * (frequency === "one_time" ? 1 : REGULAR_VISIT_COUNT) / 100
     : 0;
   const policyError = selected ? bookingPolicyError(selected.name, frequency) : null;
   const oneTimeEssential = packages.find((item) => item.name === "One-Time Essential Clean");
+  const regular = frequency !== "one_time";
+  let regularSlots: string[] = [];
+  let regularScheduleError: string | null = null;
+  if (regular && slot) {
+    try {
+      regularSlots = regularVisitSlots(slot, frequency as RegularFrequency, minutes);
+    } catch (cause) {
+      regularScheduleError = cause instanceof Error ? cause.message : "Choose an earlier first date.";
+    }
+  }
 
   return (
     <div className="wrap">
@@ -555,7 +568,7 @@ export default function BookPage() {
                   <em>✓</em> Approved, DBS-verified professionals
                 </li>
                 <li>
-                  <em>✓</em> Card held, not charged until the visit is done
+                  <em>✓</em> One-time card holds; six-visit plans paid upfront
                 </li>
                 <li>
                   <em>✓</em> No cancellation charge with more than 48 hours&apos; notice
@@ -645,7 +658,11 @@ export default function BookPage() {
                     key={item.value}
                     type="button"
                     className={frequency === item.value ? "frequency on" : "frequency"}
-                    onClick={() => setFrequency(item.value)}
+                    onClick={() => {
+                      setFrequency(item.value);
+                      setPromoInfo(null);
+                      setOptionalSlots([]);
+                    }}
                   >
                     <span className="choiceDot" />
                     <strong>{item.title}</strong>
@@ -656,7 +673,8 @@ export default function BookPage() {
 
               <p className="frequencyNote">
                 A regular booking means at least six visits booked together.
-                If you prefer to book each visit separately, choose a one-time session.
+                You pay for all six at checkout. If you prefer to book each visit
+                separately, choose a one-time session.
               </p>
 
               {policyError && <p className="flash no" role="alert">{policyError}</p>}
@@ -737,8 +755,9 @@ export default function BookPage() {
             <section>
               <h1>When suits you?</h1>
               <p className="lede">
-                Choose the time you want. We&apos;ll find your professional after
-                you book.
+                {regular
+                  ? "Choose your first visit. The next five will follow on the same weekday or day of the month, at the same London time."
+                  : "Choose the time you want. We'll find your professional after you book."}
               </p>
 
               {slots === null && <p className="muted">Finding times…</p>}
@@ -755,17 +774,24 @@ export default function BookPage() {
                   slots={slots}
                   value={slot}
                   onChange={setSlot}
-                  optionalValues={optionalSlots}
-                  onOptionalValuesChange={setOptionalSlots}
+                  {...(!regular ? { optionalValues: optionalSlots, onOptionalValuesChange: setOptionalSlots } : {})}
                   durationMinutes={minutes}
                 />
+              )}
+
+              {regularScheduleError && <p className="flash no" role="alert">{regularScheduleError}</p>}
+              {regular && regularSlots.length === REGULAR_VISIT_COUNT && (
+                <div className="timeChoicesReview">
+                  <strong>Your six visits · paid upfront</strong>
+                  <ol>{regularSlots.map((visit, index) => <li key={visit}>Visit {index + 1}: {fullLabel(visit)}</li>)}</ol>
+                </div>
               )}
 
               {slots !== null && slots.length > 0 && (
                 <button
                   className="next"
                   onClick={() => setStep(5)}
-                  disabled={!slot}
+                  disabled={!slot || !!regularScheduleError}
                 >
                   {slot ? `Continue · ${fullLabel(slot)}` : "Pick a time"}
                 </button>
@@ -782,7 +808,9 @@ export default function BookPage() {
             <section>
               <h1>Review and pay</h1>
               <p className="lede">
-                Check your visit and payment before continuing to secure checkout.
+                {regular
+                  ? "Check all six visit dates and your full upfront payment before continuing to secure checkout."
+                  : "Check your visit and payment before continuing to secure checkout."}
               </p>
 
               <div className="reviewCard">
@@ -797,25 +825,28 @@ export default function BookPage() {
                   <small>{address}, {postcode.toUpperCase()}</small>
                 </div>
                 <div>
-                  <span>Amount</span>
+                  <span>{regular ? "Six-visit total" : "Amount"}</span>
                   <strong>{money(total)}</strong>
-                  <small>Held now, charged after completion</small>
+                  <small>{regular ? "Charged in full now" : "Held now, charged after completion"}</small>
                 </div>
               </div>
 
-              <div className="timeChoicesReview">
-                <strong>Optional times</strong>
-                {optionalSlots.length ? (
-                  <ul>
-                    {optionalSlots.map((optionalSlot) => (
-                      <li key={optionalSlot}>{fullLabel(optionalSlot)}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span>No optional times added.</span>
-                )}
-                <small>Cleaners can choose one of these if your preferred time is unavailable.</small>
-              </div>
+              {regular ? (
+                <div className="timeChoicesReview">
+                  <strong>All six booked visits</strong>
+                  <ol>{regularSlots.map((visit, index) => <li key={visit}>Visit {index + 1}: {fullLabel(visit)}</li>)}</ol>
+                  {regularScheduleError && <p className="flash no" role="alert">{regularScheduleError}</p>}
+                  <small>We&apos;ll match a professional to each visit. They may be different professionals.</small>
+                </div>
+              ) : (
+                <div className="timeChoicesReview">
+                  <strong>Optional times</strong>
+                  {optionalSlots.length ? (
+                    <ul>{optionalSlots.map((optionalSlot) => <li key={optionalSlot}>{fullLabel(optionalSlot)}</li>)}</ul>
+                  ) : <span>No optional times added.</span>}
+                  <small>Cleaners can choose one of these if your preferred time is unavailable.</small>
+                </div>
+              )}
 
               <p>{frequencyLabel(frequency)} · {duration(minutes)}{preferredCleaner ? ` · Requested cleaner: ${previousCleaners.find((p) => p.provider_id === preferredCleaner)?.display_name ?? "Previous cleaner"}` : ""}</p>
               {policyError && (
@@ -859,11 +890,10 @@ export default function BookPage() {
               )}
 
               <div className="held">
-                <strong>Your card is held, not charged</strong>
-                <span>
-                  You pay once the visit is complete. If no pro accepts, the hold
-                  is released and you pay nothing.
-                </span>
+                <strong>{regular ? "Pay for all six visits now" : "Your card is held, not charged"}</strong>
+                <span>{regular
+                  ? "This payment covers the six dates above. Cleaners are paid after their individual visits. Refunds for cancelled visits follow the cancellation policy."
+                  : "You pay once the visit is complete. If no pro accepts, the hold is released and you pay nothing."}</span>
               </div>
 
               {payError && <p className="flash no">{payError}</p>}
@@ -919,7 +949,7 @@ export default function BookPage() {
                       <span className="k">Preferred time</span>
                       <span className="v">{slot ? fullLabel(slot) : "Not picked"}</span>
                     </div>
-                    {optionalSlots.length > 0 && (
+                    {!regular && optionalSlots.length > 0 && (
                       <div className="brow">
                         <span className="k">Optional times</span>
                         <span className="v">{optionalSlots.map(fullLabel).join(" · ")}</span>
@@ -936,7 +966,7 @@ export default function BookPage() {
                 )}
 
                 <div className="total">
-                  <span>Total per session</span>
+                  <span>{regular ? "Total for 6 visits upfront" : "Total per session"}</span>
                   <strong>{money(total)}</strong>
                 </div>
                 <p className="fee">Service fee included</p>
@@ -950,12 +980,14 @@ export default function BookPage() {
               <p className="hint">Now choose how often you would like it.</p>
             )}
             {step === 5 && (
-              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || !!policyError}>
+              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || !!policyError || !!regularScheduleError}>
                 {paying
                   ? "Taking you to checkout…"
                   : signedIn === false
                   ? "Sign in to continue"
-                  : "Confirm & pay"}
+                  : regular
+                    ? `Pay ${money(total)} for 6 visits`
+                    : "Confirm & pay"}
               </button>
             )}
 
@@ -1581,7 +1613,8 @@ export default function BookPage() {
           font-size: 13px;
           font-weight: 800;
         }
-        .timeChoicesReview ul {
+        .timeChoicesReview ul,
+        .timeChoicesReview ol {
           display: grid;
           gap: 3px;
           margin: 0;

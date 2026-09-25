@@ -2,6 +2,8 @@
 // Save at: app/api/promo/route.ts
 
 import { bookingPricePence } from "@/lib/cleaningBooking";
+import { bookingPolicyError } from "@/lib/bookingPolicy";
+import { REGULAR_VISIT_COUNT } from "@/lib/regularBooking";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -27,7 +29,7 @@ export function discountFor(
 
 export async function POST(req: NextRequest) {
   try {
-    const { code, packageId, durationMinutes } = await req.json();
+    const { code, packageId, durationMinutes, frequency } = await req.json();
     const clean = String(code ?? "").trim().toUpperCase();
     if (!clean) {
       return NextResponse.json({ valid: false, error: "Enter a code." });
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pkg } = await admin
       .from("packages")
-      .select("price, service_type, duration_minutes")
+      .select("name, price, service_type, duration_minutes")
       .eq("active", true)
       .eq("billing_type", "per_visit")
       .eq("id", packageId ?? "")
@@ -63,8 +65,12 @@ export async function POST(req: NextRequest) {
     if (!pkg) {
       return NextResponse.json({ valid: false, error: "Pick a service first." });
     }
+    const bookingFrequency = String(frequency ?? "one_time");
+    const policyError = bookingPolicyError(pkg.name, bookingFrequency);
+    if (policyError) return NextResponse.json({ valid: false, error: policyError });
 
-    const gross = bookingPricePence(pkg, Number(durationMinutes ?? pkg.duration_minutes ?? 120));
+    const gross = bookingPricePence(pkg, Number(durationMinutes ?? pkg.duration_minutes ?? 120))
+      * (bookingFrequency === "one_time" ? 1 : REGULAR_VISIT_COUNT);
     const discount = discountFor(gross, promo);
 
     if (discount <= 0) {

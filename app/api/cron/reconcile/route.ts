@@ -221,6 +221,7 @@ export async function GET(req: NextRequest) {
         .order("id", { ascending: true })
         .range(from, to),
     );
+    const checkedUpfrontPayments = new Set<string>();
 
     for (const p of payments) {
       // ---- stuck mid-capture ----
@@ -255,6 +256,7 @@ export async function GET(req: NextRequest) {
       if (!p.stripe_payment_ref || !p.stripe_payment_ref.startsWith("pi_")) {
         continue;
       }
+      if (checkedUpfrontPayments.has(p.stripe_payment_ref)) continue;
 
       let pi: Stripe.PaymentIntent | null = null;
       try {
@@ -286,6 +288,78 @@ export async function GET(req: NextRequest) {
           ? await stripe.charges.retrieve(pi.latest_charge)
           : pi.latest_charge;
       const refunded = charge?.amount_refunded ?? 0;
+
+      if (pi.metadata?.upfront_regular === "1") {
+        if (checkedUpfrontPayments.has(pi.id)) continue;
+        checkedUpfrontPayments.add(pi.id);
+        const { data: allocations, error: allocationsError } = await admin
+          .from("payments")
+          .select("id, booking_id, gross_amount, status")
+          .eq("stripe_payment_ref", pi.id)
+          .or("kind.is.null,kind.neq.tip");
+        throwOnQueryError(`Reading six-visit allocations for ${pi.id}`, allocationsError);
+        const rows = allocations ?? [];
+        const allocatedPence = rows.reduce((sum, row) => sum + Math.round(Number(row.gross_amount) * 100), 0);
+        if (rows.length !== 6 || pi.status !== "succeeded" || received !== pi.amount || allocatedPence !== pi.amount) {
+          findings.push({
+            finding_type: "operation_ambiguous",
+            severity: "critical",
+            booking_id: p.booking_id,
+            payment_id: p.id,
+            stripe_object_id: pi.id,
+            expected: { six_allocations_pence: pi.amount, status: "succeeded" },
+            actual: { allocation_count: rows.length, allocated_pence: allocatedPence, stripe_status: pi.status, amount_received: received },
+          });
+        }
+        let approvedRefundPence = 0;
+        let refundInProgress = false;
+        for (const allocation of rows) {
+          if (!allocation.booking_id) continue;
+          refundInProgress ||= allocation.status === "refund_pending";
+          const [caseResult, operationResult] = await Promise.all([
+            admin.from("review_cases")
+              .select("resolution_amount")
+              .eq("booking_id", allocation.booking_id)
+              .eq("status", "resolved")
+              .eq("resolution_currency", "gbp")
+              .gt("resolution_amount", 0),
+            admin.from("money_operations")
+              .select("amount")
+              .eq("booking_id", allocation.booking_id)
+              .eq("operation_type", "refund")
+              .eq("status", "succeeded")
+              .like("operation_key", `refund:booking:${allocation.booking_id}:%`),
+          ]);
+          throwOnQueryError(`Reading approved refunds for ${allocation.booking_id}`, caseResult.error);
+          throwOnQueryError(`Reading refund operations for ${allocation.booking_id}`, operationResult.error);
+          const allocationRefundPence = (caseResult.data ?? []).reduce((sum, row) => sum + Math.round(Number(row.resolution_amount) * 100), 0)
+            + (operationResult.data ?? []).reduce((sum, row) => sum + Math.round(Number(row.amount) * 100), 0);
+          approvedRefundPence += allocationRefundPence;
+          if (allocation.status !== "refund_pending") {
+            const grossPence = Math.round(Number(allocation.gross_amount) * 100);
+            const expectedStatus = allocationRefundPence === 0 ? "succeeded"
+              : allocationRefundPence >= grossPence ? "refunded" : "partially_refunded";
+            if (allocation.status !== expectedStatus) {
+              findings.push({
+                finding_type: "operation_ambiguous", severity: "critical",
+                booking_id: allocation.booking_id, payment_id: allocation.id,
+                stripe_object_id: pi.id,
+                expected: { status: expectedStatus, refunded_pence: allocationRefundPence },
+                actual: { status: allocation.status },
+              });
+            }
+          }
+        }
+        if (!refundInProgress && approvedRefundPence !== refunded) {
+          findings.push({
+            finding_type: "refund_amount_mismatch", severity: "critical",
+            booking_id: p.booking_id, payment_id: p.id, stripe_object_id: pi.id,
+            expected: { amount_refunded_pence: approvedRefundPence },
+            actual: { amount_refunded_pence: refunded },
+          });
+        }
+        continue;
+      }
 
       // Approved refund totals are decisions; Stripe's refunded amount is the
       // evidence. Reconciliation reports disagreement and never heals it.
@@ -670,7 +744,7 @@ export async function GET(req: NextRequest) {
           ? tr.source_transaction
           : (tr.source_transaction?.id ?? null);
 
-      if (sourceTransaction) {
+      if (sourceTransaction && tr.metadata?.kind !== "regular_visit") {
         destinationChargeTransfers++;
 
         let paymentIntentId: string | null = null;

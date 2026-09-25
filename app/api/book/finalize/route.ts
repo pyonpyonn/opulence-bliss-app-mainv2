@@ -14,7 +14,7 @@ function isBookingInfrastructureFailure(error: unknown) {
   } catch {
     detail = String(error);
   }
-  return /PGRST202|schema cache|finalize_customer_checkout|duration_minutes|checkout_session_id/i.test(detail);
+  return /PGRST202|schema cache|finalize_(regular_)?customer_checkout|duration_minutes|checkout_session_id/i.test(detail);
 }
 
 export async function GET(req: NextRequest) {

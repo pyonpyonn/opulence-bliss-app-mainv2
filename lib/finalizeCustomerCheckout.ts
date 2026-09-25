@@ -5,6 +5,8 @@ import { isCleaning, validCleaningDuration } from "@/lib/cleaningBooking";
 import { appointmentFitsWindow, APPOINTMENT_WINDOW_MESSAGE } from "@/lib/appointmentWindow";
 import { rotateBookingOffer } from "@/lib/offerRotation";
 import { normaliseOptionalBookingTimes } from "@/lib/bookingTimeChoices";
+import { allocateRegularPayment, regularVisitSlots, type RegularFrequency } from "@/lib/regularBooking";
+import { bookingPolicyError } from "@/lib/bookingPolicy";
 
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -19,19 +21,27 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   const packageId = m.package_id || null;
   const postcode = m.postcode || null;
   const request = m.request || null;
-  const { data: stagedChoices } = await admin
+  const frequency = m.booking_frequency || "one_time";
+  const regular = m.upfront_regular === "1";
+  const { data: stagedChoicesData } = await admin
     .from("booking_checkout_time_choices")
-    .select("preferred_scheduled_at, optional_scheduled_at")
+    .select(regular
+      ? "preferred_scheduled_at, optional_scheduled_at, regular_scheduled_at"
+      : "preferred_scheduled_at, optional_scheduled_at")
     .eq("checkout_session_id", session.id)
     .eq("customer_id", customerId)
     .maybeSingle();
+  const stagedChoices = stagedChoicesData as unknown as {
+    preferred_scheduled_at: string;
+    optional_scheduled_at: string[];
+    regular_scheduled_at?: string[];
+  } | null;
   const slot = stagedChoices?.preferred_scheduled_at || m.slot || null;
   const serviceAddress = m.service_address?.trim() || null;
-  const frequency = m.booking_frequency || "one_time";
 
   const { data: pkgRow } = await admin
     .from("packages")
-    .select("service_type, duration_minutes")
+    .select("name, service_type, duration_minutes")
     .eq("id", packageId ?? "")
     .maybeSingle();
   const serviceType = pkgRow?.service_type ?? null;
@@ -41,6 +51,9 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   }
   if (!serviceAddress || !["one_time", "weekly", "monthly"].includes(frequency)) {
     throw new Error("Invalid booking address or frequency.");
+  }
+  if (!pkgRow || bookingPolicyError(m.package ?? pkgRow.name, frequency) || regular !== (frequency !== "one_time")) {
+    throw new Error("This checkout does not match the cleaning booking policy.");
   }
   if (!slot || !appointmentFitsWindow(slot, minutes)) {
     throw new Error(APPOINTMENT_WINDOW_MESSAGE);
@@ -55,6 +68,28 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
     );
   } catch {
     throw new Error("Invalid optional booking times.");
+  }
+  if (regular && optionalSlots.length > 0) throw new Error("Regular visits cannot use optional times.");
+  let regularSlots: string[] = [];
+  let regularAmounts: ReturnType<typeof allocateRegularPayment> = [];
+  if (regular) {
+    if (pi.status !== "succeeded" || pi.amount_received !== pi.amount || pi.capture_method !== "automatic") {
+      throw new Error("Six upfront visits require a completed payment.");
+    }
+    regularSlots = regularVisitSlots(slot, frequency as RegularFrequency, minutes, session.created * 1000);
+    const staged = stagedChoices?.regular_scheduled_at ?? [];
+    if (staged.length !== regularSlots.length ||
+        staged.some((value: string, index: number) => new Date(value).getTime() !== new Date(regularSlots[index]).getTime())) {
+      throw new Error("Six-visit dates were not saved with this checkout.");
+    }
+    const perVisitGross = Number(m.per_visit_gross);
+    const discount = Number(m.discount);
+    const platform = Number(m.platform_margin);
+    if (!Number.isInteger(perVisitGross) || !Number.isInteger(discount) ||
+        discount < 0 || pi.amount !== perVisitGross * regularSlots.length - discount) {
+      throw new Error("Six-visit checkout amount does not match its schedule.");
+    }
+    regularAmounts = allocateRegularPayment(pi.amount, platform);
   }
   const compact = (postcode ?? "").toUpperCase().replace(/\s+/g, "");
   const district = compact.length > 4 ? compact.slice(0, compact.length - 3) : compact;
@@ -90,33 +125,54 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
     matched = data ?? [];
   }
 
-  // The database locks the checkout reference and creates booking + payment
-  // together, so refreshes and retries cannot create duplicate visits.
-  const { data: bookingId, error: bookingError } = await admin.rpc("finalize_customer_checkout", {
-    p_customer_id: customerId,
-    p_session_id: session.id,
-    p_payment_ref: pi.id,
-    p_package_id: packageId,
-    p_postcode: postcode,
-    p_address: serviceAddress,
-    p_request: request,
-    p_slot: slot,
-    p_optional_slots: optionalSlots,
-    p_duration_minutes: minutes,
-    p_property_size_sqm: null,
-    p_frequency: frequency,
-    p_preferred_provider_id: m.preferred_provider_id || null,
-    p_amount: pi.amount / 100,
-    p_platform: (pi.application_fee_amount ?? 0) / 100,
-    p_email: customer?.email ?? null,
-    p_payment_status: pi.status === "succeeded" ? "succeeded" : "authorised",
-  });
-  if (bookingError || !bookingId) throw bookingError ?? new Error("Booking insert failed");
+  // Both database functions lock the checkout reference. The six inserts and
+  // their payment allocations commit together, or none of them do.
+  const { data: saved, error: bookingError } = regular
+    ? await admin.rpc("finalize_regular_customer_checkout", {
+        p_customer_id: customerId,
+        p_session_id: session.id,
+        p_payment_ref: pi.id,
+        p_package_id: packageId,
+        p_postcode: postcode,
+        p_address: serviceAddress,
+        p_request: request,
+        p_slots: regularSlots,
+        p_duration_minutes: minutes,
+        p_frequency: frequency,
+        p_preferred_provider_id: m.preferred_provider_id || null,
+        p_total_pence: pi.amount,
+        p_platform_pence: Number(m.platform_margin),
+        p_amounts: regularAmounts.map((amount) => amount.grossPence),
+        p_platforms: regularAmounts.map((amount) => amount.platformPence),
+        p_email: customer?.email ?? null,
+      })
+    : await admin.rpc("finalize_customer_checkout", {
+        p_customer_id: customerId,
+        p_session_id: session.id,
+        p_payment_ref: pi.id,
+        p_package_id: packageId,
+        p_postcode: postcode,
+        p_address: serviceAddress,
+        p_request: request,
+        p_slot: slot,
+        p_optional_slots: optionalSlots,
+        p_duration_minutes: minutes,
+        p_property_size_sqm: null,
+        p_frequency: frequency,
+        p_preferred_provider_id: m.preferred_provider_id || null,
+        p_amount: pi.amount / 100,
+        p_platform: (pi.application_fee_amount ?? 0) / 100,
+        p_email: customer?.email ?? null,
+        p_payment_status: pi.status === "succeeded" ? "succeeded" : "authorised",
+      });
+  const bookingIds = regular ? saved as string[] : [saved as string];
+  if (bookingError || !bookingIds?.length || bookingIds.some((id) => !id)) {
+    throw bookingError ?? new Error("Booking insert failed");
+  }
 
-  await admin
-    .from("booking_checkout_time_choices")
-    .delete()
-    .eq("checkout_session_id", session.id);
+  if (!regular) {
+    await admin.from("booking_checkout_time_choices").delete().eq("checkout_session_id", session.id);
+  }
 
   // A paid booking is confirmed as soon as the transaction above commits.
   // Provider matching is follow-up work and must never turn a saved booking into
@@ -124,15 +180,17 @@ export async function finalizeCustomerCheckout(session: Stripe.Checkout.Session,
   try {
     const preferred = m.preferred_provider_id;
     matched.sort((a, b) => Number(b.id === preferred) - Number(a.id === preferred));
-    const { error: queueError } = await admin.rpc("system_initialize_booking_offer_queue", {
-      p_booking_id: bookingId,
-      p_provider_ids: matched.map((provider) => provider.id),
-    });
-    if (queueError) throw queueError;
-    await rotateBookingOffer(admin, bookingId);
+    for (const bookingId of bookingIds) {
+      const { error: queueError } = await admin.rpc("system_initialize_booking_offer_queue", {
+        p_booking_id: bookingId,
+        p_provider_ids: matched.map((provider) => provider.id),
+      });
+      if (queueError) throw queueError;
+      await rotateBookingOffer(admin, bookingId);
+    }
   } catch (matchingError) {
-    console.error(`Booking ${bookingId} was saved, but provider matching needs a retry:`, matchingError);
+    console.error(`Bookings ${bookingIds.join(", ")} were saved, but provider matching needs a retry:`, matchingError);
   }
 
-  return bookingId;
+  return bookingIds[0];
 }

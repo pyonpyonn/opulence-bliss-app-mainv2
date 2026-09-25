@@ -6,12 +6,14 @@ export function bookingPolicyError(packageName: string, frequency: string): stri
     return "Choose a valid cleaning frequency.";
   }
 
-  if (frequency !== "one_time") {
-    return "Regular cleaning requires at least six visits booked together. Six-visit checkout is not available yet; please book a one-time visit for now.";
+  if (frequency !== "one_time" && packageName !== "Essential Clean") {
+    return "Weekly and monthly bookings use Essential Clean. Choose Essential Clean for six visits, or book this session once.";
   }
 
   if (packageName === "Essential Clean") {
-    return "Essential Clean at £18.90 per hour is for bookings of at least six visits. For one visit, choose One-Time Essential Clean.";
+    if (frequency === "one_time") {
+      return "Essential Clean at £18.90 per hour is for bookings of six visits. For one visit, choose One-Time Essential Clean.";
+    }
   }
 
   return null;

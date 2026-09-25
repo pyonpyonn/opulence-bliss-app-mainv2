@@ -3,6 +3,7 @@ import "server-only";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { settlePrepaidVisit } from "@/lib/prepaidVisitPayout";
 import {
   claimMoneyOperation,
   maybeReleasePayout,
@@ -37,15 +38,32 @@ export async function automaticallyCompleteBooking(bookingId: string) {
 
   const { data: booking, error: bookingError } = await admin
     .from("bookings")
-    .select("subscription_id, provider_id, provider_payout, membership_fee_deducted, customer_id, customer_email, packages(name)")
+    .select("subscription_id, regular_series_id, provider_id, provider_payout, membership_fee_deducted, customer_id, customer_email, packages(name)")
     .eq("id", bookingId)
     .maybeSingle();
   if (bookingError || !booking) throw new Error(bookingError?.message ?? "Booking not found after automatic checkout.");
 
-  let paymentSettled = Boolean(booking.subscription_id);
+  let paymentSettled = Boolean(booking.subscription_id || booking.regular_series_id);
   let earned = Number(booking.provider_payout ?? 0);
 
-  if (booking.subscription_id) {
+  if (booking.regular_series_id) {
+    try {
+      const result = await settlePrepaidVisit(bookingId);
+      earned = result.earned;
+      paymentSettled = true;
+    } catch (cause) {
+      console.error(`Prepaid visit ${bookingId} payout needs review:`, cause);
+      await admin.rpc("open_review_case", {
+        p_booking_id: bookingId,
+        p_category: "payment_failure",
+        p_priority: "high",
+        p_blocks_payment: false,
+        p_blocks_payout: true,
+        p_notes: cause instanceof Error ? cause.message : "Prepaid transfer failed",
+        p_created_by: null,
+      });
+    }
+  } else if (booking.subscription_id) {
     const { data: existing } = await admin
       .from("payouts")
       .select("id, status")
