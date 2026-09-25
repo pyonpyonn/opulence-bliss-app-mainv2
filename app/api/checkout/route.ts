@@ -15,6 +15,7 @@ import {
   BOOKING_HORIZON_MESSAGE,
 } from "@/lib/appointmentWindow";
 import { normaliseOptionalBookingTimes } from "@/lib/bookingTimeChoices";
+import { bookingPolicyError } from "@/lib/bookingPolicy";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -69,8 +70,9 @@ export async function POST(req: NextRequest) {
       ? enteredAddress
       : `${enteredAddress}, ${String(postcode ?? "").trim().toUpperCase()}`;
     const bookingFrequency = String(frequency ?? "one_time");
-    if (!["one_time", "weekly", "monthly"].includes(bookingFrequency)) {
-      return NextResponse.json({ error: "Choose a valid cleaning frequency." }, { status: 400 });
+    const policyError = bookingPolicyError(pkg.name, bookingFrequency);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
     }
     if (!slot || !appointmentFitsWindow(slot, minutes)) {
       return NextResponse.json(

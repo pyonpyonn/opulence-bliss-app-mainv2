@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CLEANING_DURATIONS, isCleaning, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
+import { bookingPolicyError } from "@/lib/bookingPolicy";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
 const supabase = createClient();
@@ -352,6 +353,11 @@ export default function BookPage() {
   }
 
   function checkout() {
+    const policyError = selected && bookingPolicyError(selected.name, frequency);
+    if (policyError) {
+      setPayError(policyError);
+      return;
+    }
     if (signedIn === false) {
       const bookingQuery = new URLSearchParams({
         pc: postcode,
@@ -369,6 +375,11 @@ export default function BookPage() {
 
   async function startCheckout() {
     if (!selected || !addressValid || !slot) return;
+    const policyError = bookingPolicyError(selected.name, frequency);
+    if (policyError) {
+      setPayError(policyError);
+      return;
+    }
     setPaying(true);
     setPayError(null);
     try {
@@ -460,6 +471,8 @@ export default function BookPage() {
       ? promoInfo.total
       : bookingPricePence(selected, minutes) / 100
     : 0;
+  const policyError = selected ? bookingPolicyError(selected.name, frequency) : null;
+  const oneTimeEssential = packages.find((item) => item.name === "One-Time Essential Clean");
 
   return (
     <div className="wrap">
@@ -581,7 +594,7 @@ export default function BookPage() {
                           </b>
                         </span>
                         <span className="optMeta">
-                          2–10 hours · 30-minute steps · Cleaning
+                          2–10 hours · 30-minute steps · {p.name === "Essential Clean" ? "Six-visit minimum" : "One-time cleaning"}
                         </span>
                       </span>
                     </button>
@@ -642,13 +655,22 @@ export default function BookPage() {
               </div>
 
               <p className="frequencyNote">
-                Your payment today secures this session. The frequency is saved
-                as your preference for future scheduling.
+                A regular booking means at least six visits booked together.
+                If you prefer to book each visit separately, choose a one-time session.
               </p>
 
-              <button className="next" onClick={() => setStep(3)}>
-                Continue · {frequencyLabel(frequency)}
-              </button>
+              {policyError && <p className="flash no" role="alert">{policyError}</p>}
+              {selected.name === "Essential Clean" && frequency === "one_time" && oneTimeEssential && (
+                <button className="next" type="button" onClick={() => pick(oneTimeEssential)}>
+                  Switch to One-Time Essential Clean
+                </button>
+              )}
+
+              {!policyError && (
+                <button className="next" onClick={() => setStep(3)}>
+                  Continue · {frequencyLabel(frequency)}
+                </button>
+              )}
               <button className="back" onClick={() => setStep(1)}>
                 ← Change session
               </button>
@@ -796,6 +818,12 @@ export default function BookPage() {
               </div>
 
               <p>{frequencyLabel(frequency)} · {duration(minutes)}{preferredCleaner ? ` · Requested cleaner: ${previousCleaners.find((p) => p.provider_id === preferredCleaner)?.display_name ?? "Previous cleaner"}` : ""}</p>
+              {policyError && (
+                <>
+                  <p className="flash no" role="alert">{policyError}</p>
+                  <button className="back" type="button" onClick={() => setStep(2)}>← Change frequency or session</button>
+                </>
+              )}
               <p className="label">Requests (optional)</p>
               <textarea
                 className="field"
@@ -922,7 +950,7 @@ export default function BookPage() {
               <p className="hint">Now choose how often you would like it.</p>
             )}
             {step === 5 && (
-              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid}>
+              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || !!policyError}>
                 {paying
                   ? "Taking you to checkout…"
                   : signedIn === false
