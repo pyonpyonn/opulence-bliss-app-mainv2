@@ -39,7 +39,7 @@ export function SignUpForm() {
       return;
     }
     if (!consentAccepted) {
-      setError("Accept the Terms & Conditions and Privacy Policy to create your account.");
+      setError("Accept the Terms & Conditions, Privacy Policy and Cancellation & Refund Policy to create your account.");
       return;
     }
     if (!emailValid || !phoneValid) return;

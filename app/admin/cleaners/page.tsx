@@ -34,11 +34,11 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function AdminCleanersPage() {
   const { supabase, user } = await requireAdminPage();
-  const [providersResult, availabilityResult, jobsResult] = await Promise.all([
+  const [providersResult, availabilityResult, jobsResult, dbsResult] = await Promise.all([
     supabase
       .from("providers")
       .select(
-        "id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, is_suspended, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed, right_to_work, cleaning_experience_years, max_travel_distance)",
+        "id, display_name, services, vetting_status, dbs_verified, rating_avg, rating_count, years_experience, is_suspended, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email), application:provider_onboarding_details(preferred_weekly_hours, resident_status, self_employed_confirmed, right_to_work, cleaning_experience_years, max_travel_distance)",
       )
       .order("display_name", { ascending: true }),
     supabase
@@ -46,6 +46,9 @@ export default async function AdminCleanersPage() {
       .select("provider_id, weekday, start_time, end_time")
       .order("weekday", { ascending: true }),
     supabase.from("bookings").select("provider_id, status"),
+    supabase
+      .from("provider_dbs_checks")
+      .select("provider_id, status, uploaded_at"),
   ]);
 
   const providers = providersResult.data ?? [];
@@ -68,6 +71,9 @@ export default async function AdminCleanersPage() {
     if (["scheduled", "in_progress"].includes(job.status)) summary.upcoming += 1;
     jobsByProvider.set(job.provider_id, summary);
   }
+  const dbsByProvider = new Map(
+    (dbsResult.data ?? []).map((check) => [check.provider_id, check]),
+  );
 
   return (
     <main style={page}>
@@ -95,6 +101,12 @@ export default async function AdminCleanersPage() {
                 upcoming: 0,
               };
               const pending = provider.vetting_status === "pending";
+              const dbs = dbsByProvider.get(provider.id);
+              const dbsLabel = !dbs
+                ? "not submitted"
+                : !dbs.uploaded_at
+                  ? "upload incomplete"
+                  : dbs.status;
 
               return (
                 <article className="admin-cleaner-card" key={provider.id} style={card}>
@@ -146,6 +158,9 @@ export default async function AdminCleanersPage() {
                         : "Legacy account — no onboarding details submitted"}
                     </p>
                     <p style={meta}>
+                      <strong>DBS:</strong> {dbsLabel}
+                    </p>
+                    <p style={meta}>
                       {provider.rating_avg
                         ? `${Number(provider.rating_avg).toFixed(1)} ★ (${provider.rating_count ?? 0})`
                         : "Not rated"}
@@ -169,30 +184,37 @@ export default async function AdminCleanersPage() {
                           <span style={directoryState}>
                             {provider.is_suspended
                               ? "Hidden while suspended"
+                              : !provider.dbs_verified
+                                ? "Hidden until DBS is verified"
                               : provider.show_on_our_pros
                                 ? "Shown on Our Pros"
                                 : "Hidden from Our Pros"}
                           </span>
-                          <form
-                            action={setProviderDirectoryVisibility.bind(
-                              null,
-                              provider.id,
-                              !provider.show_on_our_pros,
-                            )}
-                          >
-                            <button
-                              type="submit"
-                              style={provider.show_on_our_pros ? hideButton : showButton}
+                          {provider.dbs_verified ? (
+                            <form
+                              action={setProviderDirectoryVisibility.bind(
+                                null,
+                                provider.id,
+                                !provider.show_on_our_pros,
+                              )}
                             >
-                              {provider.show_on_our_pros
-                                ? "Hide from Our Pros"
-                                : "Show on Our Pros"}
-                            </button>
-                          </form>
+                              <button
+                                type="submit"
+                                style={provider.show_on_our_pros ? hideButton : showButton}
+                              >
+                                {provider.show_on_our_pros
+                                  ? "Hide from Our Pros"
+                                  : "Show on Our Pros"}
+                              </button>
+                            </form>
+                          ) : null}
                         </>
                       ) : null}
                       {pending && !provider.is_suspended ? (
-                        <VettingButtons id={provider.id} />
+                        <VettingButtons
+                          id={provider.id}
+                          dbsVerified={provider.dbs_verified === true}
+                        />
                       ) : null}
                     </div>
                   ) : null}

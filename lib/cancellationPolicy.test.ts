@@ -11,8 +11,8 @@ function hoursFromNow(hours: number) {
   return new Date(new Date(NOW).getTime() + hours * 60 * 60 * 1000);
 }
 
-test("48 hours or more receives a full refund", () => {
-  for (const hours of [48, 72]) {
+test("more than 48 hours receives a full refund", () => {
+  for (const hours of [48.001, 72]) {
     const policy = calculateCancellationPolicy(hoursFromNow(hours), 93.15, NOW);
     assert.equal(policy.tier, "full");
     assert.equal(policy.refundPercent, 100);
@@ -21,8 +21,18 @@ test("48 hours or more receives a full refund", () => {
   }
 });
 
-test("24 hours through just under 48 hours receives a 50% refund", () => {
-  for (const hours of [24, 36, 47.999]) {
+test("24 through 48 hours receives a 75% refund", () => {
+  for (const hours of [24, 36, 48]) {
+    const policy = calculateCancellationPolicy(hoursFromNow(hours), 93.15, NOW);
+    assert.equal(policy.tier, "three_quarter");
+    assert.equal(policy.refundPercent, 75);
+    assert.equal(policy.refundAmount, 69.86);
+    assert.equal(policy.cancellationCharge, 23.29);
+  }
+});
+
+test("less than 24 hours but not the same day receives a 50% refund", () => {
+  for (const hours of [12, 23.999]) {
     const policy = calculateCancellationPolicy(hoursFromNow(hours), 93.15, NOW);
     assert.equal(policy.tier, "half");
     assert.equal(policy.refundPercent, 50);
@@ -31,8 +41,8 @@ test("24 hours through just under 48 hours receives a 50% refund", () => {
   }
 });
 
-test("less than 24 hours receives no refund", () => {
-  for (const hours of [23.999, 1, 0, -1]) {
+test("same-day or missed bookings receive no automatic refund", () => {
+  for (const hours of [1, 0, -1]) {
     const policy = calculateCancellationPolicy(hoursFromNow(hours), 93.15, NOW);
     assert.equal(policy.tier, "none");
     assert.equal(policy.refundPercent, 0);
@@ -52,14 +62,17 @@ test("refund and cancellation charge always reconcile to the penny", () => {
 });
 
 test("held and captured payments choose the correct Stripe adjustment", () => {
-  const full = calculateCancellationPolicy(hoursFromNow(48), 100, NOW);
-  const half = calculateCancellationPolicy(hoursFromNow(24), 100, NOW);
+  const full = calculateCancellationPolicy(hoursFromNow(48.001), 100, NOW);
+  const threeQuarter = calculateCancellationPolicy(hoursFromNow(24), 100, NOW);
+  const half = calculateCancellationPolicy(hoursFromNow(12), 100, NOW);
   const none = calculateCancellationPolicy(hoursFromNow(1), 100, NOW);
 
   assert.equal(cancellationPaymentAction("authorised", full), "release");
+  assert.equal(cancellationPaymentAction("authorised", threeQuarter), "capture");
   assert.equal(cancellationPaymentAction("authorised", half), "capture");
   assert.equal(cancellationPaymentAction("authorised", none), "capture");
   assert.equal(cancellationPaymentAction("succeeded", full), "refund");
+  assert.equal(cancellationPaymentAction("succeeded", threeQuarter), "refund");
   assert.equal(cancellationPaymentAction("succeeded", half), "refund");
   assert.equal(cancellationPaymentAction("succeeded", none), "none");
   assert.equal(cancellationPaymentAction("created", half), "none");

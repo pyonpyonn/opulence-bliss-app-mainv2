@@ -10,6 +10,7 @@ import {
   type ReviewVisibility,
 } from "@/lib/reviewVisibility";
 import { getRescheduleWindow } from "@/lib/bookingState";
+import type { CancellationPolicyTier } from "@/lib/cancellationPolicy";
 import {
   cancelCustomerBooking,
   modifyCustomerBooking,
@@ -21,7 +22,7 @@ import {
 export async function cancelBooking(
   id: string,
   reason?: string,
-  expectedPolicyTier?: "full" | "half" | "none",
+  expectedPolicyTier?: CancellationPolicyTier,
 ) {
   const supabase = await createClient();
   return cancelCustomerBooking(

@@ -5,7 +5,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
-import { LEGAL_VERSION } from "@/lib/legal";
+import { LEGAL_VERSIONS } from "@/lib/legal";
+import {
+  dbsCertificateExtension,
+  isDbsCertificateNumber,
+  isDbsIssueDate,
+  normalizeDbsCertificateNumber,
+} from "@/lib/providerDbs";
 import {
   canFinalizeProviderPartnership,
   isProviderCleaningExperienceTypes,
@@ -52,6 +58,10 @@ export async function POST(req: NextRequest) {
       skills,
       areaIds,
       professionalAgreementAccepted,
+      dbsCertificateNumber,
+      dbsIssueDate,
+      dbsCertificateFileName,
+      dbsCertificateMimeType,
     } = await req.json();
     const normalizedEmail = String(email ?? "").trim().toLowerCase();
     const normalizedPhone = normalizeUkPhone(phone);
@@ -209,19 +219,48 @@ export async function POST(req: NextRequest) {
     }
     if (professionalAgreementAccepted !== true) {
       return NextResponse.json(
-        { error: "Accept the Service Professional Partner Agreement to continue." },
+        { error: "Accept the Service Professional Partner Agreement and Privacy Policy to continue." },
         { status: 400 },
       );
     }
 
-    const { data: agreementRow } = await admin
+    const dbsNumber = normalizeDbsCertificateNumber(dbsCertificateNumber);
+    const dbsExtension = dbsCertificateExtension(
+      dbsCertificateFileName,
+      dbsCertificateMimeType,
+    );
+    if (!isDbsCertificateNumber(dbsNumber)) {
+      return NextResponse.json(
+        { error: "Enter the 12-digit DBS certificate number." },
+        { status: 400 },
+      );
+    }
+    if (!isDbsIssueDate(dbsIssueDate)) {
+      return NextResponse.json(
+        { error: "Enter a valid DBS certificate issue date." },
+        { status: 400 },
+      );
+    }
+    if (!dbsExtension) {
+      return NextResponse.json(
+        { error: "Upload the DBS certificate as a PDF, JPG or PNG file." },
+        { status: 400 },
+      );
+    }
+
+    const { data: legalRows } = await admin
       .from("legal_documents")
-      .select("version")
-      .eq("slug", "professional-partner-agreement")
-      .eq("published", true)
-      .maybeSingle();
+      .select("slug, version")
+      .in("slug", ["professional-partner-agreement", "privacy"])
+      .eq("published", true);
+    const agreementRow = legalRows?.find(
+      (row) => row.slug === "professional-partner-agreement",
+    );
+    const privacyRow = legalRows?.find((row) => row.slug === "privacy");
     const professionalAgreementVersion =
-      agreementRow?.version ?? LEGAL_VERSION;
+      agreementRow?.version ??
+      LEGAL_VERSIONS["professional-partner-agreement"];
+    const privacyVersion = privacyRow?.version ?? LEGAL_VERSIONS.privacy;
 
     // 1. Create the account, already confirmed (no confirmation email).
     const { data: created, error: createErr } =
@@ -238,6 +277,12 @@ export async function POST(req: NextRequest) {
           professional_agreement_accepted: true,
           professional_agreement_version: professionalAgreementVersion,
           professional_agreement_accepted_at: new Date().toISOString(),
+          legal_accepted: true,
+          legal_versions: {
+            "professional-partner-agreement": professionalAgreementVersion,
+            privacy: privacyVersion,
+          },
+          legal_accepted_at: new Date().toISOString(),
         },
       });
 
@@ -286,6 +331,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: provErr?.message ?? "Could not create the provider record." },
         { status: 500 }
+      );
+    }
+
+    const dbsStoragePath = `${prov.id}/certificate.${dbsExtension}`;
+    const dbsMimeType =
+      dbsExtension === "pdf"
+        ? "application/pdf"
+        : dbsExtension === "png"
+          ? "image/png"
+          : "image/jpeg";
+    const { error: dbsError } = await admin.from("provider_dbs_checks").insert({
+      provider_id: prov.id,
+      certificate_number: dbsNumber,
+      issue_date: String(dbsIssueDate),
+      certificate_storage_path: dbsStoragePath,
+      certificate_original_name: String(dbsCertificateFileName ?? "certificate").slice(0, 240),
+      certificate_mime_type: dbsMimeType,
+      status: "pending",
+    });
+    if (dbsError) {
+      return NextResponse.json(
+        { error: dbsError.message || "Could not save the DBS details." },
+        { status: 500 },
       );
     }
 
@@ -339,7 +407,13 @@ export async function POST(req: NextRequest) {
       }))
     );
 
-    return NextResponse.json({ ok: true, providerId: prov.id });
+    return NextResponse.json({
+      ok: true,
+      userId,
+      providerId: prov.id,
+      dbsStoragePath,
+      dbsMimeType,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sign-up failed";
     return NextResponse.json({ error: msg }, { status: 500 });

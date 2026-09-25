@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { LEGAL_VERSION } from "@/lib/legal";
+import { LEGAL_VERSIONS } from "@/lib/legal";
 
 function safeNext(value: string | null) {
   return value?.startsWith("/") && !value.startsWith("//") ? value : "/account";
@@ -66,12 +66,17 @@ export async function GET(request: NextRequest) {
   const { data: legalRows } = await admin
     .from("legal_documents")
     .select("slug, version")
-    .in("slug", ["terms", "privacy"])
+    .in("slug", ["terms", "privacy", "cancellation-refund"])
     .eq("published", true);
   const termsVersion =
-    legalRows?.find((row) => row.slug === "terms")?.version ?? LEGAL_VERSION;
+    legalRows?.find((row) => row.slug === "terms")?.version ??
+    LEGAL_VERSIONS.terms;
   const privacyVersion =
-    legalRows?.find((row) => row.slug === "privacy")?.version ?? LEGAL_VERSION;
+    legalRows?.find((row) => row.slug === "privacy")?.version ??
+    LEGAL_VERSIONS.privacy;
+  const cancellationVersion =
+    legalRows?.find((row) => row.slug === "cancellation-refund")?.version ??
+    LEGAL_VERSIONS["cancellation-refund"];
   const acceptedAt = new Date().toISOString();
 
   await admin.auth.admin.updateUserById(user.id, {
@@ -79,7 +84,11 @@ export async function GET(request: NextRequest) {
       ...user.user_metadata,
       legal_accepted: true,
       legal_version: termsVersion,
-      legal_versions: { terms: termsVersion, privacy: privacyVersion },
+      legal_versions: {
+        terms: termsVersion,
+        privacy: privacyVersion,
+        "cancellation-refund": cancellationVersion,
+      },
       legal_accepted_at: acceptedAt,
     },
   });

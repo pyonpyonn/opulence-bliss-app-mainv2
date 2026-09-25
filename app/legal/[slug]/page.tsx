@@ -72,7 +72,9 @@ export default async function LegalDocumentPage({
         month: "long",
         year: "numeric",
       })
-    : "20 September 2026";
+    : document.version === "1.0"
+      ? "August 2026"
+      : "20 September 2026";
 
   return (
     <>

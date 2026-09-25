@@ -251,6 +251,7 @@ export async function cannotAttend(
             .select("id, profile_id")
             .in("id", eligibleIds)
             .eq("vetting_status", "approved")
+            .eq("dbs_verified", true)
             .eq("is_suspended", false)
             .contains("services", ["cleaning"])
         : { data: [] };

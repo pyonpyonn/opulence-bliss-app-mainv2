@@ -539,13 +539,13 @@ export default function BookPage() {
 
               <ul className="trust">
                 <li>
-                  <em>✓</em> Vetted &amp; insured professionals
+                  <em>✓</em> Approved, DBS-verified professionals
                 </li>
                 <li>
                   <em>✓</em> Card held, not charged until the visit is done
                 </li>
                 <li>
-                  <em>✓</em> Full refund when cancelled 48+ hours before
+                  <em>✓</em> No cancellation charge with more than 48 hours&apos; notice
                 </li>
               </ul>
             </section>

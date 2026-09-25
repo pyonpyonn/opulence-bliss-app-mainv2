@@ -34,9 +34,10 @@ export const blogPosts: BlogPost[] = [
           "We calculate the cancellation window from the moment you confirm cancellation to the scheduled start time of your booking.",
         ],
         points: [
-          "48 hours or more before the booking: full refund.",
-          "From 24 hours up to 48 hours before the booking: 50% refund.",
-          "Less than 24 hours before the booking: no refund.",
+          "More than 48 hours before the booking: normally no cancellation charge and a full refund.",
+          "From 24 to 48 hours before the booking: up to a 25% cancellation charge.",
+          "Less than 24 hours before the booking: up to a 50% cancellation charge.",
+          "Same-day cancellation, no access or a missed appointment: up to a 100% cancellation charge.",
         ],
       },
       {
@@ -49,7 +50,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "You will see the amount before confirming",
         paragraphs: [
-          "Open the visit in My bookings and choose Cancel booking. The confirmation window shows whether you receive a full refund, a 50% refund or no refund, together with the exact amount. The policy is recorded with the cancellation for a clear payment history.",
+          "Open the visit in My bookings and choose Cancel booking. The confirmation window shows the exact refund and cancellation charge before you confirm. The policy tier is recorded with the cancellation for a clear payment history.",
         ],
       },
     ],

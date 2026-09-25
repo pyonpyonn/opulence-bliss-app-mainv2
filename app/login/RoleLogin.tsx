@@ -115,8 +115,9 @@ export default function RoleLogin({ mode }: { mode: Mode }) {
               onError={(message) => setErr(message || null)}
             />
             <p className="google-terms">
-              By continuing, you agree to our <Link href="/legal/terms">Terms</Link> and{" "}
-              <Link href="/legal/privacy">Privacy Policy</Link>.
+              By continuing, you agree to our <Link href="/legal/terms">Terms</Link>,{" "}
+              <Link href="/legal/privacy">Privacy Policy</Link> and{" "}
+              <Link href="/legal/cancellation-refund">Cancellation &amp; Refund Policy</Link>.
             </p>
             <div className="divider"><span>or use email</span></div>
           </>

@@ -1,13 +1,14 @@
 import "server-only";
 
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import type { CancellationPolicyTier } from "@/lib/cancellationPolicy";
 
 export type AssistantMutation =
   | {
       type: "cancel_booking";
       bookingId: string;
       reason: string | null;
-      expectedPolicyTier?: "full" | "half" | "none";
+      expectedPolicyTier?: CancellationPolicyTier;
     }
   | {
       type: "reschedule_booking";

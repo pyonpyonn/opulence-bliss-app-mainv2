@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { LEGAL_VERSION } from "@/lib/legal";
+import { LEGAL_VERSIONS } from "@/lib/legal";
 import { isValidUkPhone, normalizeUkPhone } from "@/lib/ukPhone";
 
 const admin = createClient(
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     if (consentAccepted !== true) {
       return NextResponse.json(
-        { error: "Accept the Terms & Conditions and Privacy Policy to sign up." },
+        { error: "Accept the Terms & Conditions, Privacy Policy and Cancellation & Refund Policy to sign up." },
         { status: 400 },
       );
     }
@@ -49,12 +49,13 @@ export async function POST(req: NextRequest) {
     const { data: legalRows } = await admin
       .from("legal_documents")
       .select("slug, version")
-      .in("slug", ["terms", "privacy"])
+      .in("slug", ["terms", "privacy", "cancellation-refund"])
       .eq("published", true);
     const legalVersions = Object.fromEntries(
-      ["terms", "privacy"].map((slug) => [
+      ["terms", "privacy", "cancellation-refund"].map((slug) => [
         slug,
-        legalRows?.find((row) => row.slug === slug)?.version ?? LEGAL_VERSION,
+        legalRows?.find((row) => row.slug === slug)?.version ??
+          LEGAL_VERSIONS[slug],
       ]),
     );
 

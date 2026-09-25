@@ -7,7 +7,18 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isValidUkPhone } from "@/lib/ukPhone";
-import { PROFESSIONAL_PARTNER_AGREEMENT_URL } from "@/lib/legal";
+import {
+  DBS_CERTIFICATE_ACCEPT,
+  DBS_CERTIFICATE_MAX_BYTES,
+  isDbsCertificateNumber,
+  isDbsIssueDate,
+  isSupportedDbsCertificate,
+  normalizeDbsCertificateNumber,
+} from "@/lib/providerDbs";
+import {
+  PRIVACY_URL,
+  PROFESSIONAL_PARTNER_AGREEMENT_URL,
+} from "@/lib/legal";
 import {
   estimateProviderMonthlyEarnings,
   isOptionalUtrNumber,
@@ -35,7 +46,14 @@ type PublicReview = {
   recipient_type: "professional" | "client";
 };
 
-type JoinStep = "estimate" | "account" | "status" | "experience" | "work" | "availability";
+type JoinStep =
+  | "estimate"
+  | "account"
+  | "status"
+  | "experience"
+  | "work"
+  | "availability"
+  | "dbs";
 
 const INITIAL_WEEKLY_AVAILABILITY: ProviderWeeklyAvailability = {
   monday: "unavailable",
@@ -92,6 +110,15 @@ export default function ProviderJoinPage() {
   const [err, setErr] = useState<string | null>(null);
   const [professionalAgreementAccepted, setProfessionalAgreementAccepted] =
     useState(false);
+  const [dbsCertificateNumber, setDbsCertificateNumber] = useState("");
+  const [dbsIssueDate, setDbsIssueDate] = useState("");
+  const [dbsCertificate, setDbsCertificate] = useState<File | null>(null);
+  const [createdApplication, setCreatedApplication] = useState<{
+    userId: string;
+    providerId: string;
+    dbsStoragePath: string;
+    dbsMimeType: string;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -238,60 +265,132 @@ export default function ProviderJoinPage() {
     setJoinStep("availability");
   }
 
+  function continueToDbs() {
+    if (!hasWorkingPeriod) {
+      setErr("Choose at least one working period before continuing.");
+      return;
+    }
+    if (
+      !Number.isInteger(weeklyHours) ||
+      weeklyHours < 0 ||
+      weeklyHours > PROVIDER_MAX_WEEKLY_HOURS
+    ) {
+      setErr("Weekly availability must be between 0 and 40 hours.");
+      return;
+    }
+    setErr(null);
+    setJoinStep("dbs");
+  }
+
   async function submit() {
+    if (!isDbsCertificateNumber(dbsCertificateNumber)) {
+      setErr("Enter the 12-digit DBS certificate number.");
+      return;
+    }
+    if (!isDbsIssueDate(dbsIssueDate)) {
+      setErr("Enter a valid DBS certificate issue date.");
+      return;
+    }
+    if (
+      !dbsCertificate ||
+      !isSupportedDbsCertificate(
+        dbsCertificate.name,
+        dbsCertificate.type,
+        dbsCertificate.size,
+      )
+    ) {
+      setErr("Upload a PDF, JPG or PNG DBS certificate no larger than 8 MB.");
+      return;
+    }
     if (!professionalAgreementAccepted) {
-      setErr("Accept the Service Professional Partner Agreement to continue.");
+      setErr("Accept the Service Professional Partner Agreement and Privacy Policy to continue.");
       return;
     }
     setBusy(true);
     setErr(null);
 
     try {
-      // 1. Create the provider account
-      setStep("Creating your account…");
-      const res = await fetch("/api/provider-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName,
-          salutation,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-          password,
-          phone: phone.trim(),
-          address: address.trim(),
-          dateOfBirth,
-          weeklyHours,
-          residentStatus,
-          utrNumber: utrNumber.trim() || null,
-          selfEmployed: selfEmployed === "agree",
-          rightToWork: rightToWork === "yes",
-          currentlySelfEmployed,
-          currentSelfEmploymentDetail: currentSelfEmploymentDetail.trim() || null,
-          businessName: businessName.trim(),
-          cleaningExperienceYears: Number(cleaningExperienceYears),
-          cleaningExperienceTypes,
-          otherCleaningExperience: otherCleaningExperience.trim() || null,
-          maxTravelDistance,
-          weeklyAvailability,
-          skills,
-          areaIds,
-          professionalAgreementAccepted,
-        }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "Sign-up failed");
+      // 1. Create the provider account and its private DBS review record.
+      let application = createdApplication;
+      if (!application) {
+        setStep("Creating your account…");
+        const res = await fetch("/api/provider-signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName,
+            salutation,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim(),
+            password,
+            phone: phone.trim(),
+            address: address.trim(),
+            dateOfBirth,
+            weeklyHours,
+            residentStatus,
+            utrNumber: utrNumber.trim() || null,
+            selfEmployed: selfEmployed === "agree",
+            rightToWork: rightToWork === "yes",
+            currentlySelfEmployed,
+            currentSelfEmploymentDetail:
+              currentSelfEmploymentDetail.trim() || null,
+            businessName: businessName.trim(),
+            cleaningExperienceYears: Number(cleaningExperienceYears),
+            cleaningExperienceTypes,
+            otherCleaningExperience: otherCleaningExperience.trim() || null,
+            maxTravelDistance,
+            weeklyAvailability,
+            skills,
+            areaIds,
+            professionalAgreementAccepted,
+            dbsCertificateNumber:
+              normalizeDbsCertificateNumber(dbsCertificateNumber),
+            dbsIssueDate,
+            dbsCertificateFileName: dbsCertificate.name,
+            dbsCertificateMimeType: dbsCertificate.type,
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Sign-up failed");
+        application = {
+          userId: String(data.userId),
+          providerId: String(data.providerId),
+          dbsStoragePath: String(data.dbsStoragePath),
+          dbsMimeType: String(data.dbsMimeType),
+        };
+        setCreatedApplication(application);
+      }
 
       // 2. Sign them in
       setStep("Signing you in…");
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (signInErr) throw new Error(signInErr.message);
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user.id !== application.userId) {
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInErr) throw new Error(signInErr.message);
+      }
 
-      // 3. No joining payment: continue directly to the provider portal.
+      // 3. Upload directly to the applicant's private storage folder.
+      setStep("Uploading your DBS certificate…");
+      const { error: uploadError } = await supabase.storage
+        .from("provider-dbs")
+        .upload(application.dbsStoragePath, dbsCertificate, {
+          contentType: application.dbsMimeType,
+          upsert: true,
+        });
+      if (uploadError) throw new Error(uploadError.message);
+
+      const { error: uploadedError } = await supabase
+        .from("provider_dbs_checks")
+        .update({ uploaded_at: new Date().toISOString() })
+        .eq("provider_id", application.providerId)
+        .eq("status", "pending");
+      if (uploadedError) throw new Error(uploadedError.message);
+
+      // 4. No joining payment: continue directly to the provider portal.
       setStep("Opening your provider portal…");
       window.location.href = "/worker";
     } catch (e) {
@@ -317,6 +416,14 @@ export default function ProviderJoinPage() {
       areaIds.length &&
       maxTravelDistance &&
       hasWorkingPeriod &&
+      isDbsCertificateNumber(dbsCertificateNumber) &&
+      isDbsIssueDate(dbsIssueDate) &&
+      dbsCertificate &&
+      isSupportedDbsCertificate(
+        dbsCertificate.name,
+        dbsCertificate.type,
+        dbsCertificate.size,
+      ) &&
       professionalAgreementAccepted,
   );
   const monthlyEstimate = estimateProviderMonthlyEarnings(weeklyHours);
@@ -823,7 +930,7 @@ export default function ProviderJoinPage() {
               <button className="step-back" type="button" onClick={() => setJoinStep("work")} disabled={busy}>
                 ← Back
               </button>
-              <p className="form-kicker">Final step</p>
+              <p className="form-kicker">Professional application</p>
               <h2>When are you available?</h2>
               <p className="section-intro">
                 Choose one period for every day. Select Off when you do not want jobs that day.
@@ -869,6 +976,80 @@ export default function ProviderJoinPage() {
                 <p className="help-copy">Choose at least one working period before submitting.</p>
               )}
 
+              <button className="go next" type="button" onClick={continueToDbs}>
+                Continue to DBS check
+              </button>
+            </div>
+          )}
+
+          {joinStep === "dbs" && (
+            <div className="dbs-fields">
+              <button
+                className="step-back"
+                type="button"
+                onClick={() => setJoinStep("availability")}
+                disabled={busy || Boolean(createdApplication)}
+              >
+                ← Back
+              </button>
+              <p className="form-kicker">Final application step</p>
+              <h2>DBS certificate</h2>
+              <p className="section-intro">
+                Submit your DBS certificate for private administrator review.
+                You cannot be approved until it has been verified.
+              </p>
+
+              <div className="dbs-privacy-note">
+                Your certificate is stored privately. Customers cannot view the
+                document or certificate number.
+              </div>
+
+              <label htmlFor="provider-dbs-number">Certificate number</label>
+              <input
+                id="provider-dbs-number"
+                value={dbsCertificateNumber}
+                onChange={(event) =>
+                  setDbsCertificateNumber(
+                    normalizeDbsCertificateNumber(event.target.value),
+                  )
+                }
+                placeholder="12-digit DBS certificate number"
+                inputMode="numeric"
+                autoComplete="off"
+                disabled={Boolean(createdApplication)}
+              />
+              {dbsCertificateNumber.length > 0 &&
+                !isDbsCertificateNumber(dbsCertificateNumber) && (
+                  <p className="field-error">
+                    Enter all 12 digits shown on the certificate.
+                  </p>
+                )}
+
+              <label htmlFor="provider-dbs-date">Certificate issue date</label>
+              <input
+                id="provider-dbs-date"
+                type="date"
+                value={dbsIssueDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(event) => setDbsIssueDate(event.target.value)}
+                disabled={Boolean(createdApplication)}
+              />
+
+              <label htmlFor="provider-dbs-file">Certificate file</label>
+              <input
+                id="provider-dbs-file"
+                className="dbs-file"
+                type="file"
+                accept={DBS_CERTIFICATE_ACCEPT}
+                onChange={(event) =>
+                  setDbsCertificate(event.target.files?.[0] ?? null)
+                }
+              />
+              <p className="help-copy">
+                PDF, JPG or PNG · maximum {DBS_CERTIFICATE_MAX_BYTES / 1024 / 1024} MB.
+                {dbsCertificate ? ` Selected: ${dbsCertificate.name}` : ""}
+              </p>
+
               <label className="legal-consent">
                 <input
                   type="checkbox"
@@ -886,6 +1067,14 @@ export default function ProviderJoinPage() {
                   >
                     Service Professional Partner Agreement
                   </a>
+                  {" "}and acknowledge the{" "}
+                  <a
+                    href={PRIVACY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
                   .
                 </span>
               </label>
@@ -896,7 +1085,8 @@ export default function ProviderJoinPage() {
                 </button>
               </div>
               <p className="small">
-                Jobs unlock after your application is approved.
+                Your application remains pending until an administrator verifies
+                the DBS certificate and approves your account.
               </p>
             </div>
           )}
@@ -933,10 +1123,6 @@ export default function ProviderJoinPage() {
               <li>Bookings &amp; customer acquisition</li>
               <li>Priority access to jobs</li>
               <li>Easy payment processing: <strong>weekly or monthly</strong></li>
-              <li>
-                <strong>Insurance</strong> for cancellations where applicable,
-                damages and accidents
-              </li>
               <li><strong>Administrative support</strong></li>
               <li>Referral income &amp; loyalty/ambassador rewards</li>
             </ul>
@@ -1384,8 +1570,37 @@ export default function ProviderJoinPage() {
         .status-fields,
         .experience-fields,
         .availability-fields,
+        .dbs-fields,
         .work-fields {
           display: grid;
+        }
+        .dbs-privacy-note {
+          margin: 0 0 18px;
+          padding: 13px 14px;
+          border: 1px solid #d7e8de;
+          border-radius: 13px;
+          background: #f1fbf4;
+          color: #276343;
+          font-size: 12.5px;
+          font-weight: 800;
+          line-height: 1.5;
+        }
+        .dbs-file {
+          height: auto;
+          padding: 9px;
+          color: #4b5563;
+          font-size: 13px;
+        }
+        .dbs-file::file-selector-button {
+          margin-right: 10px;
+          padding: 7px 12px;
+          border: 0;
+          border-radius: 999px;
+          background: #f4ecfe;
+          color: #6d28d9;
+          font: inherit;
+          font-weight: 900;
+          cursor: pointer;
         }
         .help-copy {
           margin: -8px 2px 20px;

@@ -74,7 +74,7 @@ export default function Home() {
       {/* ---------- TRUST ---------- */}
       <section className="strip">
         {[
-          ["Vetted & insured", "Every provider background-checked"],
+          ["DBS-verified professionals", "Verification required before new bookings"],
           ["Clear before you commit", "See the cleaning price or approve a handyman quote"],
           ["Your regular pro", "Ask for them again next time"],
           ["Made for your schedule", "Choose a cleaning slot or request a preferred time"],
