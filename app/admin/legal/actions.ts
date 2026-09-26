@@ -47,7 +47,7 @@ export async function saveLegalDocument(
   }
 
   const audience =
-    slug === "terms"
+    slug === "terms" || slug === "cancellation-refund"
       ? "customers"
       : slug === "professional-partner-agreement"
         ? "professionals"

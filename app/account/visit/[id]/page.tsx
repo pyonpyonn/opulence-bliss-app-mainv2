@@ -48,7 +48,7 @@ export default async function VisitPage({
   const { data: row } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, household_notes, package_id, provider_id, subscription_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, public_rating_avg, public_rating_count, bio, photo_url, years_experience, services, vetting_status), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, household_notes, package_id, provider_id, subscription_id, offer_expires_at, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, public_rating_avg, public_rating_count, bio, photo_url, years_experience, services, vetting_status, dbs_verified), check_ins(arrived_at, left_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -154,6 +154,7 @@ export default async function VisitPage({
     years_experience: number | null;
     services: string[] | null;
     vetting_status: string | null;
+    dbs_verified: boolean | null;
   } | null;
   const checkIn = one(row.check_ins as never) as {
     arrived_at: string | null;
@@ -257,7 +258,7 @@ export default async function VisitPage({
       bio: provider?.bio ?? null,
       yearsExperience: provider?.years_experience ?? null,
       profession: professionFor(service, provider?.services ?? []),
-      backgroundChecked: provider?.vetting_status === "approved",
+      backgroundChecked: provider?.dbs_verified === true,
     },
     latestReview: latestProviderReview,
   };

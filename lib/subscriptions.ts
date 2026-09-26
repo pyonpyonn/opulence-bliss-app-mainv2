@@ -110,6 +110,7 @@ export async function generateBookings(subId: string, cycleStart: Date) {
         .select("id, profile_id")
         .in("id", ids)
         .eq("vetting_status", "approved")
+        .eq("dbs_verified", true)
         .eq("is_suspended", false)
         .contains("services", ["cleaning"]);
       provs = data ?? [];

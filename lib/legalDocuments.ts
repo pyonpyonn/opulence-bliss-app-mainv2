@@ -1,9 +1,14 @@
 import sanitizeHtml from "sanitize-html";
 import { CUSTOMER_TERMS_HTML } from "@/lib/customerTerms";
+import {
+  CANCELLATION_REFUND_POLICY_HTML,
+  PRIVACY_POLICY_HTML,
+} from "@/lib/policyContent";
 
 export const LEGAL_DOCUMENT_SLUGS = [
   "terms",
   "privacy",
+  "cancellation-refund",
   "professional-partner-agreement",
 ] as const;
 
@@ -30,21 +35,16 @@ const DEFAULTS: Record<LegalDocumentSlug, Omit<LegalDocument, "slug">> = {
   privacy: {
     title: "Privacy Policy",
     audience: "everyone",
-    version: "2026-09-20",
+    version: "1.0",
     updatedAt: null,
-    contentHtml: `
-      <p><strong>Draft for prototype review.</strong> This policy must be reviewed and approved before production launch.</p>
-      <h2>Information we use</h2>
-      <p>We use account, contact, address, booking, payment-status, message, review and support information to operate the service. Professional applications may also contain identity, work-status, experience and availability information.</p>
-      <h2>Why we use it</h2>
-      <p>We use information to create accounts, arrange and manage bookings, process payments, provide support, protect users, prevent abuse and meet legal obligations.</p>
-      <h2>Sharing</h2>
-      <p>Booking information is shared only as needed with the customer, assigned professional, payment providers and service suppliers. We do not sell personal information.</p>
-      <h2>Retention and security</h2>
-      <p>Information is retained only for operational, safety, accounting and legal needs, with access controls appropriate to the type of information.</p>
-      <h2>Your choices</h2>
-      <p>You may ask to access, correct or delete eligible information and may contact support about privacy questions or complaints.</p>
-    `,
+    contentHtml: PRIVACY_POLICY_HTML,
+  },
+  "cancellation-refund": {
+    title: "Cancellation & Refund Policy",
+    audience: "customers",
+    version: "1.0",
+    updatedAt: null,
+    contentHtml: CANCELLATION_REFUND_POLICY_HTML,
   },
   "professional-partner-agreement": {
     title: "Service Professional Partner Agreement",

@@ -67,7 +67,7 @@ export default async function AdminPage() {
   const { data: provRows } = await supabase
     .from("providers")
     .select(
-      "id, display_name, services, vetting_status, rating_avg, rating_count, profile:profiles!providers_profile_id_fkey(email)"
+      "id, display_name, services, vetting_status, dbs_verified, rating_avg, rating_count, profile:profiles!providers_profile_id_fkey(email)"
     );
 
   const pending = (provRows ?? []).filter(
@@ -212,7 +212,10 @@ export default async function AdminPage() {
                       {email} · {(p.services ?? []).join(", ") || "no skills"}
                     </div>
                   </div>
-                  <VettingButtons id={p.id} />
+                  <VettingButtons
+                    id={p.id}
+                    dbsVerified={p.dbs_verified === true}
+                  />
                 </div>
               );
             })

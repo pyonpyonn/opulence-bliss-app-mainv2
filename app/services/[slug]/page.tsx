@@ -44,8 +44,6 @@ const COPY: Record<
     proLink: string;
     proText: string;
     intro: string;
-    alsoTitle: string;
-    also: { label: string; type: string }[];
     faq: { q: string; a: string }[];
   }
 > = {
@@ -54,7 +52,7 @@ const COPY: Record<
     match: "clean",
     tagline: "Put your feet up — we'll take care of the rest.",
     ticks: [
-      "Vetted, insured cleaners in your area",
+      "Approved, DBS-verified cleaners in your area",
       "One-off or regular cleaning",
       "All products and equipment included",
       "Book online 24/7 · visits finish by 8pm",
@@ -63,18 +61,6 @@ const COPY: Record<
     proText: "Become an Opulence cleaner",
     intro:
       "Book a cleaner who learns your home — your products, your preferences, your rhythm. Choose the session and frequency that work for you.",
-    alsoTitle: "Looking for something else in cleaning?",
-    also: [
-      { label: "Essential Clean", type: "clean" },
-      { label: "One-Time Essential Clean", type: "clean" },
-      { label: "Express Clean", type: "clean" },
-      { label: "Signature Deep Clean", type: "clean" },
-      { label: "End of Tenancy / Move-In Clean", type: "clean" },
-      { label: "Guest Ready", type: "clean" },
-      { label: "Linen Care", type: "clean" },
-      { label: "Window Cleaning", type: "clean" },
-      { label: "Essential Clean and Linen Care", type: "clean" },
-    ],
     faq: [
       {
         q: "How do I book a cleaner near me?",
@@ -86,7 +72,7 @@ const COPY: Record<
       },
       {
         q: "Which cleaning session should I choose?",
-        a: "Essential Clean is for regular week-to-week upkeep. One-Time Essential Clean is a one-off standard refresh. Express Clean is our same-day standard clean, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset. Your price is confirmed when you book.",
+        a: "Essential Clean is £18.90 per hour for a booking of six weekly or monthly visits paid upfront. If you want to arrange each clean separately, choose One-Time Essential Clean. Express Clean is our same-day standard clean, subject to availability. Signature Deep Clean is a thorough top-to-bottom reset. Your full price is confirmed before checkout.",
       },
       {
         q: "What specialist cleaning services can I book?",
@@ -94,11 +80,11 @@ const COPY: Record<
       },
       {
         q: "How long can I book a clean for?",
-        a: "Choose from two to ten hours in 30-minute steps. The booking form shows the price per session as you adjust the duration.",
+        a: "Choose from two to eight hours in 30-minute steps. The booking form shows the price per session as you adjust the duration.",
       },
       {
         q: "When am I charged?",
-        a: "Your card is held when you book, but only charged once the visit is complete. If no cleaner accepts your booking, the hold is released and you pay nothing.",
+        a: "For a one-time visit, your card is held when you book and charged after the visit. For a six-visit Essential Clean booking, you pay for all six upfront. If a prepaid visit cannot be filled, that visit's amount is refunded.",
       },
       {
         q: "Can I have the same cleaner each time?",
@@ -425,7 +411,7 @@ export default function ServicePage() {
                       <div className="detail-body">
                         <h3>{selected.name}</h3>
                         <p className="detail-price">
-                          <span>Two-hour minimum · price shown when you book</span>
+                          <span>{selected.name === "Essential Clean" ? "Six-visit minimum · paid upfront · price shown when you book" : "Two-hour minimum · price shown when you book"}</span>
                         </p>
                         {selected.description && (
                           <p className="detail-desc">{selected.description}</p>
@@ -472,15 +458,15 @@ export default function ServicePage() {
             {[
               [
                 "We're thorough",
-                "Every provider is vetted, insured and rated by the people they've worked for.",
+                "Every provider is approved, DBS-verified and rated by the people they've worked for.",
               ],
               [
                 "We're flexible",
-                "Cancel 48+ hours before for a full refund, or 24–48 hours before for a 50% refund.",
+                "Cancel more than 48 hours before with no cancellation charge. Later cancellations may incur a charge under our policy.",
               ],
               [
                 "We're fair",
-                "You're only charged once the visit is done — and your provider keeps their full rate.",
+                "One-time visits are charged after completion; six-visit plans are paid upfront. Providers are paid after their visits.",
               ],
             ].map(([t, s]) => (
               <div key={t} className="lovecard">
@@ -545,20 +531,6 @@ export default function ServicePage() {
               </div>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ---------- SOMETHING ELSE ---------- */}
-      <section className="also">
-        <div className="inner">
-          <h2>{copy.alsoTitle}</h2>
-          <div className="chips">
-            {copy.also.map((a) => (
-              <a key={a.label} href={`/book?type=${a.type}`} className="chip">
-                {a.label}
-              </a>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -1215,33 +1187,6 @@ export default function ServicePage() {
         .sheet-backdrop,
         .sheet-close {
           display: none;
-        }
-
-        /* also */
-        .also {
-          padding: 62px 0 10px;
-        }
-        .chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-        }
-        .chip {
-          background: #fff;
-          border: 1.5px solid var(--line);
-          border-radius: 999px;
-          padding: 11px 20px;
-          font-size: 15px;
-          font-weight: 600;
-          color: var(--green);
-          text-decoration: none;
-        }
-        .chip:hover {
-          border-color: var(--apricot-deep);
-        }
-        .chip.alt {
-          background: var(--green-pale);
-          border-color: var(--green-pale);
         }
 
         /* faq */

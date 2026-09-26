@@ -44,7 +44,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "What Opulence Bliss is",
     content:
-      "Opulence Bliss is a premium pay-per-visit home-cleaning marketplace in London. Every cleaner is vetted and insured before they can take work. Customers choose a cleaning session, frequency preference, duration, date and time, then pay securely for that visit.",
+      "Opulence Bliss is a premium pay-per-visit home-cleaning marketplace in London. A cleaner must complete the application, DBS review and administrator approval before receiving new work. Customers choose a cleaning session, frequency preference, duration, date and time, then pay securely for that visit.",
   },
   {
     title: "How booking works",
@@ -64,7 +64,7 @@ const DOCS: { title: string; content: string }[] = [
   {
     title: "Cancelling and rescheduling",
     content:
-      "You can cancel or modify a visit from My bookings in your account or ask the assistant to prepare a time change. The assistant always shows a confirmation button before changing anything. A new time must meet the minimum notice and permitted appointment window. The cancellation policy is: 48 hours or more before the booking gives a full refund; from 24 hours up to 48 hours gives a 50% refund; and less than 24 hours gives no refund. The cancellation screen shows the exact amount before confirmation. Every modification keeps its audited history and the customer, provider and admin schedule are updated.",
+      "You can cancel or modify a visit from My bookings in your account or ask the assistant to prepare a time change. The assistant always shows a confirmation button before changing anything. A new time must meet the permitted appointment window. Under the cancellation policy, more than 48 hours' notice normally has no cancellation charge; 24 to 48 hours may incur up to 25%; less than 24 hours may incur up to 50%; and a same-day cancellation, no-access visit or missed appointment may incur up to 100%. The cancellation screen shows the exact amount before confirmation. Every modification keeps its audited history and the customer, provider and admin schedule are updated.",
   },
   {
     title: "Tipping",
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
               const duration = Number(p.duration_minutes ?? 120);
               const hourly = Number(p.price) * 60 / duration;
               return isCleaning
-                ? `${p.name} — £${hourly.toFixed(2)} per cleaner-hour; cleaning bookings run from two to ten hours in 30-minute steps. ${p.description ?? ""}`
+                ? `${p.name} — £${hourly.toFixed(2)} per cleaner-hour; cleaning bookings run from two to eight hours in 30-minute steps. ${p.description ?? ""}`
                 : `${p.name} — £${Number(p.price).toFixed(0)} per visit${
                     p.duration_minutes ? `, ${p.duration_minutes} minutes` : ""
                   } (${p.service_type ?? "service"}). ${p.description ?? ""}`;

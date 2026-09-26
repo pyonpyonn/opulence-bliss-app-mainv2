@@ -20,6 +20,7 @@ import {
 import {
   calculateCancellationPolicy,
   cancellationPaymentAction,
+  type CancellationPolicyTier,
 } from "@/lib/cancellationPolicy";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -124,7 +125,7 @@ export async function cancelCustomerBooking(
   id: string,
   reason?: string,
   source: "account" | "assistant" = "account",
-  expectedPolicyTier?: "full" | "half" | "none",
+  expectedPolicyTier?: CancellationPolicyTier,
 ) {
   const cleanReason = reason?.trim().slice(0, 240) || null;
 
@@ -202,7 +203,7 @@ export async function cancelCustomerBooking(
     const operationKey = shouldRefundCaptured
       ? policy.tier === "full"
         ? `refund:booking:${id}:full`
-        : `refund:booking:${id}:50`
+        : `refund:booking:${id}:${policy.refundPercent}`
       : shouldReleaseHold
         ? `release:booking:${id}`
         : `capture:cancellation:${id}:${policy.cancellationChargePence}`;
@@ -283,7 +284,7 @@ export async function cancelCustomerBooking(
                 { idempotencyKey: operationKey },
               );
 
-              if (policy.tier === "half") {
+              if (policy.refundPercent > 0 && policy.refundPercent < 100) {
                 const platformFee = platformFeePence / 100;
                 const update = await admin
                   .from("payments")
@@ -363,10 +364,10 @@ export async function cancelCustomerBooking(
           ? isCaptured
             ? `Booking cancelled. Your full £${policy.refundAmount.toFixed(2)} refund has been started.`
             : "Booking cancelled. Your full card hold is being released."
-          : policy.tier === "half"
+          : policy.refundPercent > 0
             ? isCaptured
-              ? `Booking cancelled. Your 50% refund of £${policy.refundAmount.toFixed(2)} has been started.`
-              : `Booking cancelled. £${policy.cancellationCharge.toFixed(2)} has been charged and the remaining 50% of the hold is being released.`
+              ? `Booking cancelled. Your ${policy.refundPercent}% refund of £${policy.refundAmount.toFixed(2)} has been started.`
+              : `Booking cancelled. £${policy.cancellationCharge.toFixed(2)} has been charged and the remaining ${policy.refundPercent}% of the hold is being released.`
             : `Booking cancelled. The £${policy.cancellationCharge.toFixed(2)} booking amount is non-refundable.`;
     } catch (error) {
       const failure =

@@ -17,8 +17,8 @@
 }
 
 .blogHero {
-  padding-top: clamp(42px, 6vw, 68px);
-  padding-bottom: clamp(44px, 6vw, 68px);
+  padding-top: clamp(32px, 4vw, 48px);
+  padding-bottom: clamp(34px, 4vw, 50px);
 }
 
 .heroInner,
@@ -159,18 +159,43 @@
   gap: 28px;
 }
 
+.blogGrid {
+  gap: 20px;
+}
+
 .card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--ob-border);
-  border-radius: 24px;
+  border-radius: 20px;
   background: var(--ob-surface);
 }
 
-.cardArt { min-height: 190px; }
+.blogGrid .cardArt { min-height: 126px; }
+.blogGrid .artMark {
+  width: 72px;
+  height: 72px;
+  border-radius: 21px;
+  font-size: 30px;
+}
 .purple { background: linear-gradient(135deg, #efe3ff, #cfa9f7); }
 .gold { background: linear-gradient(135deg, #fff0bc, #f0be53); }
 .pink { background: linear-gradient(135deg, #ffe5ef, #d999dc); }
-.cardBody { padding: 28px; }
+.cardBody { padding: 22px; }
+.blogGrid .cardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.blogGrid .cardBody .meta { margin-bottom: 11px; }
+.blogGrid .cardBody p {
+  margin: 12px 0 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.blogGrid .readLink { margin-top: auto; }
 
 .articleHero { padding-bottom: 76px; }
 .articleHero h1 { font-size: clamp(32px, 4.4vw, 52px); }
@@ -292,6 +317,8 @@
   .hero { padding-left: 20px; padding-right: 20px; }
   .content, .articleShell { padding-left: 20px; padding-right: 20px; }
   .grid { grid-template-columns: 1fr; }
+  .blogGrid { gap: 16px; }
+  .blogGrid .cardArt { min-height: 104px; }
   .featureCopy { padding: 30px; }
   .faqItem summary { padding: 19px; font-size: 16px; }
   .faqAnswer { padding: 0 19px 20px; }

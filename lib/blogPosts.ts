@@ -34,9 +34,10 @@ export const blogPosts: BlogPost[] = [
           "We calculate the cancellation window from the moment you confirm cancellation to the scheduled start time of your booking.",
         ],
         points: [
-          "48 hours or more before the booking: full refund.",
-          "From 24 hours up to 48 hours before the booking: 50% refund.",
-          "Less than 24 hours before the booking: no refund.",
+          "More than 48 hours before the booking: normally no cancellation charge and a full refund.",
+          "From 24 to 48 hours before the booking: up to a 25% cancellation charge.",
+          "Less than 24 hours before the booking: up to a 50% cancellation charge.",
+          "Same-day cancellation, no access or a missed appointment: up to a 100% cancellation charge.",
         ],
       },
       {
@@ -49,7 +50,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "You will see the amount before confirming",
         paragraphs: [
-          "Open the visit in My bookings and choose Cancel booking. The confirmation window shows whether you receive a full refund, a 50% refund or no refund, together with the exact amount. The policy is recorded with the cancellation for a clear payment history.",
+          "Open the visit in My bookings and choose Cancel booking. The confirmation window shows the exact refund and cancellation charge before you confirm. The policy tier is recorded with the cancellation for a clear payment history.",
         ],
       },
     ],
@@ -68,11 +69,11 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Choose the cleaning session that fits",
         paragraphs: [
-          "Every cleaning session can be booked for two to ten hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
+          "Every cleaning session can be booked for two to eight hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
         ],
         points: [
-          "Essential Clean — £18.90 per hour. Our regular standard clean covers dusting, floors, bedroom, kitchen and bathroom to keep your home fresh week to week.",
-          "One-Time Essential Clean — £22.90 per hour. A single standard clean with no ongoing commitment, perfect for a one-off refresh.",
+          "Essential Clean — £18.90 per hour for six weekly or monthly visits booked and paid together. Our regular standard clean covers dusting, floors, bedroom, kitchen and bathroom.",
+          "One-Time Essential Clean — £22.99 per hour. A single standard clean with no ongoing commitment, perfect for a one-off refresh.",
           "Express Clean — £22.90 per hour. A same-day standard clean for when time is tight, subject to available cleaners and time slots.",
           "Signature Deep Clean — £24.90 per hour. A thorough, top-to-bottom clean that reaches the spots regular cleaning misses, ideal for a seasonal reset or before hosting.",
           "End of Tenancy / Move-In Clean — £25 per hour. A detailed deep clean that leaves a property spotless for moving out or moving in, ready for a landlord or inspection.",
@@ -86,7 +87,7 @@ export const blogPosts: BlogPost[] = [
         heading: "Choose the time your home needs",
         paragraphs: [
           "After choosing a cleaning session, select the number of hours that suits the condition of your home and your priorities.",
-          "Our cleaning visits run from two to ten hours in 30-minute steps, so you can choose a clear finish time without guessing at odd intervals.",
+          "Our cleaning visits run from two to eight hours in 30-minute steps, so you can choose a clear finish time without guessing at odd intervals.",
         ],
       },
       {

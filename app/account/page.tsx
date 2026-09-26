@@ -38,6 +38,7 @@ type Row = {
         photo_url: string | null;
         years_experience: number | null;
         vetting_status: string | null;
+        dbs_verified: boolean | null;
         public_rating_avg: number | null;
         public_rating_count: number | null;
       }
@@ -46,6 +47,7 @@ type Row = {
         photo_url: string | null;
         years_experience: number | null;
         vetting_status: string | null;
+        dbs_verified: boolean | null;
         public_rating_avg: number | null;
         public_rating_count: number | null;
       }[]
@@ -130,7 +132,7 @@ export default async function AccountPage() {
   const { data: rowsData } = await supabase
     .from("bookings")
     .select(
-      "id, scheduled_at, status, address, package_id, subscription_id, household_notes, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, photo_url, years_experience, vetting_status, public_rating_avg, public_rating_count), check_ins(arrived_at, left_at)",
+      "id, scheduled_at, status, address, package_id, subscription_id, household_notes, provider_delay_minutes, provider_delay_reported_at, duration_minutes, property_size_sqm, packages(name, duration_minutes, price), providers(display_name, photo_url, years_experience, vetting_status, dbs_verified, public_rating_avg, public_rating_count), check_ins(arrived_at, left_at)",
     )
     .order("scheduled_at", { ascending: false });
 
@@ -258,7 +260,7 @@ export default async function AccountPage() {
       providerName: prv?.display_name ?? null,
       providerPhoto: prv?.photo_url ?? null,
       providerYearsExperience: prv?.years_experience ?? null,
-      providerVerified: prv?.vetting_status === "approved",
+      providerVerified: prv?.dbs_verified === true,
       providerRating: prv?.public_rating_avg ?? null,
       providerRatingCount: prv?.public_rating_count ?? 0,
       paymentAmount: amount > 0 ? amount : null,

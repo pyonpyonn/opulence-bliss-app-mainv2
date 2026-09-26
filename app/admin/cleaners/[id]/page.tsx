@@ -1,5 +1,7 @@
 import Link from "next/link";
 import AdminNav from "../../AdminNav";
+import DbsReviewButtons from "../../DbsReviewButtons";
+import VettingButtons from "../../VettingButtons";
 import { requireAdminPage } from "@/lib/adminSession";
 import {
   setProviderDirectoryVisibility,
@@ -36,10 +38,10 @@ function formatApplicationAvailability(value: Record<string, string> | null | un
 export default async function ProfessionalRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user } = await requireAdminPage();
-  const [providerResult, bookingsResult, hoursResult, suspensionResult] = await Promise.all([
+  const [providerResult, bookingsResult, hoursResult, suspensionResult, dbsResult] = await Promise.all([
     supabase
       .from("providers")
-      .select("id, profile_id, display_name, services, vetting_status, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, salutation, date_of_birth, right_to_work, current_self_employment_status, current_self_employment_detail, business_name, cleaning_experience_years, cleaning_experience_types, other_cleaning_experience, max_travel_distance, weekly_availability, created_at)")
+      .select("id, profile_id, display_name, services, vetting_status, dbs_verified, rating_avg, rating_count, years_experience, created_at, is_suspended, suspended_at, suspension_reason, payout_schedule, show_on_our_pros, profile:profiles!providers_profile_id_fkey(email, full_name, phone, address, postcode), application:provider_onboarding_details(preferred_weekly_hours, resident_status, utr_number, self_employed_confirmed, salutation, date_of_birth, right_to_work, current_self_employment_status, current_self_employment_detail, business_name, cleaning_experience_years, cleaning_experience_types, other_cleaning_experience, max_travel_distance, weekly_availability, created_at)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -58,6 +60,11 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
       .eq("provider_id", id)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("provider_dbs_checks")
+      .select("provider_id, certificate_number, issue_date, certificate_storage_path, certificate_original_name, certificate_mime_type, status, review_note, submitted_at, uploaded_at, reviewed_at")
+      .eq("provider_id", id)
+      .maybeSingle(),
   ]);
 
   const provider = providerResult.data;
@@ -84,6 +91,14 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
     weekly_availability: Record<string, string> | null;
     created_at: string;
   } | null;
+  const dbs = dbsResult.data;
+  let dbsCertificateUrl: string | null = null;
+  if (dbs?.uploaded_at && dbs.certificate_storage_path) {
+    const { data: signedCertificate } = await supabase.storage
+      .from("provider-dbs")
+      .createSignedUrl(dbs.certificate_storage_path, 10 * 60);
+    dbsCertificateUrl = signedCertificate?.signedUrl ?? null;
+  }
   const bookings = bookingsResult.data ?? [];
   const bookingIds = bookings.map((booking) => booking.id);
   const [paymentsResult, payoutsResult, eventsResult] = await Promise.all([
@@ -146,6 +161,108 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
           </div>
         </section>
 
+        <section style={dbsCard}>
+          <div style={recordTop}>
+            <div>
+              <p style={eyebrow}>Identity and safety review</p>
+              <h2 style={{ ...sectionTitle, marginBottom: 5 }}>DBS certificate</h2>
+              <p style={muted}>
+                This evidence is private and must be reviewed before the
+                professional can be approved.
+              </p>
+            </div>
+            <span
+              style={{
+                ...status,
+                background:
+                  dbs?.status === "verified"
+                    ? "#dff5e8"
+                    : dbs?.status === "failed"
+                      ? "#ffe6ea"
+                      : "#fff3d6",
+                color:
+                  dbs?.status === "verified"
+                    ? "#137b4e"
+                    : dbs?.status === "failed"
+                      ? "#b0384f"
+                      : "#8a5a00",
+              }}
+            >
+              {dbs?.status ?? "not submitted"}
+            </span>
+          </div>
+
+          {dbs ? (
+            <>
+              <div style={applicationGrid}>
+                <ApplicationField
+                  label="Certificate number"
+                  value={dbs.certificate_number}
+                />
+                <ApplicationField
+                  label="Issue date"
+                  value={new Date(`${dbs.issue_date}T00:00:00`).toLocaleDateString(
+                    "en-GB",
+                    { day: "numeric", month: "long", year: "numeric" },
+                  )}
+                />
+                <ApplicationField
+                  label="File"
+                  value={dbs.certificate_original_name}
+                />
+                <ApplicationField
+                  label="Uploaded"
+                  value={dbs.uploaded_at ? when(dbs.uploaded_at) : "Upload incomplete"}
+                />
+              </div>
+
+              {dbs.review_note ? (
+                <p style={reviewNote}>
+                  <strong>Review note:</strong> {dbs.review_note}
+                </p>
+              ) : null}
+
+              <div style={dbsActions}>
+                {dbsCertificateUrl ? (
+                  <a
+                    href={dbsCertificateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={certificateLink}
+                  >
+                    Open DBS certificate ↗
+                  </a>
+                ) : (
+                  <span style={uploadMissing}>
+                    Certificate upload has not been completed.
+                  </span>
+                )}
+                {dbs.uploaded_at ? (
+                  <DbsReviewButtons
+                    id={id}
+                    status={dbs.status as "pending" | "verified" | "failed"}
+                  />
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <p style={uploadMissing}>
+              No DBS details exist for this professional. Approval remains
+              unavailable.
+            </p>
+          )}
+
+          {provider.vetting_status === "pending" && !provider.is_suspended ? (
+            <div style={approvalGate}>
+              <strong>Application decision</strong>
+              <VettingButtons
+                id={id}
+                dbsVerified={provider.dbs_verified === true}
+              />
+            </div>
+          ) : null}
+        </section>
+
         <section
           style={{
             ...availability,
@@ -157,13 +274,15 @@ export default async function ProfessionalRecordPage({ params }: { params: Promi
           <span>
             {provider.vetting_status !== "approved"
               ? "This professional cannot appear publicly until their application is approved."
+              : !provider.dbs_verified
+                ? "This professional is hidden from the public directory until their DBS is verified."
               : provider.is_suspended
                 ? "This professional is hidden while their account is suspended. Their saved directory setting is kept."
                 : provider.show_on_our_pros
                   ? "This professional is currently visible on the public Our Pros page."
                   : "This professional is hidden from the public Our Pros page."}
           </span>
-          {provider.vetting_status === "approved" ? (
+          {provider.vetting_status === "approved" && provider.dbs_verified ? (
             <form
               action={setProviderDirectoryVisibility.bind(
                 null,
@@ -272,6 +391,12 @@ const availability: React.CSSProperties = { display: "grid", gap: 5, marginBotto
 const applicationCard: React.CSSProperties = { display: "grid", gap: 18, marginBottom: 18, padding: 20, border: "1px solid #dfd1f8", borderRadius: 16, background: "linear-gradient(145deg, #fffaf0, #f7f1ff)" };
 const applicationGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 };
 const applicationField: React.CSSProperties = { display: "grid", gap: 4, padding: "12px 13px", border: "1px solid #e6ddf5", borderRadius: 11, background: "rgba(255,255,255,0.82)", color: "#68717d", fontSize: 11.5, overflowWrap: "anywhere" };
+const dbsCard: React.CSSProperties = { display: "grid", gap: 17, marginBottom: 18, padding: 20, border: "1px solid #ead7a1", borderRadius: 16, background: "linear-gradient(145deg, #fffdf7, #fff8e8)" };
+const dbsActions: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" };
+const certificateLink: React.CSSProperties = { display: "inline-flex", alignItems: "center", minHeight: 40, padding: "8px 15px", border: "1.5px solid #6d28d9", borderRadius: 999, color: "#6d28d9", background: "#fff", fontSize: 12.5, fontWeight: 900, textDecoration: "none" };
+const uploadMissing: React.CSSProperties = { margin: 0, color: "#8a5a00", fontSize: 12.5, fontWeight: 800 };
+const reviewNote: React.CSSProperties = { margin: 0, padding: "11px 13px", borderRadius: 11, background: "rgba(255,255,255,0.75)", color: "#5f6874", fontSize: 12.5 };
+const approvalGate: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", paddingTop: 15, borderTop: "1px solid #eadfbd" };
 const sectionTitle: React.CSSProperties = { margin: "0 0 13px", fontSize: 20, fontWeight: 900 };
 const list: React.CSSProperties = { display: "grid", gap: 11 };
 const recordCard: React.CSSProperties = { padding: "17px 18px", border: "1px solid #e5e7eb", borderRadius: 15, background: "#fff" };

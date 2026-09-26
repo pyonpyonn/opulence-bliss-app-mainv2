@@ -35,6 +35,7 @@ export default function ProvidersPage() {
           "id, display_name, bio, photo_url, years_experience, services, public_rating_avg, public_rating_count"
         )
         .eq("vetting_status", "approved")
+        .eq("dbs_verified", true)
         .eq("is_suspended", false)
         .eq("show_on_our_pros", true)
         .order("public_rating_avg", { ascending: false, nullsFirst: false });
@@ -54,9 +55,9 @@ export default function ProvidersPage() {
         <p className="eyebrow">Our professionals</p>
         <h1>The people who&apos;ll be in your home</h1>
         <p className="lede">
-          Every provider is vetted, insured and rated by the clients they&apos;ve
-          worked for. We&apos;ll match you with whoever&apos;s best placed for
-          your booking.
+          Every professional shown here has completed our approval and DBS
+          review and is rated by the clients they&apos;ve worked for. We&apos;ll match
+          you with whoever&apos;s best placed for your booking.
         </p>
 
         {loading ? (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  CANCELLATION_REFUND_URL,
   PRIVACY_URL,
   PROFESSIONAL_PARTNER_AGREEMENT_URL,
   TERMS_URL,
@@ -84,6 +85,13 @@ export default function SiteFooter() {
               Privacy Policy
             </a>
           )}
+          <a
+            href={CANCELLATION_REFUND_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Cancellation &amp; Refund Policy
+          </a>
           <a
             href={PROFESSIONAL_PARTNER_AGREEMENT_URL}
             target="_blank"

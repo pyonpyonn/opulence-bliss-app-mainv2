@@ -52,6 +52,15 @@ function assertTestMode(tool: string) {
 
 export async function approveProvider(id: string) {
   const s = await requireAdmin();
+  const { data: dbs, error: dbsError } = await s
+    .from("provider_dbs_checks")
+    .select("status, uploaded_at")
+    .eq("provider_id", id)
+    .maybeSingle();
+  if (dbsError) throw new Error(dbsError.message);
+  if (dbs?.status !== "verified" || !dbs.uploaded_at) {
+    throw new Error("Verify the uploaded DBS certificate before approving this professional.");
+  }
   const { data: p, error } = await s
     .from("providers")
     .update({ vetting_status: "approved" })
@@ -75,6 +84,80 @@ export async function approveProvider(id: string) {
   revalidatePath("/admin/cleaners");
   revalidatePath(`/admin/cleaners/${id}`);
   revalidatePath("/worker");
+}
+
+export async function setProviderDbsStatus(
+  id: string,
+  status: "verified" | "failed",
+  note?: string,
+) {
+  const s = await requireAdmin();
+  const {
+    data: { user },
+  } = await s.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const { data: check, error: checkError } = await admin
+    .from("provider_dbs_checks")
+    .select("certificate_storage_path, uploaded_at")
+    .eq("provider_id", id)
+    .maybeSingle();
+  if (checkError) throw new Error(checkError.message);
+  if (!check?.certificate_storage_path || !check.uploaded_at) {
+    throw new Error("The DBS certificate has not been uploaded yet.");
+  }
+
+  if (status === "verified") {
+    const parts = check.certificate_storage_path.split("/");
+    const fileName = parts.pop();
+    const folder = parts.join("/");
+    const { data: files, error: storageError } = await admin.storage
+      .from("provider-dbs")
+      .list(folder, { search: fileName, limit: 10 });
+    if (storageError) throw new Error(storageError.message);
+    if (!fileName || !files?.some((file) => file.name === fileName)) {
+      throw new Error("The uploaded DBS certificate could not be found.");
+    }
+  }
+
+  const reviewNote = String(note ?? "").trim().slice(0, 500) || null;
+  if (status === "failed" && !reviewNote) {
+    throw new Error("Record a reason when a DBS check fails.");
+  }
+
+  const { error } = await admin
+    .from("provider_dbs_checks")
+    .update({
+      status,
+      review_note: reviewNote,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("provider_id", id);
+  if (error) throw new Error(error.message);
+
+  const { data: provider } = await admin
+    .from("providers")
+    .select("profile_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (provider?.profile_id) {
+    await admin.from("notifications").insert({
+      user_id: provider.profile_id,
+      title: status === "verified" ? "DBS certificate verified" : "DBS certificate needs attention",
+      body:
+        status === "verified"
+          ? "Your DBS certificate has been verified. Your application can now be approved."
+          : `Your DBS certificate was not verified.${reviewNote ? ` ${reviewNote}` : ""}`,
+      href: "/worker/profile",
+    });
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/cleaners");
+  revalidatePath(`/admin/cleaners/${id}`);
+  revalidatePath("/providers");
 }
 
 export async function rejectProvider(id: string) {
@@ -126,6 +209,17 @@ export async function setProviderDirectoryVisibility(
   visible: boolean,
 ) {
   const s = await requireAdmin();
+  if (visible) {
+    const { data: provider, error: providerError } = await s
+      .from("providers")
+      .select("dbs_verified")
+      .eq("id", id)
+      .maybeSingle();
+    if (providerError) throw new Error(providerError.message);
+    if (!provider?.dbs_verified) {
+      throw new Error("Verify the DBS certificate before showing this professional publicly.");
+    }
+  }
   const { error } = await s.rpc("admin_set_provider_directory_visibility", {
     p_provider_id: id,
     p_visible: visible,

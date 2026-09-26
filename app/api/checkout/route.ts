@@ -15,6 +15,9 @@ import {
   BOOKING_HORIZON_MESSAGE,
 } from "@/lib/appointmentWindow";
 import { normaliseOptionalBookingTimes } from "@/lib/bookingTimeChoices";
+import { bookingPolicyError } from "@/lib/bookingPolicy";
+import { REGULAR_VISIT_COUNT, regularVisitSlots, type RegularFrequency } from "@/lib/regularBooking";
+import { bookingNotesForHome, parseCleaningHome } from "@/lib/cleaningHome";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -26,7 +29,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { packageId, postcode, address, frequency, request, slot, optionalSlots, promoCode, durationMinutes, preferredProviderId } = await req.json();
+    const { packageId, postcode, address, frequency, request, home, slot, optionalSlots, promoCode, durationMinutes, preferredProviderId } = await req.json();
     if (!packageId) {
       return NextResponse.json({ error: "Missing packageId" }, { status: 400 });
     }
@@ -57,7 +60,11 @@ export async function POST(req: NextRequest) {
     }
     const minutes = cleaning ? Number(durationMinutes) : pkg.duration_minutes ?? 120;
     if (cleaning && !validCleaningDuration(minutes)) {
-      return NextResponse.json({ error: "Choose 2–10 hours in 30-minute steps." }, { status: 400 });
+      return NextResponse.json({ error: "Choose 2–8 hours in 30-minute steps." }, { status: 400 });
+    }
+    const cleaningHome = parseCleaningHome(home);
+    if (!cleaningHome) {
+      return NextResponse.json({ error: "Add your property type, bedrooms and bathrooms." }, { status: 400 });
     }
     const enteredAddress = String(address ?? "").trim();
     if (enteredAddress.length < 5) {
@@ -69,9 +76,11 @@ export async function POST(req: NextRequest) {
       ? enteredAddress
       : `${enteredAddress}, ${String(postcode ?? "").trim().toUpperCase()}`;
     const bookingFrequency = String(frequency ?? "one_time");
-    if (!["one_time", "weekly", "monthly"].includes(bookingFrequency)) {
-      return NextResponse.json({ error: "Choose a valid cleaning frequency." }, { status: 400 });
+    const policyError = bookingPolicyError(pkg.name, bookingFrequency);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
     }
+    const regular = bookingFrequency !== "one_time";
     if (!slot || !appointmentFitsWindow(slot, minutes)) {
       return NextResponse.json(
         { error: APPOINTMENT_WINDOW_MESSAGE },
@@ -83,6 +92,17 @@ export async function POST(req: NextRequest) {
         { error: BOOKING_HORIZON_MESSAGE },
         { status: 400 },
       );
+    }
+    let regularSlots: string[] = [];
+    if (regular) {
+      try {
+        regularSlots = regularVisitSlots(slot, bookingFrequency as RegularFrequency, minutes);
+      } catch (cause) {
+        return NextResponse.json({ error: cause instanceof Error ? cause.message : "Choose a valid six-visit schedule." }, { status: 400 });
+      }
+      if (Array.isArray(optionalSlots) && optionalSlots.length > 0) {
+        return NextResponse.json({ error: "Optional times are only available for one-time visits. Your six regular dates are shown before payment." }, { status: 400 });
+      }
     }
     let alternativeTimes: string[];
     try {
@@ -114,7 +134,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const gross = bookingPricePence(pkg, minutes); // amount in pence
+    const perVisitGross = bookingPricePence(pkg, minutes);
+    const gross = perVisitGross * (regular ? REGULAR_VISIT_COUNT : 1); // amount in pence
 
     // Who's booking? Used to prefill their email on Stripe's checkout.
     const ssr = await createServerClient();
@@ -135,6 +156,16 @@ export async function POST(req: NextRequest) {
         { error: "Booking is temporarily unavailable while an update finishes. No payment has been taken." },
         { status: 503 },
       );
+    }
+    if (regular) {
+      const { data: regularReady, error: regularReadyError } = await supabaseAdmin.rpc("regular_checkout_ready");
+      if (regularReadyError || regularReady !== true) {
+        console.error("Six-visit checkout is not ready:", regularReadyError);
+        return NextResponse.json(
+          { error: "Six-visit booking is temporarily unavailable while an update finishes. No payment has been taken." },
+          { status: 503 },
+        );
+      }
     }
 
     if (preferredProviderId) {
@@ -201,6 +232,7 @@ export async function POST(req: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      ...(regular ? { payment_method_types: ["card"] as ["card"] } : {}),
       client_reference_id: user.id,
       customer_email: user?.email ?? undefined,
       line_items: [
@@ -210,7 +242,7 @@ export async function POST(req: NextRequest) {
             currency: "gbp",
             unit_amount: chargeAmount,
             product_data: {
-              name: `${pkg.name} — ${minutes / 60} hours${
+              name: `${pkg.name} — ${regular ? "6 visits × " : ""}${minutes / 60} hours${
                 appliedCode ? ` (${appliedCode} applied)` : ""
               }`,
             },
@@ -218,14 +250,16 @@ export async function POST(req: NextRequest) {
         },
       ],
       payment_intent_data: {
-        // Authorise now, capture when the job is completed (like Wecasa).
-        capture_method: "manual",
-        // This is the split: platform keeps `application_fee_amount`,
-        // Stripe transfers the rest to the connected provider account.
-        application_fee_amount: platformFee,
-        transfer_data: { destination: process.env.PROVIDER_TEST_ACCOUNT! },
+        // A six-visit series is charged upfront to the platform. Each cleaner
+        // receives a separate transfer only after their own visit is complete.
+        capture_method: regular ? "automatic" : "manual",
+        ...(regular
+          ? { transfer_group: `ob_regular_${crypto.randomUUID()}` }
+          : { application_fee_amount: platformFee, transfer_data: { destination: process.env.PROVIDER_TEST_ACCOUNT! } }),
         metadata: {
           kind: "booking",
+          upfront_regular: regular ? "1" : "0",
+          regular_visit_count: regular ? String(REGULAR_VISIT_COUNT) : "1",
           customer_id: user.id,
           duration_minutes: String(minutes),
           service_address: serviceAddress.slice(0, 480),
@@ -234,10 +268,11 @@ export async function POST(req: NextRequest) {
           package: pkg.name,
           package_id: packageId,
           postcode: postcode ?? "",
-          request: (request ?? "").slice(0, 480),
+          request: bookingNotesForHome(cleaningHome, String(request ?? "")),
           slot: slot ?? "",
           provider_amount: String(providerAmount),
           platform_margin: String(platformFee),
+          per_visit_gross: String(perVisitGross),
           promo_code: appliedCode ?? "",
           discount: String(discount),
         },
@@ -256,6 +291,7 @@ export async function POST(req: NextRequest) {
         customer_id: user.id,
         preferred_scheduled_at: slot,
         optional_scheduled_at: alternativeTimes,
+        ...(regular ? { regular_scheduled_at: regularSlots } : {}),
       });
     if (timeChoicesError) {
       await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
