@@ -20,6 +20,7 @@ import BookingProgress from "@/components/BookingProgress";
 import { appointmentTimeLabel as clock } from "@/lib/appointmentWindow";
 import JobActions, { CheckInControl } from "./JobActions";
 import ReportDelay from "./ReportDelay";
+import { splitBookingHomeNotes } from "@/lib/cleaningHome";
 
 export type ActiveJobData = {
   id: string;
@@ -195,6 +196,7 @@ export default function ActiveJob({
   const detailHref = live ? "/worker/current" : `/worker/job/${job.id}`;
   const checkInPanelId = `dashboard-checkin-panel-${job.id}`;
   const customerInitial = (job.client ?? "C").trim().charAt(0).toUpperCase();
+  const bookingNotes = splitBookingHomeNotes(job.notes);
 
   return (
     <section className={`dashboard-job ${status.tone}`}>
@@ -296,16 +298,16 @@ export default function ActiveJob({
           </div>
           <div className="offer-facts" aria-label="Details to review before responding">
             <div>
-              <span>Property size</span>
+              <span>Home details</span>
               <strong>
-                {job.propertySizeSqm !== null && job.propertySizeSqm !== undefined
+                {bookingNotes.home ?? (job.propertySizeSqm !== null && job.propertySizeSqm !== undefined
                   ? `${Number(job.propertySizeSqm).toFixed(1)} m²`
-                  : "Not provided"}
+                  : "Not provided")}
               </strong>
             </div>
             <div>
               <span>Special instructions</span>
-              <strong>{job.notes?.trim() || "No special instructions"}</strong>
+              <strong>{bookingNotes.request.trim() || "No special instructions"}</strong>
             </div>
           </div>
         </>

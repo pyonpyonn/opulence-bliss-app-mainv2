@@ -24,6 +24,7 @@ import JobActions, { CheckInControl } from "./JobActions";
 import JobExceptions from "./JobExceptions";
 import ReportDelay from "./ReportDelay";
 import type { WorkerJobWorkspaceData } from "./jobData";
+import { splitBookingHomeNotes } from "@/lib/cleaningHome";
 
 function money(value: number | null) {
   return value === null ? "—" : `£${value.toFixed(2)}`;
@@ -210,6 +211,7 @@ export default function WorkerJobWorkspace({
   }, [modalOpen]);
 
   const bookedFinish = endTime(job.scheduledAt, job.durationMinutes);
+  const bookingNotes = splitBookingHomeNotes(job.notes);
   const finish = endTime(
     job.status === "in_progress" && job.checkIn.arrivedAt
       ? job.checkIn.arrivedAt
@@ -340,7 +342,11 @@ export default function WorkerJobWorkspace({
           details={timelineDetails}
         />
 
-        {job.propertySizeSqm && <p>Property size: {Number(job.propertySizeSqm).toFixed(1)} m²</p>}
+        {bookingNotes.home
+          ? <p>Home details: {bookingNotes.home}</p>
+          : job.propertySizeSqm
+            ? <p>Property size: {Number(job.propertySizeSqm).toFixed(1)} m²</p>
+            : null}
         <div className="summary-grid">
           <SummaryCard tone="sky" icon={<MapPin size={22} />} label="Location">
             <strong>{job.address ?? "Address unavailable"}</strong>
@@ -405,7 +411,7 @@ export default function WorkerJobWorkspace({
             <Instruction
               icon={<MessageSquare size={18} />}
               title="Booking notes"
-              body={job.notes ?? "No special requests were added."}
+              body={bookingNotes.request || "No special requests were added."}
             />
             <Instruction
               icon={<Clock3 size={18} />}

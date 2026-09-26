@@ -17,6 +17,7 @@ import {
 import { normaliseOptionalBookingTimes } from "@/lib/bookingTimeChoices";
 import { bookingPolicyError } from "@/lib/bookingPolicy";
 import { REGULAR_VISIT_COUNT, regularVisitSlots, type RegularFrequency } from "@/lib/regularBooking";
+import { bookingNotesForHome, parseCleaningHome } from "@/lib/cleaningHome";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -28,7 +29,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { packageId, postcode, address, frequency, request, slot, optionalSlots, promoCode, durationMinutes, preferredProviderId } = await req.json();
+    const { packageId, postcode, address, frequency, request, home, slot, optionalSlots, promoCode, durationMinutes, preferredProviderId } = await req.json();
     if (!packageId) {
       return NextResponse.json({ error: "Missing packageId" }, { status: 400 });
     }
@@ -59,7 +60,11 @@ export async function POST(req: NextRequest) {
     }
     const minutes = cleaning ? Number(durationMinutes) : pkg.duration_minutes ?? 120;
     if (cleaning && !validCleaningDuration(minutes)) {
-      return NextResponse.json({ error: "Choose 2–10 hours in 30-minute steps." }, { status: 400 });
+      return NextResponse.json({ error: "Choose 2–8 hours in 30-minute steps." }, { status: 400 });
+    }
+    const cleaningHome = parseCleaningHome(home);
+    if (!cleaningHome) {
+      return NextResponse.json({ error: "Add your property type, bedrooms and bathrooms." }, { status: 400 });
     }
     const enteredAddress = String(address ?? "").trim();
     if (enteredAddress.length < 5) {
@@ -263,7 +268,7 @@ export async function POST(req: NextRequest) {
           package: pkg.name,
           package_id: packageId,
           postcode: postcode ?? "",
-          request: (request ?? "").slice(0, 480),
+          request: bookingNotesForHome(cleaningHome, String(request ?? "")),
           slot: slot ?? "",
           provider_amount: String(providerAmount),
           platform_margin: String(platformFee),

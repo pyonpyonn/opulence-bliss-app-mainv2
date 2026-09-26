@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
         ? Math.min(Math.round(requestedDuration), 12 * 60)
         : DEFAULT_APPOINTMENT_DURATION_MINUTES;
     if (isCleaning(req.nextUrl.searchParams.get("service")) && !validCleaningDuration(requestedDuration)) {
-      return NextResponse.json({ error: "Cleaning sessions must be 2–10 hours in 30-minute steps." }, { status: 400 });
+      return NextResponse.json({ error: "Cleaning sessions must be 2–8 hours in 30-minute steps." }, { status: 400 });
     }
     const out = outwardCode(postcode);
     if (!out) {

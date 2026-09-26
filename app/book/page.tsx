@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CLEANING_DURATIONS, isCleaning, bookingPricePence, cleaningHourlyRatePence, compareCleaningSessions } from "@/lib/cleaningBooking";
 import { bookingPolicyError } from "@/lib/bookingPolicy";
 import { REGULAR_VISIT_COUNT, regularVisitSlots, type RegularFrequency } from "@/lib/regularBooking";
+import { cleaningHomeLabel, parseCleaningHome, recommendedCleaningMinutesForHome, type PropertyType } from "@/lib/cleaningHome";
 import AppointmentTimePicker from "@/components/AppointmentTimePicker";
 
 const supabase = createClient();
@@ -97,12 +98,16 @@ export default function BookPage() {
   const [selected, setSelected] = useState<Pkg | null>(null);
 
   const [cleaningMinutes, setCleaningMinutes] = useState(120);
+  const [propertyType, setPropertyType] = useState<PropertyType | "">("");
+  const [bedrooms, setBedrooms] = useState<number | "">("");
+  const [bathrooms, setBathrooms] = useState<number | "">("");
   const [frequency, setFrequency] = useState<BookingFrequency>("weekly");
   const [previousCleaners, setPreviousCleaners] = useState<{ provider_id: string; display_name: string }[]>([]);
   const [preferredCleaner, setPreferredCleaner] = useState("");
   const cleaning = isCleaning(selected?.service_type);
   const minutes = cleaning ? cleaningMinutes : selected?.duration_minutes ?? 120;
   const addressValid = address.trim().length >= 5;
+  const home = parseCleaningHome({ propertyType, bedrooms, bathrooms });
 
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
@@ -146,7 +151,7 @@ export default function BookPage() {
         list.find((item) => item.name === "Essential Clean") ?? list[0] ?? null;
       setSelected(essential);
       if (essential) {
-        setCleaningMinutes(Math.max(120, essential.duration_minutes ?? 120));
+        setCleaningMinutes(Math.min(480, Math.max(120, essential.duration_minutes ?? 120)));
       }
 
       let savedPc: string | null = null;
@@ -201,7 +206,7 @@ export default function BookPage() {
       if (match) {
         setSelected(match);
         setFrequency(match.name === "Essential Clean" ? "weekly" : "one_time");
-        setCleaningMinutes(Math.max(120, match.duration_minutes ?? 120));
+        setCleaningMinutes(Math.min(480, Math.max(120, match.duration_minutes ?? 120)));
       }
       const hasAddress = (savedAddress ?? "").trim().length >= 5;
 
@@ -239,24 +244,19 @@ export default function BookPage() {
 
           if (data.covered && liveSlot) {
             setSlot(liveSlot);
-            setStep(match.name === "Essential Clean" ? 2 : 5);
+            setStep(match.name === "Essential Clean" ? 2 : 3);
           } else {
-            setStep(data.covered ? 4 : 0);
+            setStep(data.covered ? 3 : 0);
             setHandoffError(
               data.covered
-                ? "That time was just taken. Choose another live time below."
+                ? "That time was just taken. Add your home details, then choose another time."
                 : "That postcode is not currently in our service area.",
             );
           }
         } catch {
-          setStep(4);
+          setStep(3);
           setHandoffError(
-            "We could not recheck that time. Please choose a live time below.",
-          );
-          loadSlots(
-            pcToCheck,
-            match.service_type ?? "",
-            match.duration_minutes,
+            "We could not recheck that time. Add your home details, then choose a live time.",
           );
         }
       } else if (reviewHandoff) {
@@ -268,7 +268,7 @@ export default function BookPage() {
         setStep(0);
       } else if (match && wantSlot && covered && hasAddress) {
         setSlot(wantSlot);
-        setStep(match.name === "Essential Clean" ? 2 : 5);
+        setStep(match.name === "Essential Clean" ? 2 : 3);
       } else {
         // Every normal booking starts by confirming the service address.
         setStep(0);
@@ -315,7 +315,7 @@ export default function BookPage() {
     setFrequency(p.name === "Essential Clean" ? "weekly" : "one_time");
     setPromoInfo(null);
     setPreferredCleaner("");
-    setCleaningMinutes(Math.max(120, p.duration_minutes ?? 120));
+    setCleaningMinutes(Math.min(480, Math.max(120, p.duration_minutes ?? 120)));
     setSlot(null);
     setOptionalSlots([]);
   }
@@ -326,7 +326,7 @@ export default function BookPage() {
   }
 
   function goToTimes() {
-    if (!selected) return;
+    if (!selected || !home) return;
     setStep(4);
     loadSlots(
       postcode,
@@ -377,7 +377,7 @@ export default function BookPage() {
   }
 
   async function startCheckout() {
-    if (!selected || !addressValid || !slot) return;
+    if (!selected || !addressValid || !slot || !home) return;
     const policyError = bookingPolicyError(selected.name, frequency);
     if (policyError) {
       setPayError(policyError);
@@ -397,6 +397,7 @@ export default function BookPage() {
           preferredProviderId: cleaning ? preferredCleaner || null : null,
           postcode,
           request,
+          home,
           slot,
           optionalSlots,
           promoCode: promoInfo?.ok ? promo.trim().toUpperCase() : null,
@@ -607,7 +608,7 @@ export default function BookPage() {
                           </b>
                         </span>
                         <span className="optMeta">
-                          2–10 hours · 30-minute steps · {p.name === "Essential Clean" ? "Six-visit minimum" : "One-time cleaning"}
+                          2–8 hours · 30-minute steps · {p.name === "Essential Clean" ? "Six-visit minimum" : "One-time cleaning"}
                         </span>
                       </span>
                     </button>
@@ -699,7 +700,53 @@ export default function BookPage() {
           {step === 3 && selected && (
             <section>
               <h1>How many hours?</h1>
-              <p className="lede">Choose from 2 to 10 hours in 30-minute steps.</p>
+              <p className="lede">Tell us about your home for a suggested time, then choose from 2 to 8 hours in 30-minute steps.</p>
+
+              <div className="homeCard">
+                <h2>Your home</h2>
+                <div className="homeGrid">
+                  <label>
+                    Property type
+                    <select className="field" value={propertyType} onChange={(event) => {
+                      const next = event.target.value as PropertyType | "";
+                      setPropertyType(next);
+                      if (next === "studio") setBedrooms(0);
+                      else if (propertyType === "studio") setBedrooms("");
+                    }}>
+                      <option value="">Select a property type</option>
+                      <option value="studio">Studio</option>
+                      <option value="flat">Flat</option>
+                      <option value="house">House</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    Bedrooms
+                    <select className="field" value={bedrooms} disabled={propertyType === "studio"} onChange={(event) => setBedrooms(event.target.value === "" ? "" : Number(event.target.value))}>
+                      <option value="">Select bedrooms</option>
+                      {Array.from({ length: 9 }, (_, count) => <option key={count} value={count}>{count}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Bathrooms
+                    <select className="field" value={bathrooms} onChange={(event) => setBathrooms(event.target.value === "" ? "" : Number(event.target.value))}>
+                      <option value="">Select bathrooms</option>
+                      {Array.from({ length: 8 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
+                    </select>
+                  </label>
+                </div>
+                {home && (
+                  <div className="homeSuggestion">
+                    <span>Suggested starting point: <strong>{duration(recommendedCleaningMinutesForHome(home))}</strong>. Your cleaner will see these home details.</span>
+                    <button type="button" onClick={() => {
+                      setCleaningMinutes(recommendedCleaningMinutesForHome(home));
+                      setPromoInfo(null);
+                      setSlot(null);
+                      setOptionalSlots([]);
+                    }}>Use suggestion</button>
+                  </div>
+                )}
+              </div>
 
               <div className="hoursCard">
                 <div className="hoursTop">
@@ -727,7 +774,7 @@ export default function BookPage() {
                   }}
                   aria-label="Cleaning duration"
                 />
-                <div className="rangeLabels"><span>2 hours</span><span>10 hours</span></div>
+                <div className="rangeLabels"><span>2 hours</span><span>8 hours</span></div>
               </div>
 
               {previousCleaners.length > 0 && (
@@ -741,9 +788,10 @@ export default function BookPage() {
                 </div>
               )}
 
-              <button className="next" onClick={goToTimes}>
+              <button className="next" onClick={goToTimes} disabled={!home}>
                 Continue · {duration(cleaningMinutes)}
               </button>
+              {!home && <p className="muted">Add your property type, bedrooms and bathrooms to continue.</p>}
               <button className="back" onClick={() => setStep(2)}>
                 ← Change frequency
               </button>
@@ -820,6 +868,11 @@ export default function BookPage() {
                   <small>{duration(minutes) ?? "Visit"}</small>
                 </div>
                 <div>
+                  <span>Your home</span>
+                  <strong>{home ? cleaningHomeLabel(home) : "Add home details"}</strong>
+                  <small>The professional will see this before accepting.</small>
+                </div>
+                <div>
                   <span>Preferred time · first choice</span>
                   <strong>{slot ? fullLabel(slot) : "Choose a time"}</strong>
                   <small>{address}, {postcode.toUpperCase()}</small>
@@ -859,6 +912,7 @@ export default function BookPage() {
               <textarea
                 className="field"
                 rows={3}
+                maxLength={250}
                 value={request}
                 onChange={(e) => setRequest(e.target.value)}
                 placeholder="e.g. key is under the mat, please avoid the study"
@@ -939,6 +993,12 @@ export default function BookPage() {
             )}
             {step >= 3 && selected && (
               <>
+                {home && (
+                  <div className="brow">
+                    <span className="k">Home</span>
+                    <span className="v">{cleaningHomeLabel(home)}</span>
+                  </div>
+                )}
                 <div className="brow">
                   <span className="k">Hours</span>
                   <span className="v">{duration(minutes) ?? "—"}</span>
@@ -980,7 +1040,7 @@ export default function BookPage() {
               <p className="hint">Now choose how often you would like it.</p>
             )}
             {step === 5 && (
-              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || !!policyError || !!regularScheduleError}>
+              <button className="pay" onClick={checkout} disabled={paying || !slot || !addressValid || !home || !!policyError || !!regularScheduleError}>
                 {paying
                   ? "Taking you to checkout…"
                   : signedIn === false
@@ -1486,6 +1546,56 @@ export default function BookPage() {
           font-size: 12.5px;
           font-weight: 700;
         }
+        .homeCard {
+          margin-bottom: 18px;
+          padding: 20px;
+          border: 1.5px solid #e5d9f7;
+          border-radius: 18px;
+          background: #faf7ff;
+        }
+        .homeCard h2 {
+          margin: 0 0 14px;
+          font-size: 19px;
+          font-weight: 900;
+        }
+        .homeGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+        .homeGrid label {
+          display: block;
+          min-width: 0;
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .homeGrid .field {
+          width: 100%;
+          margin: 6px 0 0;
+          padding-inline: 10px;
+          font-size: 13px;
+        }
+        .homeSuggestion {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 15px;
+          color: #4c5967;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .homeSuggestion button {
+          flex: 0 0 auto;
+          padding: 9px 12px;
+          border: 1px solid #6d28d9;
+          border-radius: 10px;
+          background: #fff;
+          color: #6d28d9;
+          font: inherit;
+          font-weight: 900;
+          cursor: pointer;
+        }
         .hoursCard {
           padding: 24px;
           border: 2px solid #e5d9f7;
@@ -1830,6 +1940,13 @@ export default function BookPage() {
           }
         }
         @media (max-width: 470px) {
+          .homeGrid {
+            grid-template-columns: 1fr;
+          }
+          .homeSuggestion {
+            align-items: flex-start;
+            flex-direction: column;
+          }
           .list {
             grid-template-columns: 1fr;
           }

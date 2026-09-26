@@ -69,11 +69,11 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Choose the cleaning session that fits",
         paragraphs: [
-          "Every cleaning session can be booked for two to ten hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
+          "Every cleaning session can be booked for two to eight hours in 30-minute steps. The price scales with the time you choose, and the booking form shows the full total before payment.",
         ],
         points: [
           "Essential Clean — £18.90 per hour for six weekly or monthly visits booked and paid together. Our regular standard clean covers dusting, floors, bedroom, kitchen and bathroom.",
-          "One-Time Essential Clean — £22.90 per hour. A single standard clean with no ongoing commitment, perfect for a one-off refresh.",
+          "One-Time Essential Clean — £22.99 per hour. A single standard clean with no ongoing commitment, perfect for a one-off refresh.",
           "Express Clean — £22.90 per hour. A same-day standard clean for when time is tight, subject to available cleaners and time slots.",
           "Signature Deep Clean — £24.90 per hour. A thorough, top-to-bottom clean that reaches the spots regular cleaning misses, ideal for a seasonal reset or before hosting.",
           "End of Tenancy / Move-In Clean — £25 per hour. A detailed deep clean that leaves a property spotless for moving out or moving in, ready for a landlord or inspection.",
@@ -87,7 +87,7 @@ export const blogPosts: BlogPost[] = [
         heading: "Choose the time your home needs",
         paragraphs: [
           "After choosing a cleaning session, select the number of hours that suits the condition of your home and your priorities.",
-          "Our cleaning visits run from two to ten hours in 30-minute steps, so you can choose a clear finish time without guessing at odd intervals.",
+          "Our cleaning visits run from two to eight hours in 30-minute steps, so you can choose a clear finish time without guessing at odd intervals.",
         ],
       },
       {

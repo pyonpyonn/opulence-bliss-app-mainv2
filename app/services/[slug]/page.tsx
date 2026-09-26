@@ -80,7 +80,7 @@ const COPY: Record<
       },
       {
         q: "How long can I book a clean for?",
-        a: "Choose from two to ten hours in 30-minute steps. The booking form shows the price per session as you adjust the duration.",
+        a: "Choose from two to eight hours in 30-minute steps. The booking form shows the price per session as you adjust the duration.",
       },
       {
         q: "When am I charged?",
